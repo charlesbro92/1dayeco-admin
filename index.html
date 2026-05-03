@@ -97,6 +97,57 @@ body { background:var(--bg); color:var(--text); font-family:var(--sans); display
 .content { padding:28px; display:none; }
 .content.active { display:block; }
 
+/* ─── 콘텐츠 페이지: 5:5 분할 영역 ─── */
+#page-content.content.active {
+  display:flex; flex-direction:column;
+  height:calc(100vh - 58px); /* topbar 높이 제외 */
+  padding:20px 28px; gap:14px;
+  box-sizing:border-box; overflow:hidden;
+}
+#contentSplitArea {
+  display:grid; grid-template-rows:1fr 1fr; gap:14px;
+  flex:1 1 auto; min-height:0; overflow:hidden;
+}
+.split-panel {
+  display:flex; flex-direction:column;
+  min-height:0; overflow:hidden;
+}
+.split-panel .panel-head { flex:0 0 auto; }
+.split-body {
+  flex:1 1 auto; min-height:0; overflow-y:auto; padding:0;
+}
+.split-body table { width:100%; border-collapse:collapse; }
+.split-empty {
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  height:100%; color:var(--muted); font-size:13px; text-align:center; line-height:1.7;
+  padding:40px 20px;
+}
+
+/* ─── 카테고리 pill 필터 (드롭다운 대체) ─── */
+.cat-pill-filter {
+  display:flex; gap:6px; flex-wrap:wrap;
+}
+.cat-pill {
+  background:var(--s3); border:1px solid var(--b); color:var(--muted);
+  padding:6px 12px; font-size:11px; font-weight:600; border-radius:100px;
+  cursor:pointer; transition:all .2s; font-family:var(--sans);
+  letter-spacing:.3px;
+}
+.cat-pill:hover { color:var(--text); border-color:rgba(201,168,76,.3); }
+.cat-pill.active {
+  background:rgba(201,168,76,.12); border-color:var(--gold);
+  color:var(--gold); font-weight:700;
+}
+
+/* ─── 다크 select 화살표 ─── */
+.dark-select {
+  -webkit-appearance:none; -moz-appearance:none; appearance:none;
+  background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'><path fill='%23C9A84C' d='M0 0l5 6 5-6z'/></svg>");
+  background-repeat:no-repeat;
+  background-position:right 12px center;
+  padding-right:32px !important;
+}
+
 #subTableWrap tbody tr { border-bottom:1px solid var(--b); }
     #subTableWrap tbody tr:last-child { border-bottom:none; }
     /* ── KPI CARDS ── */
@@ -676,15 +727,15 @@ tr:hover td { background:rgba(255,255,255,.02); }
 
   <!-- ── PAGE: 콘텐츠 ── -->
   <div class="content" id="page-content">
-    <!-- 주제 생성 영역 -->
-    <div class="panel" style="margin-bottom:14px">
+    <!-- 주제 생성 영역 (상단 고정 영역) -->
+    <div class="panel" style="margin-bottom:14px;flex-shrink:0">
       <div class="panel-head">
         <div class="panel-title">🎯 주제 생성</div>
       </div>
       <div class="panel-body" style="padding:20px;display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap">
         <div style="flex:1.2;min-width:140px">
           <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:6px;letter-spacing:.5px">카테고리</label>
-          <select id="topicGenCategory"
+          <select id="topicGenCategory" class="dark-select"
             style="width:100%;background:var(--s3);border:1px solid var(--b);color:var(--text);
                    padding:10px;border-radius:6px;font-size:13px;outline:none;font-family:var(--sans)">
             <option value="economy">📊 경제</option>
@@ -720,57 +771,72 @@ tr:hover td { background:rgba(255,255,255,.02); }
       </div>
     </div>
 
-    <!-- 생성된 주제 목록 -->
-    <div class="panel" id="topicListPanel" style="margin-bottom:14px;display:none">
-      <div class="panel-head">
-        <div class="panel-title">📋 생성된 주제 목록</div>
-        <div style="display:flex;gap:8px;align-items:center">
-          <span id="topicSelectedCount" style="font-size:11px;color:var(--muted);letter-spacing:.5px">0개 선택</span>
-          <button onclick="toggleAllTopics()" style="background:none;border:1px solid var(--b);color:var(--muted);padding:6px 12px;border-radius:6px;font-size:11px;cursor:pointer">전체 선택</button>
-          <button class="btn-send" onclick="generateContentFromTopics()" style="font-size:11px;padding:7px 14px">
-            📝 콘텐츠 생성
-          </button>
+    <!-- 5:5 분할 영역 (생성된 주제 + 아카이브) -->
+    <div id="contentSplitArea">
+      <!-- 생성된 주제 목록 -->
+      <div class="panel split-panel" id="topicListPanel">
+        <div class="panel-head">
+          <div class="panel-title">📋 생성된 주제 목록</div>
+          <div style="display:flex;gap:8px;align-items:center">
+            <span id="topicSelectedCount" style="font-size:11px;color:var(--muted);letter-spacing:.5px">0개 선택</span>
+            <button onclick="toggleAllTopics()" style="background:none;border:1px solid var(--b);color:var(--muted);padding:6px 12px;border-radius:6px;font-size:11px;cursor:pointer">전체 선택</button>
+            <button class="btn-send" onclick="generateContentFromTopics()" style="font-size:11px;padding:7px 14px">
+              📝 콘텐츠 생성
+            </button>
+          </div>
+        </div>
+        <div class="panel-body split-body">
+          <div id="topicListEmpty" class="split-empty">
+            <span style="font-size:32px;display:block;margin-bottom:8px;opacity:.6">🎯</span>
+            <div>위에서 카테고리·기간을 선택하고<br>주제 생성 버튼을 눌러주세요</div>
+          </div>
+          <div id="topicListTableWrap" style="display:none">
+            <table>
+              <thead>
+                <tr>
+                  <th style="width:42px;background:var(--s1);position:sticky;top:0;z-index:2"><input type="checkbox" id="topicSelectAll" onchange="toggleAllTopics()"></th>
+                  <th style="background:var(--s1);position:sticky;top:0;z-index:2">날짜</th>
+                  <th style="background:var(--s1);position:sticky;top:0;z-index:2;text-align:center">카테고리</th>
+                  <th style="background:var(--s1);position:sticky;top:0;z-index:2">주제</th>
+                  <th style="background:var(--s1);position:sticky;top:0;z-index:2">키워드</th>
+                  <th style="background:var(--s1);position:sticky;top:0;z-index:2;text-align:center">상태</th>
+                </tr>
+              </thead>
+              <tbody id="topicListBody"></tbody>
+            </table>
+          </div>
         </div>
       </div>
-      <div class="panel-body">
-        <table>
-          <thead>
-            <tr>
-              <th style="width:42px"><input type="checkbox" id="topicSelectAll" onchange="toggleAllTopics()"></th>
-              <th>날짜</th>
-              <th style="text-align:center">카테고리</th>
-              <th>주제</th>
-              <th>키워드</th>
-              <th style="text-align:center">상태</th>
-            </tr>
-          </thead>
-          <tbody id="topicListBody"></tbody>
-        </table>
-      </div>
-    </div>
 
-    <!-- 콘텐츠 아카이브 -->
-    <div class="panel">
-      <div class="panel-head">
-        <div class="panel-title">📝 콘텐츠 아카이브</div>
-        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-          <select id="contentCatFilter" onchange="loadContentArchive()"
-            style="background:var(--s2);border:1px solid var(--b);color:var(--text);
-                   padding:6px 10px;font-size:11px;border-radius:6px;
-                   font-family:var(--sans);outline:none;-webkit-appearance:none">
-            <option value="">전체 카테고리</option>
-            <option value="economy">📊 경제</option>
-            <option value="realestate">🏠 부동산</option>
-            <option value="english">🇬🇧 영어</option>
-            <option value="trivia">🧠 상식</option>
-          </select>
+      <!-- 콘텐츠 아카이브 -->
+      <div class="panel split-panel">
+        <div class="panel-head">
+          <div class="panel-title">📝 콘텐츠 아카이브</div>
+          <div class="cat-pill-filter" id="catPillFilter">
+            <button class="cat-pill active" data-cat="" onclick="selectCatFilter(this)">전체</button>
+            <button class="cat-pill" data-cat="economy" onclick="selectCatFilter(this)">📊 경제</button>
+            <button class="cat-pill" data-cat="realestate" onclick="selectCatFilter(this)">🏠 부동산</button>
+            <button class="cat-pill" data-cat="english" onclick="selectCatFilter(this)">🇬🇧 영어</button>
+            <button class="cat-pill" data-cat="trivia" onclick="selectCatFilter(this)">🧠 상식</button>
+          </div>
         </div>
-      </div>
-      <div class="panel-body">
-        <table>
-          <thead><tr><th>날짜</th><th style="text-align:center">카테고리</th><th>주제</th><th>키워드</th><th>미리보기</th><th style="text-align:center">토큰</th></tr></thead>
-          <tbody id="contentBody"><tr><td colspan="6"><div class="empty"><span class="empty-ico">📝</span>생성된 콘텐츠가 없습니다</div></td></tr></tbody>
-        </table>
+        <div class="panel-body split-body">
+          <table>
+            <thead>
+              <tr>
+                <th style="background:var(--s1);position:sticky;top:0;z-index:2">날짜</th>
+                <th style="background:var(--s1);position:sticky;top:0;z-index:2;text-align:center">카테고리</th>
+                <th style="background:var(--s1);position:sticky;top:0;z-index:2">주제</th>
+                <th style="background:var(--s1);position:sticky;top:0;z-index:2">키워드</th>
+                <th style="background:var(--s1);position:sticky;top:0;z-index:2">미리보기</th>
+                <th style="background:var(--s1);position:sticky;top:0;z-index:2;text-align:center">토큰</th>
+              </tr>
+            </thead>
+            <tbody id="contentBody"><tr><td colspan="6"><div class="empty"><span class="empty-ico">📝</span>생성된 콘텐츠가 없습니다</div></td></tr></tbody>
+          </table>
+          <!-- hidden select for backward compatibility with loadContentArchive() -->
+          <select id="contentCatFilter" style="display:none"><option value="" selected></option></select>
+        </div>
       </div>
     </div>
   </div>
@@ -2765,14 +2831,17 @@ function generateTopics() {
 }
 
 function renderTopicList() {
-  const panel = document.getElementById('topicListPanel');
-  const tbody = document.getElementById('topicListBody');
+  const tbody     = document.getElementById('topicListBody');
+  const emptyEl   = document.getElementById('topicListEmpty');
+  const tableWrap = document.getElementById('topicListTableWrap');
 
   if (GENERATED_TOPICS.length === 0) {
-    panel.style.display = 'none';
+    if (emptyEl)   emptyEl.style.display   = 'flex';
+    if (tableWrap) tableWrap.style.display = 'none';
     return;
   }
-  panel.style.display = 'block';
+  if (emptyEl)   emptyEl.style.display   = 'none';
+  if (tableWrap) tableWrap.style.display = 'block';
 
   tbody.innerHTML = GENERATED_TOPICS.map(function(t) {
     const checked = t.selected ? 'checked' : '';
@@ -2790,6 +2859,21 @@ function renderTopicList() {
   }).join('');
 
   updateTopicSelectedCount();
+}
+
+// 카테고리 pill 필터
+function selectCatFilter(btnEl) {
+  const cat = btnEl.dataset.cat || '';
+  // 모든 pill에서 active 제거
+  document.querySelectorAll('#catPillFilter .cat-pill').forEach(function(b) {
+    b.classList.remove('active');
+  });
+  btnEl.classList.add('active');
+  // 호환성을 위한 hidden select에도 값 반영
+  const hidden = document.getElementById('contentCatFilter');
+  if (hidden) hidden.value = cat;
+  // 아카이브 다시 로드
+  loadContentArchive();
 }
 
 function onTopicCheck(el) {
