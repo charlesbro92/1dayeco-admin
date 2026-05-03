@@ -676,49 +676,94 @@ tr:hover td { background:rgba(255,255,255,.02); }
 
   <!-- ── PAGE: 콘텐츠 ── -->
   <div class="content" id="page-content">
+    <!-- 주제 생성 영역 -->
+    <div class="panel" style="margin-bottom:14px">
+      <div class="panel-head">
+        <div class="panel-title">🎯 주제 생성</div>
+      </div>
+      <div class="panel-body" style="padding:20px;display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap">
+        <div style="flex:1;min-width:140px">
+          <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:6px;letter-spacing:.5px">카테고리</label>
+          <select id="topicGenCategory"
+            style="width:100%;background:var(--s3);border:1px solid var(--b);color:var(--text);
+                   padding:10px;border-radius:6px;font-size:13px;outline:none;font-family:var(--sans)">
+            <option value="economy">📊 경제</option>
+            <option value="realestate">🏠 부동산</option>
+            <option value="english">🇬🇧 영어</option>
+            <option value="trivia">🧠 상식</option>
+          </select>
+        </div>
+        <div style="flex:1;min-width:140px">
+          <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:6px;letter-spacing:.5px">기간 (일)</label>
+          <select id="topicGenDays"
+            style="width:100%;background:var(--s3);border:1px solid var(--b);color:var(--text);
+                   padding:10px;border-radius:6px;font-size:13px;outline:none;font-family:var(--sans)">
+            <option value="7">7일</option>
+            <option value="14">14일</option>
+            <option value="30" selected>30일</option>
+          </select>
+        </div>
+        <div style="flex:1;min-width:140px">
+          <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:6px;letter-spacing:.5px">시작일</label>
+          <input type="date" id="topicGenStart"
+            style="width:100%;background:var(--s3);border:1px solid var(--b);color:var(--text);
+                   padding:10px;border-radius:6px;font-size:13px;outline:none;font-family:var(--sans)">
+        </div>
+        <button class="btn-send" onclick="generateTopics()" style="font-size:12px;padding:10px 18px;letter-spacing:.5px">
+          🎯 주제 생성
+        </button>
+      </div>
+    </div>
+
+    <!-- 생성된 주제 목록 -->
+    <div class="panel" id="topicListPanel" style="margin-bottom:14px;display:none">
+      <div class="panel-head">
+        <div class="panel-title">📋 생성된 주제 목록</div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <span id="topicSelectedCount" style="font-size:11px;color:var(--muted);letter-spacing:.5px">0개 선택</span>
+          <button onclick="toggleAllTopics()" style="background:none;border:1px solid var(--b);color:var(--muted);padding:6px 12px;border-radius:6px;font-size:11px;cursor:pointer">전체 선택</button>
+          <button class="btn-send" onclick="generateContentFromTopics()" style="font-size:11px;padding:7px 14px">
+            📝 콘텐츠 생성
+          </button>
+        </div>
+      </div>
+      <div class="panel-body">
+        <table>
+          <thead>
+            <tr>
+              <th style="width:42px"><input type="checkbox" id="topicSelectAll" onchange="toggleAllTopics()"></th>
+              <th>날짜</th>
+              <th style="text-align:center">카테고리</th>
+              <th>주제</th>
+              <th>키워드</th>
+              <th style="text-align:center">상태</th>
+            </tr>
+          </thead>
+          <tbody id="topicListBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- 콘텐츠 아카이브 -->
     <div class="panel">
       <div class="panel-head">
         <div class="panel-title">📝 콘텐츠 아카이브</div>
         <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-          <select id="contentSuperFilter" onchange="onSuperFilterChange()"
-            style="background:var(--s2);border:1px solid var(--b);color:var(--text);
-                   padding:6px 10px;font-size:11px;border-radius:6px;
-                   font-family:var(--sans);outline:none;-webkit-appearance:none">
-            <option value="">전체 대분류</option>
-            <option value="거시·글로벌">🌐 거시·글로벌</option>
-            <option value="재테크·금융">💵 재테크·금융</option>
-            <option value="비즈니스">🚀 비즈니스</option>
-          </select>
           <select id="contentCatFilter" onchange="loadContentArchive()"
             style="background:var(--s2);border:1px solid var(--b);color:var(--text);
                    padding:6px 10px;font-size:11px;border-radius:6px;
                    font-family:var(--sans);outline:none;-webkit-appearance:none">
             <option value="">전체 카테고리</option>
-            <optgroup label="🌐 거시·글로벌">
-              <option value="macro">거시경제</option>
-              <option value="global">글로벌</option>
-            </optgroup>
-            <optgroup label="💵 재테크·금융">
-              <option value="finance">금융·환율</option>
-              <option value="special">머니인사이트</option>
-              <option value="realestate">부동산</option>
-            </optgroup>
-            <optgroup label="🚀 비즈니스">
-              <option value="industry">산업트렌드</option>
-              <option value="startup">창업·비즈</option>
-              <option value="career">직장·커리어</option>
-            </optgroup>
+            <option value="economy">📊 경제</option>
+            <option value="realestate">🏠 부동산</option>
+            <option value="english">🇬🇧 영어</option>
+            <option value="trivia">🧠 상식</option>
           </select>
-          <span id="rssStatusBadge" onclick="triggerRssCollect()"
-            style="font-size:10px;padding:4px 8px;border-radius:4px;cursor:pointer;
-                   border:1px solid var(--b);color:var(--muted);white-space:nowrap"
-            title="클릭하면 RSS 즉시 수집">📡 RSS 로딩중...</span>
-          <button class="btn-send" onclick="openCalendarPicker()" style="font-size:11px;padding:7px 12px">📅 생성</button>
         </div>
       </div>
       <div class="panel-body">
         <table>
-          <thead><tr><th>날짜</th><th style="text-align:center">대분류</th><th style="text-align:center">카테고리</th><th>키워드</th><th>미리보기</th><th style="text-align:center">토큰</th></tr></thead>
+          <thead><tr><th>날짜</th><th style="text-align:center">카테고리</th><th>주제</th><th>키워드</th><th>미리보기</th><th style="text-align:center">토큰</th></tr></thead>
           <tbody id="contentBody"><tr><td colspan="6"><div class="empty"><span class="empty-ico">📝</span>생성된 콘텐츠가 없습니다</div></td></tr></tbody>
         </table>
       </div>
@@ -768,46 +813,15 @@ tr:hover td { background:rgba(255,255,255,.02); }
         </div>
         <div style="padding:20px"><div id="schedulerJobList" style="display:flex;flex-direction:column;gap:10px"><div style="color:var(--muted);font-size:12px">로딩 중...</div></div></div>
       </div>
-      <div class="panel">
-        <div class="panel-head"><div class="panel-title">📡 RSS 자동 수집</div></div>
-        <div style="padding:20px;display:flex;flex-direction:column;gap:14px">
-          <div style="display:flex;justify-content:space-between;align-items:center">
-            <span style="font-size:13px">자동 수집 활성화</span>
-            <span onclick="document.getElementById('rssEnabled').click()" id="rssToggleSlider"
-              style="display:inline-block;width:44px;height:24px;background:var(--b);border-radius:24px;cursor:pointer;transition:.3s;position:relative">
-              <input type="checkbox" id="rssEnabled" style="opacity:0;width:0;height:0;position:absolute" onchange="onSchedulerToggle()">
-            </span>
-          </div>
-          <div>
-            <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:6px">수집 시각 (매일)</label>
-            <div style="display:flex;gap:8px;align-items:center">
-              <select id="rssHour" style="flex:1;background:var(--s3);border:1px solid var(--b);color:var(--text);padding:8px;border-radius:6px;font-size:13px;outline:none">
-                <option value="5">오전 5시</option><option value="6" selected>오전 6시</option><option value="7">오전 7시</option><option value="8">오전 8시</option>
-              </select>
-              <span style="color:var(--muted)">:</span>
-              <select id="rssMinute" style="flex:1;background:var(--s3);border:1px solid var(--b);color:var(--text);padding:8px;border-radius:6px;font-size:13px;outline:none">
-                <option value="0" selected>00분</option><option value="30">30분</option>
-              </select>
-            </div>
-          </div>
-          <div style="display:flex;gap:8px">
-            <button onclick="saveSchedulerConfig()" style="flex:1;background:var(--gold);color:var(--bg);border:none;padding:10px;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer">💾 저장</button>
-            <button onclick="runJobNow('rss_collect')" style="flex:1;background:none;border:1px solid var(--gold);color:var(--gold);padding:10px;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer">▶ 지금 실행</button>
-          </div>
-        </div>
-      </div>
-      <div class="panel">
+      <div class="panel" style="grid-column:1/-1">
         <div class="panel-head"><div class="panel-title">📝 콘텐츠 자동 생성</div></div>
-        <div style="padding:20px;display:flex;flex-direction:column;gap:14px">
+        <div style="padding:20px;display:flex;flex-direction:column;gap:14px;max-width:600px">
           <div style="display:flex;justify-content:space-between;align-items:center">
             <span style="font-size:13px">자동 생성 활성화</span>
             <span onclick="document.getElementById('contentEnabled').click()" id="contentToggleSlider"
               style="display:inline-block;width:44px;height:24px;background:var(--b);border-radius:24px;cursor:pointer;transition:.3s;position:relative">
               <input type="checkbox" id="contentEnabled" style="opacity:0;width:0;height:0;position:absolute" onchange="onSchedulerToggle()">
             </span>
-          </div>
-          <div style="padding:8px;background:rgba(201,168,76,.08);border-radius:6px;border:1px solid rgba(201,168,76,.2);font-size:11px;color:var(--muted)">
-            ⚠️ RSS 수집보다 30분 이상 늦게 설정 권장
           </div>
           <div>
             <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:6px">생성 시각 (매일)</label>
@@ -1234,20 +1248,10 @@ tr:hover td { background:rgba(255,255,255,.02); }
             style="width:100%;background:var(--s2);border:1px solid var(--b);color:var(--text);
                    padding:6px 10px;font-size:11px;border-radius:6px;font-family:var(--sans);outline:none">
             <option value="">📅 커리큘럼 자동</option>
-            <optgroup label="🌐 거시·글로벌">
-              <option value="macro">거시경제</option>
-              <option value="global">글로벌</option>
-            </optgroup>
-            <optgroup label="💵 재테크·금융">
-              <option value="finance">금융·환율</option>
-              <option value="special">머니인사이트</option>
-              <option value="realestate">부동산</option>
-            </optgroup>
-            <optgroup label="🚀 비즈니스">
-              <option value="industry">산업트렌드</option>
-              <option value="startup">창업·비즈</option>
-              <option value="career">직장·커리어</option>
-            </optgroup>
+            <option value="economy">📊 경제</option>
+            <option value="realestate">🏠 부동산</option>
+            <option value="english">🇬🇧 영어</option>
+            <option value="trivia">🧠 상식</option>
           </select>
         </div>
         <div style="font-size:16px;font-weight:700">날짜 범위 선택</div>
@@ -1623,9 +1627,9 @@ function renderTodayContent(el, d, dateStr) {
     .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
     .replace(/─+/g,'<hr style="border:none;border-top:1px solid var(--b);margin:8px 0">')
     .replace(/\n/g,'<br>');
-  const catLabel = {macro:'거시경제',industry:'산업트렌드',finance:'금융·환율',global:'글로벌경제',
-    realestate:'부동산',startup:'창업·스타트업',policy:'경제정책',invest:'투자전략',
-    money:'생활경제',trade:'무역·공급망',energy:'에너지·자원',tech:'테크비즈',labor:'고용·노동',weekly:'주간브리핑'};
+  const catLabel = {
+    economy:'📊 경제', realestate:'🏠 부동산', english:'🇬🇧 영어', trivia:'🧠 상식'
+  };
   const catKo = catLabel[d.category] || (d.category||'').toUpperCase();
   el.innerHTML =
     '<div class="cc-date" style="margin-bottom:6px">' + dateStr + ' · ' + catKo + '</div>' +
@@ -2400,58 +2404,228 @@ async function resendAll(dateIdx) {
 
 
 const SUPER_CATEGORY_MAP = {
-  macro:'거시·글로벌',global:'거시·글로벌',
-  finance:'재테크·금융',special:'재테크·금융',realestate:'재테크·금융',
-  industry:'비즈니스',startup:'비즈니스',career:'비즈니스',
+  economy:'경제',realestate:'부동산',english:'영어',trivia:'상식'
 };
 const CATEGORY_LABEL_MAP = {
-  macro:'거시경제',global:'글로벌',finance:'금융·환율',
-  special:'머니인사이트',realestate:'부동산',
-  industry:'산업트렌드',startup:'창업·비즈',career:'직장·커리어',
+  economy:'📊 경제', realestate:'🏠 부동산', english:'🇬🇧 영어', trivia:'🧠 상식'
 };
-const SUPER_ICON = {'거시·글로벌':'🌐','재테크·금융':'💵','비즈니스':'🚀'};
+const SUPER_ICON = {'경제':'📊','부동산':'🏠','영어':'🇬🇧','상식':'🧠'};
 function getSuperCategory(cat){return SUPER_CATEGORY_MAP[cat]||'기타';}
 function onSuperFilterChange(){
-  const v=document.getElementById('contentSuperFilter').value;
-  if(v) document.getElementById('contentCatFilter').value='';
+  // 대분류 필터 제거됨 (4개 평면 구조). 호환성을 위해 함수만 유지.
   loadContentArchive();
 }
-async function loadRssStatus(){
-  const badge=document.getElementById('rssStatusBadge');
-  if(!badge||!API_BASE)return;
-  try{
-    const r=await fetch(API_BASE+'/admin/rss/status');
-    const d=await r.json();
-    if(d.status==='ok'){
-      badge.textContent=`📡 RSS ${d.date} (${d.total}건)`;
-      badge.style.color='var(--green)';
-      badge.style.borderColor='rgba(74,222,128,.3)';
-    }else{
-      badge.textContent='📡 RSS 미수집 (클릭하여 수집)';
-      badge.style.color='var(--amber)';
-    }
-  }catch(e){badge.textContent='📡 RSS 연결 안됨';}
+async function loadRssStatus(){ /* RSS 기능 제거됨 */ }
+async function triggerRssCollect(){ /* RSS 기능 제거됨 */ }
+// ════════════════════════════════════════════════════════════
+// 주제 생성 → 콘텐츠 생성 워크플로우 (Phase 1: 프론트 더미)
+// ════════════════════════════════════════════════════════════
+
+// 카테고리별 더미 주제 풀
+const DUMMY_TOPICS = {
+  economy: [
+    { topic:'기준금리 인상이 가계대출에 미치는 영향', kw:'#금리 #대출 #가계' },
+    { topic:'GDP와 GNI의 차이, 어느 게 더 중요한가', kw:'#GDP #GNI #지표' },
+    { topic:'환율이 오르면 내 월급 실질가치는?', kw:'#환율 #실질소득' },
+    { topic:'인플레이션 시대의 자산 배분 전략', kw:'#인플레 #자산배분' },
+    { topic:'금리와 주식시장의 상관관계', kw:'#금리 #주식 #채권' },
+    { topic:'경기침체 신호, 어디서 확인하나', kw:'#경기 #지표 #신호' },
+    { topic:'중앙은행의 통화정책 도구 3가지', kw:'#중앙은행 #통화정책' },
+    { topic:'한국은행이 기준금리를 올리는 이유', kw:'#한은 #금리인상' },
+    { topic:'환차손과 환차익, 누구의 이야기인가', kw:'#환차익 #수출입' },
+    { topic:'CPI와 PPI, 물가지표 읽는 법', kw:'#CPI #PPI #물가' },
+  ],
+  realestate: [
+    { topic:'LTV·DTI·DSR 한 번에 정리', kw:'#LTV #DTI #DSR' },
+    { topic:'전세 vs 월세, 내 상황에선 뭐가 유리할까', kw:'#전세 #월세 #비교' },
+    { topic:'청약가점 계산법과 1순위 조건', kw:'#청약 #가점 #1순위' },
+    { topic:'등기부등본 보는 법 — 갑구·을구', kw:'#등기 #갑구 #을구' },
+    { topic:'재건축·재개발의 차이와 투자 포인트', kw:'#재건축 #재개발' },
+    { topic:'전세사기 안 당하는 5가지 체크리스트', kw:'#전세사기 #체크리스트' },
+    { topic:'중개수수료 계산법, 부르는 게 값?', kw:'#중개수수료' },
+    { topic:'갭투자, 지금도 통하는 전략인가', kw:'#갭투자 #전략' },
+    { topic:'아파트 단지 시세, 어디서 확인하나', kw:'#시세 #확인방법' },
+    { topic:'전월세 신고제, 임대인이 알아야 할 것', kw:'#임대차 #신고제' },
+  ],
+  english: [
+    { topic:'Trying is the first step towards failure', kw:'#심슨 #도전 #실패' },
+    { topic:"D'oh! 호머가 매일 외치는 그 단어", kw:"#감탄사 #호머" },
+    { topic:'Eat my shorts! — 바트의 시그니처', kw:'#슬랭 #바트' },
+    { topic:'Cowabunga! 90년대를 풍미한 감탄사', kw:'#감탄사 #90s' },
+    { topic:'Excellent~ 번스 사장의 음흉한 칭찬', kw:'#번스 #칭찬' },
+    { topic:"Ay, caramba! 바트의 놀람 표현", kw:'#바트 #스페인어' },
+    { topic:'Don\'t have a cow, man! 진정해 친구', kw:'#슬랭 #진정해' },
+    { topic:'Okely-dokely! 플랜더스의 인사', kw:'#플랜더스 #인사' },
+    { topic:"That's unpossible! 랄프의 어록", kw:'#랄프 #어록' },
+    { topic:'Hi-diddly-ho, neighborino!', kw:'#플랜더스 #이웃' },
+  ],
+  trivia: [
+    { topic:'비행기 창문은 왜 둥근 모양일까?', kw:'#비행기 #안전 #설계' },
+    { topic:'바나나가 사실은 베리(berry)라는 사실', kw:'#식물학 #바나나' },
+    { topic:'문어의 심장은 3개, 피는 파란색', kw:'#문어 #생물학' },
+    { topic:'왜 거울은 좌우만 바뀌고 위아래는 안 바뀔까', kw:'#거울 #착시' },
+    { topic:'꿀이 상하지 않는 진짜 이유', kw:'#꿀 #보존' },
+    { topic:'페트병 바닥의 숫자, 무엇을 의미하나', kw:'#재활용 #페트병' },
+    { topic:'우표를 거꾸로 붙이면 사랑한다는 뜻', kw:'#우표 #관습' },
+    { topic:'에펠탑은 여름에 15cm 더 자란다', kw:'#에펠탑 #열팽창' },
+    { topic:'기린의 목과 사람의 목, 뼈 개수가 같다', kw:'#기린 #해부학' },
+    { topic:'단풍은 왜 빨갛게 변할까', kw:'#단풍 #식물생리' },
+  ]
+};
+
+// 생성된 주제 저장 (휘발성)
+let GENERATED_TOPICS = [];
+
+function generateTopics() {
+  const cat   = document.getElementById('topicGenCategory').value;
+  const days  = parseInt(document.getElementById('topicGenDays').value);
+  let startStr = document.getElementById('topicGenStart').value;
+
+  if (!startStr) {
+    // 시작일 미입력 시 오늘 날짜
+    const today = new Date();
+    startStr = today.toISOString().slice(0, 10);
+    document.getElementById('topicGenStart').value = startStr;
+  }
+
+  const pool = DUMMY_TOPICS[cat] || [];
+  if (pool.length === 0) {
+    showToast('해당 카테고리의 주제 풀이 비어있습니다', 'ng');
+    return;
+  }
+
+  // 풀에서 days만큼 순환하여 뽑기
+  GENERATED_TOPICS = [];
+  const startDate = new Date(startStr);
+  for (let i = 0; i < days; i++) {
+    const t = pool[i % pool.length];
+    const d = new Date(startDate);
+    d.setDate(d.getDate() + i);
+    GENERATED_TOPICS.push({
+      id: 't_' + Date.now() + '_' + i,
+      date: d.toISOString().slice(0, 10),
+      cat: cat,
+      topic: t.topic,
+      kw: t.kw,
+      status: 'pending', // pending | generated
+      selected: true     // 기본 전체 선택
+    });
+  }
+
+  renderTopicList();
+  showToast(days + '일치 주제 ' + GENERATED_TOPICS.length + '개 생성', 'ok');
 }
-async function triggerRssCollect(){
-  const badge=document.getElementById('rssStatusBadge');
-  if(!API_BASE)return;
-  badge.textContent='📡 수집 중...';
-  try{
-    await fetch(API_BASE+'/admin/rss/collect',{method:'POST'});
-    showToast('RSS 수집 시작됨 (약 30초 소요)','ok');
-    setTimeout(loadRssStatus,35000);
-  }catch(e){showToast('RSS 수집 실패','ng');}
+
+function renderTopicList() {
+  const panel = document.getElementById('topicListPanel');
+  const tbody = document.getElementById('topicListBody');
+
+  if (GENERATED_TOPICS.length === 0) {
+    panel.style.display = 'none';
+    return;
+  }
+  panel.style.display = 'block';
+
+  tbody.innerHTML = GENERATED_TOPICS.map(function(t) {
+    const checked = t.selected ? 'checked' : '';
+    const statusBadge = t.status === 'generated'
+      ? '<span style="background:rgba(74,222,128,.12);color:var(--green);font-size:10px;padding:3px 8px;border-radius:4px;border:1px solid rgba(74,222,128,.25)">✓ 생성됨</span>'
+      : '<span style="color:var(--muted);font-size:10px">대기</span>';
+    return '<tr>'
+      + '<td><input type="checkbox" data-tid="' + t.id + '" ' + checked + ' onchange="onTopicCheck(this)"></td>'
+      + '<td style="font-family:var(--mono);font-size:11px">' + t.date + '</td>'
+      + '<td style="text-align:center"><span class="badge monthly">' + (CATEGORY_LABEL_MAP[t.cat] || t.cat) + '</span></td>'
+      + '<td><strong>' + t.topic + '</strong></td>'
+      + '<td style="color:var(--muted);font-size:11px">' + t.kw + '</td>'
+      + '<td style="text-align:center">' + statusBadge + '</td>'
+      + '</tr>';
+  }).join('');
+
+  updateTopicSelectedCount();
 }
-// ── 콘텐츠 아카이브 ───────────────────────────────────────────
+
+function onTopicCheck(el) {
+  const tid = el.dataset.tid;
+  const t = GENERATED_TOPICS.find(x => x.id === tid);
+  if (t) t.selected = el.checked;
+  updateTopicSelectedCount();
+}
+
+function toggleAllTopics() {
+  const allSelected = GENERATED_TOPICS.every(t => t.selected);
+  GENERATED_TOPICS.forEach(t => t.selected = !allSelected);
+  document.querySelectorAll('#topicListBody input[type=checkbox]').forEach(cb => cb.checked = !allSelected);
+  document.getElementById('topicSelectAll').checked = !allSelected;
+  updateTopicSelectedCount();
+}
+
+function updateTopicSelectedCount() {
+  const cnt = GENERATED_TOPICS.filter(t => t.selected).length;
+  const el = document.getElementById('topicSelectedCount');
+  if (el) el.textContent = cnt + '개 선택';
+}
+
+async function generateContentFromTopics() {
+  const selected = GENERATED_TOPICS.filter(t => t.selected && t.status !== 'generated');
+  if (selected.length === 0) {
+    showToast('생성할 주제를 선택해주세요', 'ng');
+    return;
+  }
+
+  showToast(selected.length + '개 콘텐츠 생성 중...', 'ok');
+
+  // 더미: 주제별로 차례로 처리하는 시뮬레이션
+  for (const t of selected) {
+    // 백엔드 연동 시 여기서 API 호출:
+    //   const res = await apiPost('/admin/content/generate-from-topic',
+    //     { date: t.date, category: t.cat, topic: t.topic, keyword: t.kw });
+
+    // 더미 본문
+    const dummyBody = '[' + (CATEGORY_LABEL_MAP[t.cat] || t.cat) + '] ' + t.topic + '\n\n'
+                    + '오늘은 「' + t.topic + '」에 대해 1분 안에 정리해드립니다.\n\n'
+                    + '핵심 포인트는 다음과 같습니다.\n'
+                    + '1. 첫 번째 핵심: ...\n'
+                    + '2. 두 번째 핵심: ...\n'
+                    + '3. 실생활 적용: ...\n\n'
+                    + '내일도 좋은 하루 되세요. — 1DAYECO';
+
+    // 아카이브에 저장
+    saveToArchive(t.date, {
+      category: t.cat,
+      keyword: t.kw,
+      headline: t.topic,
+      body: dummyBody,
+      topic: t.topic,
+      tok: 1500 + Math.floor(Math.random() * 800),
+      source: 'generated'
+    });
+
+    t.status = 'generated';
+    await new Promise(r => setTimeout(r, 200));
+  }
+
+  renderTopicList();
+  loadContentArchive();
+  showToast(selected.length + '개 콘텐츠 생성 완료', 'ok');
+}
+
+// ════════════════════════════════════════════════════════════
+// 콘텐츠 아카이브 ───────────────────────────────────────────
 const MOCK_CONTENT = [];
 
 // ── AI 생성 콘텐츠 저장소 (localStorage 영구 저장) ──────────
+const ARCHIVE_KEY = '1dayeco_archive';
 function loadArchiveFromStorage() {
-  try { const s = localStorage.getItem('haru1min_archive'); return s ? JSON.parse(s) : {}; }
+  try {
+    // 기존 키(haru1min_archive)는 폐기하고 새 키 사용
+    localStorage.removeItem('haru1min_archive');
+    const s = localStorage.getItem(ARCHIVE_KEY);
+    return s ? JSON.parse(s) : {};
+  }
   catch(e) { return {}; }
 }
 function saveArchiveToStorage() {
-  try { localStorage.setItem('haru1min_archive', JSON.stringify(CONTENT_ARCHIVE)); }
+  try { localStorage.setItem(ARCHIVE_KEY, JSON.stringify(CONTENT_ARCHIVE)); }
   catch(e) {}
 }
 
@@ -2459,12 +2633,14 @@ const CONTENT_ARCHIVE = loadArchiveFromStorage();
 
 function saveToArchive(dateStr, data) {
   CONTENT_ARCHIVE[dateStr] = {
-    cat:         data.category  || data.cat  || 'macro',
-    kw:          data.keyword   || data.kw   || '',
-    headline:    data.headline  || '',
-    body:        data.body      || '',
-    tags:        data.tags      || [],
-    tok:         data.token_used || 0,
+    cat:         data.category   || data.cat  || 'economy',
+    kw:          data.keyword    || data.kw   || '',
+    topic:       data.topic      || data.headline || '',
+    headline:    data.headline   || data.topic    || '',
+    body:        data.body       || '',
+    tags:        data.tags       || [],
+    tok:         data.tok        || data.token_used || 0,
+    source:      data.source     || 'generated',
     generatedAt: new Date().toLocaleTimeString('ko-KR', {hour:'2-digit', minute:'2-digit'}),
   };
   saveArchiveToStorage();
@@ -2508,11 +2684,7 @@ function getArchiveList() {
 }
 
 const CAT_LABEL = {
-  macro:'거시경제', industry:'산업트렌드', finance:'금융·환율',
-  global:'글로벌경제', startup:'창업·스타트업', special:'머니인사이트',
-  realestate:'부동산', policy:'경제정책', invest:'투자전략',
-  money:'생활경제', trade:'무역·공급망', energy:'에너지·자원',
-  tech:'테크비즈', labor:'고용·노동', weekly:'주간브리핑',
+  economy:'📊 경제', realestate:'🏠 부동산', english:'🇬🇧 영어', trivia:'🧠 상식'
 };
 
 function loadContentArchive() {
@@ -2540,7 +2712,7 @@ function loadContentArchive() {
     ? '검색 결과가 없습니다' : '생성된 콘텐츠가 없습니다';
 
   document.getElementById('contentBody').innerHTML = rows.length === 0
-    ? '<tr><td colspan="5"><div class="empty"><span class="empty-ico">🔍</span>' + emptyMsg + '</div></td></tr>'
+    ? '<tr><td colspan="6"><div class="empty"><span class="empty-ico">🔍</span>' + emptyMsg + '</div></td></tr>'
     : rows.map(function(r) {
         var aiBadge = r.source === 'generated'
           ? ' <span style="background:rgba(74,222,128,.12);border:1px solid rgba(74,222,128,.25);color:var(--green);font-size:9px;padding:1px 4px;border-radius:3px">AI</span>'
@@ -2550,12 +2722,13 @@ function loadContentArchive() {
           + ' onmouseover="this.style.background=\'rgba(201,168,76,.04)\'"'
           + ' onmouseout="this.style.background=\'\'">'
           + '<td style="font-family:var(--mono);font-size:11px">' + r.date + aiBadge + '</td>'
-          + '<td><span class="badge monthly">' + (CAT_LABEL[r.cat] || r.cat) + '</span></td>'
-          + '<td><strong>' + r.kw + '</strong></td>'
-          + '<td style="color:var(--muted);font-size:11px;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + r.headline + '</td>'
-          + '<td style="font-family:var(--mono);font-size:11px;color:var(--muted)">' + (r.tok || 0) + '</td>'
+          + '<td style="text-align:center"><span class="badge monthly">' + (CATEGORY_LABEL_MAP[r.cat] || r.cat) + '</span></td>'
+          + '<td><strong>' + (r.topic || r.kw || '') + '</strong></td>'
+          + '<td style="color:var(--muted);font-size:11px">' + (r.kw || '') + '</td>'
+          + '<td style="color:var(--muted);font-size:11px;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + (r.headline || '') + '</td>'
+          + '<td style="text-align:center;font-family:var(--mono);font-size:11px;color:var(--muted)">' + (r.tok || 0) + '</td>'
           + '</tr>';
-      }).join('');;
+      }).join('');
 }
 
 function resetContentFilters() {
@@ -3436,7 +3609,7 @@ async function executeCalGenerate() {
       } else {
         await new Promise(r => setTimeout(r, 600));
         result = { success: true, date: dateStr, keyword: '테스트키워드', headline: dateStr + ' 테스트 브리핑',
-          body: dateStr + ' 생성된 콘텐츠 내용', tags: ['테스트'], category: 'macro' };
+          body: dateStr + ' 생성된 콘텐츠 내용', tags: ['테스트'], category: 'economy' };
       }
       if (result && result.success !== false) {
         saveToArchive(dateStr, result);  // 덮어쓰기 포함
