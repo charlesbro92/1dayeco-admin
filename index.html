@@ -682,7 +682,7 @@ tr:hover td { background:rgba(255,255,255,.02); }
         <div class="panel-title">🎯 주제 생성</div>
       </div>
       <div class="panel-body" style="padding:20px;display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap">
-        <div style="flex:1;min-width:140px">
+        <div style="flex:1.2;min-width:140px">
           <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:6px;letter-spacing:.5px">카테고리</label>
           <select id="topicGenCategory"
             style="width:100%;background:var(--s3);border:1px solid var(--b);color:var(--text);
@@ -693,21 +693,26 @@ tr:hover td { background:rgba(255,255,255,.02); }
             <option value="trivia">🧠 상식</option>
           </select>
         </div>
-        <div style="flex:1;min-width:140px">
+        <div style="flex:.8;min-width:100px">
           <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:6px;letter-spacing:.5px">기간 (일)</label>
-          <select id="topicGenDays"
+          <input type="number" id="topicGenDays" min="1" max="365" value="30"
+            oninput="updateTopicEndDate()"
             style="width:100%;background:var(--s3);border:1px solid var(--b);color:var(--text);
                    padding:10px;border-radius:6px;font-size:13px;outline:none;font-family:var(--sans)">
-            <option value="7">7일</option>
-            <option value="14">14일</option>
-            <option value="30" selected>30일</option>
-          </select>
         </div>
         <div style="flex:1;min-width:140px">
           <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:6px;letter-spacing:.5px">시작일</label>
-          <input type="date" id="topicGenStart"
+          <input type="date" id="topicGenStart" onchange="updateTopicEndDate()" onclick="this.showPicker && this.showPicker()"
             style="width:100%;background:var(--s3);border:1px solid var(--b);color:var(--text);
-                   padding:10px;border-radius:6px;font-size:13px;outline:none;font-family:var(--sans)">
+                   padding:10px;border-radius:6px;font-size:13px;outline:none;font-family:var(--sans);
+                   color-scheme:dark;cursor:pointer">
+        </div>
+        <div style="flex:1;min-width:140px">
+          <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:6px;letter-spacing:.5px">종료일 (자동)</label>
+          <input type="text" id="topicGenEnd" readonly placeholder="—"
+            style="width:100%;background:rgba(201,168,76,.06);border:1px solid var(--b);color:var(--gold);
+                   padding:10px;border-radius:6px;font-size:13px;outline:none;font-family:var(--sans);
+                   cursor:not-allowed">
         </div>
         <button class="btn-send" onclick="generateTopics()" style="font-size:12px;padding:10px 18px;letter-spacing:.5px">
           🎯 주제 생성
@@ -807,37 +812,58 @@ tr:hover td { background:rgba(255,255,255,.02); }
         <div class="panel-head">
           <div class="panel-title">⏰ 스케줄러 현황</div>
           <div style="display:flex;gap:8px">
-            <span id="schedulerRunningBadge" style="font-size:11px;padding:4px 10px;border-radius:4px;border:1px solid var(--b);color:var(--muted)">확인 중...</span>
+            <span id="schedulerRunningBadge" style="font-size:11px;padding:4px 10px;border-radius:4px;border:1px solid var(--b);color:var(--muted);letter-spacing:.3px">○ 비활성</span>
             <button onclick="loadSchedulerStatus()" style="background:none;border:1px solid var(--b);color:var(--muted);padding:4px 10px;border-radius:4px;font-size:11px;cursor:pointer">🔄 새로고침</button>
           </div>
         </div>
-        <div style="padding:20px"><div id="schedulerJobList" style="display:flex;flex-direction:column;gap:10px"><div style="color:var(--muted);font-size:12px">로딩 중...</div></div></div>
+        <div style="padding:20px"><div id="schedulerJobList" style="display:flex;flex-direction:column;gap:10px"></div></div>
       </div>
       <div class="panel" style="grid-column:1/-1">
         <div class="panel-head"><div class="panel-title">📝 콘텐츠 자동 생성</div></div>
-        <div style="padding:20px;display:flex;flex-direction:column;gap:14px;max-width:600px">
-          <div style="display:flex;justify-content:space-between;align-items:center">
-            <span style="font-size:13px">자동 생성 활성화</span>
-            <span onclick="document.getElementById('contentEnabled').click()" id="contentToggleSlider"
-              style="display:inline-block;width:44px;height:24px;background:var(--b);border-radius:24px;cursor:pointer;transition:.3s;position:relative">
-              <input type="checkbox" id="contentEnabled" style="opacity:0;width:0;height:0;position:absolute" onchange="onSchedulerToggle()">
-            </span>
-          </div>
+        <div style="padding:20px;display:flex;flex-direction:column;gap:16px;max-width:640px">
+          <!-- 활성/비활성 명확한 버튼 토글 -->
           <div>
-            <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:6px">생성 시각 (매일)</label>
+            <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:8px;letter-spacing:.5px">자동 생성 상태</label>
+            <div style="display:flex;gap:8px">
+              <button id="autoGenOnBtn" onclick="setAutoGenEnabled(true)"
+                style="flex:1;padding:12px;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;
+                       background:rgba(74,222,128,.12);border:1.5px solid rgba(74,222,128,.4);color:var(--green);
+                       transition:all .2s;letter-spacing:.5px">
+                ● 활성화
+              </button>
+              <button id="autoGenOffBtn" onclick="setAutoGenEnabled(false)"
+                style="flex:1;padding:12px;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;
+                       background:var(--s3);border:1.5px solid var(--b);color:var(--muted);
+                       transition:all .2s;letter-spacing:.5px">
+                ○ 비활성화
+              </button>
+            </div>
+            <input type="checkbox" id="contentEnabled" style="display:none" onchange="onSchedulerToggle()">
+          </div>
+
+          <div>
+            <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:6px;letter-spacing:.5px">생성 시각 (매일)</label>
             <div style="display:flex;gap:8px;align-items:center">
-              <select id="contentHour" style="flex:1;background:var(--s3);border:1px solid var(--b);color:var(--text);padding:8px;border-radius:6px;font-size:13px;outline:none">
-                <option value="6">오전 6시</option><option value="7" selected>오전 7시</option><option value="8">오전 8시</option>
+              <select id="contentHour" style="flex:1;background:var(--s3);border:1px solid var(--b);color:var(--text);padding:10px;border-radius:6px;font-size:13px;outline:none">
+                <option value="5">오전 5시</option>
+                <option value="6">오전 6시</option>
+                <option value="7" selected>오전 7시</option>
+                <option value="8">오전 8시</option>
+                <option value="9">오전 9시</option>
               </select>
               <span style="color:var(--muted)">:</span>
-              <select id="contentMinute" style="flex:1;background:var(--s3);border:1px solid var(--b);color:var(--text);padding:8px;border-radius:6px;font-size:13px;outline:none">
-                <option value="0">00분</option><option value="30" selected>30분</option>
+              <select id="contentMinute" style="flex:1;background:var(--s3);border:1px solid var(--b);color:var(--text);padding:10px;border-radius:6px;font-size:13px;outline:none">
+                <option value="0">00분</option>
+                <option value="15">15분</option>
+                <option value="30" selected>30분</option>
+                <option value="45">45분</option>
               </select>
             </div>
           </div>
+
           <div style="display:flex;gap:8px">
-            <button onclick="saveSchedulerConfig()" style="flex:1;background:var(--gold);color:var(--bg);border:none;padding:10px;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer">💾 저장</button>
-            <button onclick="runJobNow('content_generate')" style="flex:1;background:none;border:1px solid var(--gold);color:var(--gold);padding:10px;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer">▶ 지금 실행</button>
+            <button onclick="saveSchedulerConfig()" style="flex:1;background:var(--gold);color:var(--bg);border:none;padding:10px;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;letter-spacing:.5px">💾 저장</button>
+            <button onclick="runJobNow('content_generate')" style="flex:1;background:none;border:1px solid var(--gold);color:var(--gold);padding:10px;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;letter-spacing:.5px">▶ 지금 실행</button>
           </div>
         </div>
       </div>
@@ -1384,7 +1410,7 @@ function loadPage(name) {
     if (toEl   && !toEl.value)   toEl.value   = yr + '-' + mo + '-' + String(lastDay).padStart(2,'0');
     loadSendHistory();
   }
-  if (name === 'content')      loadContentArchive();
+  if (name === 'content')      { loadContentArchive(); initTopicGenerator(); }
   if (name === 'revenue')      loadRevenue();
   if (name === 'payments')     loadPayments();
   if (name === 'settings')     loadSettings();
@@ -2417,6 +2443,187 @@ function onSuperFilterChange(){
 }
 async function loadRssStatus(){ /* RSS 기능 제거됨 */ }
 async function triggerRssCollect(){ /* RSS 기능 제거됨 */ }
+
+// ════════════════════════════════════════════════════════════
+// 스케줄러 (Phase 1: 프론트 더미 + localStorage)
+// ════════════════════════════════════════════════════════════
+const SCHEDULER_KEY = '1dayeco_scheduler';
+
+function loadSchedulerConfig() {
+  try {
+    const s = localStorage.getItem(SCHEDULER_KEY);
+    return s ? JSON.parse(s) : {
+      contentEnabled: false,
+      contentHour: 7,
+      contentMinute: 30
+    };
+  } catch(e) {
+    return { contentEnabled: false, contentHour: 7, contentMinute: 30 };
+  }
+}
+
+function persistSchedulerConfig(cfg) {
+  try { localStorage.setItem(SCHEDULER_KEY, JSON.stringify(cfg)); } catch(e) {}
+}
+
+function loadSchedulerStatus() {
+  try {
+    // 1) 현황 패널 렌더링
+    const cfg = loadSchedulerConfig();
+    const badge = document.getElementById('schedulerRunningBadge');
+    const list  = document.getElementById('schedulerJobList');
+
+    if (badge) {
+      badge.textContent = cfg.contentEnabled ? '● 활성' : '○ 비활성';
+      badge.style.color = cfg.contentEnabled ? 'var(--green)' : 'var(--muted)';
+      badge.style.borderColor = cfg.contentEnabled ? 'rgba(74,222,128,.3)' : 'var(--b)';
+    }
+
+    if (list) {
+      if (!cfg.contentEnabled) {
+        list.innerHTML =
+          '<div style="color:var(--muted);font-size:12px;padding:14px;text-align:center;'
+          + 'background:rgba(255,255,255,.02);border:1px dashed var(--b);border-radius:8px">'
+          + '⏸ 콘텐츠 자동 생성이 <strong>비활성화</strong> 상태입니다'
+          + '</div>';
+      } else {
+        const hh = String(cfg.contentHour).padStart(2,'0');
+        const mm = String(cfg.contentMinute).padStart(2,'0');
+        const nextRun = computeNextRun(cfg.contentHour, cfg.contentMinute);
+        list.innerHTML =
+          '<div style="display:flex;justify-content:space-between;align-items:center;'
+          + 'padding:14px 16px;background:rgba(201,168,76,.04);'
+          + 'border:1px solid rgba(201,168,76,.15);border-radius:8px">'
+          +   '<div>'
+          +     '<div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:4px">'
+          +       '📝 콘텐츠 자동 생성'
+          +     '</div>'
+          +     '<div style="font-size:11px;color:var(--muted)">매일 ' + hh + ':' + mm + ' KST 실행</div>'
+          +   '</div>'
+          +   '<div style="text-align:right">'
+          +     '<div style="font-size:10px;color:var(--muted);letter-spacing:.5px;margin-bottom:3px">다음 실행</div>'
+          +     '<div style="font-size:12px;color:var(--gold);font-family:var(--mono)">' + nextRun + '</div>'
+          +   '</div>'
+          + '</div>';
+      }
+    }
+
+    // 2) 토글/시간 입력 동기화
+    const enabledEl = document.getElementById('contentEnabled');
+    const hourEl    = document.getElementById('contentHour');
+    const minuteEl  = document.getElementById('contentMinute');
+    if (enabledEl) {
+      enabledEl.checked = !!cfg.contentEnabled;
+      updateToggleVisual('contentToggleSlider', enabledEl.checked);
+    }
+    if (hourEl)   hourEl.value   = cfg.contentHour;
+    if (minuteEl) minuteEl.value = cfg.contentMinute;
+  } catch (e) {
+    console.error('loadSchedulerStatus error:', e);
+    const badge = document.getElementById('schedulerRunningBadge');
+    if (badge) {
+      badge.textContent = '○ 비활성';
+      badge.style.color = 'var(--muted)';
+    }
+  }
+}
+
+function computeNextRun(hour, minute) {
+  const now = new Date();
+  // KST 기준 다음 실행 시각 계산
+  const next = new Date(now);
+  next.setHours(hour, minute, 0, 0);
+  if (next <= now) next.setDate(next.getDate() + 1);
+  const m = String(next.getMonth() + 1).padStart(2,'0');
+  const d = String(next.getDate()).padStart(2,'0');
+  const hh = String(next.getHours()).padStart(2,'0');
+  const mm = String(next.getMinutes()).padStart(2,'0');
+  return m + '/' + d + ' ' + hh + ':' + mm;
+}
+
+function updateToggleVisual(sliderId, on) {
+  // 새 버튼식 토글 동기화
+  const onBtn  = document.getElementById('autoGenOnBtn');
+  const offBtn = document.getElementById('autoGenOffBtn');
+  if (onBtn && offBtn) {
+    if (on) {
+      onBtn.style.background  = 'rgba(74,222,128,.12)';
+      onBtn.style.borderColor = 'rgba(74,222,128,.4)';
+      onBtn.style.color       = 'var(--green)';
+      offBtn.style.background  = 'var(--s3)';
+      offBtn.style.borderColor = 'var(--b)';
+      offBtn.style.color       = 'var(--muted)';
+    } else {
+      onBtn.style.background  = 'var(--s3)';
+      onBtn.style.borderColor = 'var(--b)';
+      onBtn.style.color       = 'var(--muted)';
+      offBtn.style.background  = 'rgba(248,113,113,.10)';
+      offBtn.style.borderColor = 'rgba(248,113,113,.35)';
+      offBtn.style.color       = 'var(--red)';
+    }
+  }
+  // 호환성: 기존 슬라이더가 남아있는 경우에도 처리
+  const slider = document.getElementById(sliderId);
+  if (slider && slider.style) {
+    slider.style.background = on ? 'var(--gold)' : 'var(--b)';
+  }
+}
+
+function setAutoGenEnabled(enabled) {
+  const input = document.getElementById('contentEnabled');
+  if (input) {
+    input.checked = enabled;
+    onSchedulerToggle();
+  }
+}
+
+function onSchedulerToggle() {
+  const cfg = loadSchedulerConfig();
+  cfg.contentEnabled = document.getElementById('contentEnabled').checked;
+  persistSchedulerConfig(cfg);
+  updateToggleVisual('contentToggleSlider', cfg.contentEnabled);
+  loadSchedulerStatus();
+  showToast(cfg.contentEnabled ? '자동 생성 활성화됨' : '자동 생성 비활성화됨', 'ok');
+}
+
+function saveSchedulerConfig() {
+  const cfg = loadSchedulerConfig();
+  cfg.contentEnabled = document.getElementById('contentEnabled').checked;
+  cfg.contentHour    = parseInt(document.getElementById('contentHour').value);
+  cfg.contentMinute  = parseInt(document.getElementById('contentMinute').value);
+  persistSchedulerConfig(cfg);
+  loadSchedulerStatus();
+  appendSchedulerLog('💾 설정 저장: 매일 ' +
+    String(cfg.contentHour).padStart(2,'0') + ':' +
+    String(cfg.contentMinute).padStart(2,'0') +
+    ' (' + (cfg.contentEnabled ? '활성' : '비활성') + ')');
+  showToast('스케줄러 설정 저장됨', 'ok');
+}
+
+function runJobNow(jobName) {
+  const label = jobName === 'content_generate' ? '콘텐츠 자동 생성' : jobName;
+  appendSchedulerLog('▶ ' + label + ' 수동 실행 시작');
+  showToast(label + ' 실행 중...', 'ok');
+  setTimeout(function() {
+    appendSchedulerLog('✓ ' + label + ' 실행 완료 (더미)');
+    showToast(label + ' 실행 완료', 'ok');
+  }, 800);
+}
+
+function appendSchedulerLog(msg) {
+  const log = document.getElementById('schedulerLog');
+  if (!log) return;
+  const ts = new Date().toLocaleTimeString('ko-KR', { hour:'2-digit', minute:'2-digit', second:'2-digit' });
+  // 첫 더미 메시지 제거
+  if (log.querySelector('div') && log.querySelector('div').textContent.includes('실행 기록이 여기에')) {
+    log.innerHTML = '';
+  }
+  const line = document.createElement('div');
+  line.style.padding = '4px 0';
+  line.innerHTML = '<span style="color:var(--gold);margin-right:8px">' + ts + '</span>' + msg;
+  log.insertBefore(line, log.firstChild);
+}
+
 // ════════════════════════════════════════════════════════════
 // 주제 생성 → 콘텐츠 생성 워크플로우 (Phase 1: 프론트 더미)
 // ════════════════════════════════════════════════════════════
@@ -2476,16 +2683,57 @@ const DUMMY_TOPICS = {
 // 생성된 주제 저장 (휘발성)
 let GENERATED_TOPICS = [];
 
+// 콘텐츠 페이지 진입 시 주제 생성 영역 초기화
+function initTopicGenerator() {
+  const startEl = document.getElementById('topicGenStart');
+  if (startEl && !startEl.value) {
+    // KST 기준 오늘 날짜
+    const kstNow = new Date(new Date().getTime() + 9*60*60*1000);
+    const yr  = kstNow.getUTCFullYear();
+    const mo  = String(kstNow.getUTCMonth()+1).padStart(2,'0');
+    const day = String(kstNow.getUTCDate()).padStart(2,'0');
+    startEl.value = yr + '-' + mo + '-' + day;
+  }
+  updateTopicEndDate();
+}
+
+// 종료일 자동 계산 (시작일 + 기간)
+function updateTopicEndDate() {
+  const startStr = document.getElementById('topicGenStart').value;
+  const days = parseInt(document.getElementById('topicGenDays').value);
+  const endEl = document.getElementById('topicGenEnd');
+
+  if (!startStr || !days || days < 1) {
+    endEl.value = '';
+    return;
+  }
+  const start = new Date(startStr);
+  const end = new Date(start);
+  end.setDate(end.getDate() + days - 1); // 시작일 포함하므로 -1
+  endEl.value = end.toISOString().slice(0, 10) + ' (' + days + '일치)';
+}
+
 function generateTopics() {
   const cat   = document.getElementById('topicGenCategory').value;
   const days  = parseInt(document.getElementById('topicGenDays').value);
   let startStr = document.getElementById('topicGenStart').value;
+
+  // 검증
+  if (!days || days < 1) {
+    showToast('기간을 1일 이상으로 입력해주세요', 'ng');
+    return;
+  }
+  if (days > 365) {
+    showToast('기간은 365일을 넘을 수 없습니다', 'ng');
+    return;
+  }
 
   if (!startStr) {
     // 시작일 미입력 시 오늘 날짜
     const today = new Date();
     startStr = today.toISOString().slice(0, 10);
     document.getElementById('topicGenStart').value = startStr;
+    updateTopicEndDate();
   }
 
   const pool = DUMMY_TOPICS[cat] || [];
