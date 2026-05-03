@@ -1397,6 +1397,57 @@ tr:hover td { background:rgba(255,255,255,.02); }
   </div>
 </div>
 
+<!-- 콘텐츠 생성 충돌 경고 모달 -->
+<div class="overlay" id="contentConflictOverlay" onclick="if(event.target.id==='contentConflictOverlay')closeContentConflict()">
+  <div class="modal" style="max-width:560px;padding:0">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:18px 22px 14px;border-bottom:1px solid var(--b)">
+      <div>
+        <div style="font-size:10px;color:var(--amber);letter-spacing:1px;text-transform:uppercase;margin-bottom:3px;font-weight:700">⚠️ 충돌 감지</div>
+        <div style="font-size:16px;font-weight:700">콘텐츠 생성 확인</div>
+      </div>
+      <button onclick="closeContentConflict()" style="background:none;border:none;color:var(--muted);font-size:18px;cursor:pointer;padding:4px" onmouseover="this.style.color='var(--text)'" onmouseout="this.style.color='var(--muted)'">✕</button>
+    </div>
+
+    <div style="padding:18px 22px;display:flex;flex-direction:column;gap:14px">
+      <!-- 덮어쓰기 경고 -->
+      <div id="conflictOverwriteSection" style="display:none">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+          <span style="font-size:14px">🔄</span>
+          <strong style="font-size:13px;color:var(--amber);letter-spacing:.3px">기존 콘텐츠 덮어쓰기</strong>
+          <span id="conflictOverwriteCount" style="margin-left:auto;background:rgba(251,191,36,.15);color:var(--amber);font-size:11px;padding:2px 8px;border-radius:100px;font-weight:700">0개</span>
+        </div>
+        <div style="background:rgba(251,191,36,.06);border:1px solid rgba(251,191,36,.2);border-radius:8px;padding:10px 12px;font-size:12px;color:var(--muted);line-height:1.7;max-height:120px;overflow-y:auto" id="conflictOverwriteList"></div>
+      </div>
+
+      <!-- 주제 중복 경고 -->
+      <div id="conflictDuplicateSection" style="display:none">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+          <span style="font-size:14px">🔁</span>
+          <strong style="font-size:13px;color:var(--red);letter-spacing:.3px">최근 1년 내 중복 주제</strong>
+          <span id="conflictDuplicateCount" style="margin-left:auto;background:rgba(248,113,113,.15);color:var(--red);font-size:11px;padding:2px 8px;border-radius:100px;font-weight:700">0개</span>
+        </div>
+        <div style="background:rgba(248,113,113,.06);border:1px solid rgba(248,113,113,.2);border-radius:8px;padding:10px 12px;font-size:12px;color:var(--muted);line-height:1.7;max-height:120px;overflow-y:auto" id="conflictDuplicateList"></div>
+      </div>
+
+      <!-- 안내 -->
+      <div style="font-size:12px;color:var(--muted);background:rgba(255,255,255,.02);border:1px dashed var(--b);border-radius:6px;padding:10px 12px;line-height:1.7">
+        💡 <strong>건너뛰기</strong>: 충돌 항목은 제외하고 나머지만 생성<br>
+        ⚡ <strong>강제 생성</strong>: 모든 항목을 생성 (기존 콘텐츠 덮어쓰기)
+      </div>
+    </div>
+
+    <div style="display:flex;gap:8px;padding:14px 22px;border-top:1px solid var(--b)">
+      <button class="m-btn" onclick="closeContentConflict()" style="flex:1">취소</button>
+      <button class="m-btn" onclick="proceedSkipConflicts()" style="flex:1.2;background:rgba(255,255,255,.04);border-color:var(--b)">
+        <span id="skipBtnLabel">건너뛰고 생성</span>
+      </button>
+      <button class="m-btn primary" onclick="proceedForceGenerate()" style="flex:1.2;background:rgba(248,113,113,.1);border-color:rgba(248,113,113,.35);color:var(--red)">
+        ⚡ 강제 생성
+      </button>
+    </div>
+  </div>
+</div>
+
 <!-- 시간 변경 피커 모달 -->
 <div class="overlay" id="hourPickerOverlay" onclick="if(event.target.id==='hourPickerOverlay')closeHourPicker()">
   <div class="modal" style="max-width:320px;padding:28px 24px">
@@ -2897,6 +2948,50 @@ function updateTopicSelectedCount() {
   if (el) el.textContent = cnt + '개 선택';
 }
 
+// 콘텐츠 생성 진행을 위해 보관할 컨텍스트
+let _pendingGenerate = { selected: [], conflicts: { overwrites: [], duplicates: [] } };
+
+// 정규화: 주제 텍스트 비교용 (공백/대소문자 무시)
+function _normTopic(s) {
+  return (s || '').toString().trim().toLowerCase().replace(/\s+/g, ' ');
+}
+
+// 1년 윈도우(전후 6개월) 내 동일 주제 검색
+function findDuplicateTopicInArchive(topicText, refDateStr) {
+  const target = _normTopic(topicText);
+  if (!target) return null;
+  const ref = new Date(refDateStr + 'T00:00:00');
+  if (isNaN(ref.getTime())) return null;
+  const minDate = new Date(ref); minDate.setMonth(minDate.getMonth() - 6);
+  const maxDate = new Date(ref); maxDate.setMonth(maxDate.getMonth() + 6);
+
+  const archive = (typeof CONTENT_ARCHIVE !== 'undefined') ? CONTENT_ARCHIVE : {};
+  for (const dateStr in archive) {
+    if (!Object.prototype.hasOwnProperty.call(archive, dateStr)) continue;
+    if (dateStr === refDateStr) continue; // 같은 날짜는 '덮어쓰기'로 따로 처리
+    const d = new Date(dateStr + 'T00:00:00');
+    if (isNaN(d.getTime())) continue;
+    if (d < minDate || d > maxDate) continue;
+    const item = archive[dateStr] || {};
+    const candidate = _normTopic(item.topic || item.headline || item.kw);
+    if (candidate && candidate === target) {
+      return { dateStr: dateStr, topic: item.topic || item.headline || item.kw };
+    }
+  }
+  return null;
+}
+
+// 모달 열고 닫기
+function openContentConflict() {
+  const overlay = document.getElementById('contentConflictOverlay');
+  if (overlay) overlay.classList.add('open');
+}
+function closeContentConflict() {
+  const overlay = document.getElementById('contentConflictOverlay');
+  if (overlay) overlay.classList.remove('open');
+}
+
+// === 1단계: 진입점 — 충돌 검사 ===
 async function generateContentFromTopics() {
   const selected = GENERATED_TOPICS.filter(t => t.selected && t.status !== 'generated');
   if (selected.length === 0) {
@@ -2904,15 +2999,118 @@ async function generateContentFromTopics() {
     return;
   }
 
-  showToast(selected.length + '개 콘텐츠 생성 중...', 'ok');
+  // 1) 같은 날짜 덮어쓰기 검사
+  const overwrites = [];
+  // 2) 1년 윈도우 내 중복 주제 검사
+  const duplicates = [];
 
-  // 더미: 주제별로 차례로 처리하는 시뮬레이션
-  for (const t of selected) {
+  selected.forEach(function(t) {
+    if (CONTENT_ARCHIVE && CONTENT_ARCHIVE[t.date]) {
+      const existing = CONTENT_ARCHIVE[t.date];
+      overwrites.push({
+        topic: t,
+        existingTopic: existing.topic || existing.headline || existing.kw || '(제목 없음)'
+      });
+    }
+    const dup = findDuplicateTopicInArchive(t.topic, t.date);
+    if (dup) {
+      duplicates.push({ topic: t, dup: dup });
+    }
+  });
+
+  _pendingGenerate = { selected: selected, conflicts: { overwrites: overwrites, duplicates: duplicates } };
+
+  // 충돌 없음 → 바로 진행
+  if (overwrites.length === 0 && duplicates.length === 0) {
+    return _executeGenerate(selected);
+  }
+
+  // 충돌 있음 → 모달 표시
+  const owSec = document.getElementById('conflictOverwriteSection');
+  const dupSec = document.getElementById('conflictDuplicateSection');
+  const owList = document.getElementById('conflictOverwriteList');
+  const dupList = document.getElementById('conflictDuplicateList');
+  const owCnt = document.getElementById('conflictOverwriteCount');
+  const dupCnt = document.getElementById('conflictDuplicateCount');
+  const skipLabel = document.getElementById('skipBtnLabel');
+
+  if (overwrites.length > 0) {
+    owSec.style.display = 'block';
+    owCnt.textContent = overwrites.length + '개';
+    owList.innerHTML = overwrites.map(function(o) {
+      return '<div style="padding:4px 0;border-bottom:1px dashed rgba(251,191,36,.12)">'
+        + '<span style="font-family:var(--mono);color:var(--amber);margin-right:8px">' + o.topic.date + '</span>'
+        + '<span style="color:var(--text)">' + o.topic.topic + '</span>'
+        + '<div style="font-size:11px;color:var(--muted);margin-top:2px;padding-left:88px">기존: ' + o.existingTopic + '</div>'
+        + '</div>';
+    }).join('');
+  } else {
+    owSec.style.display = 'none';
+  }
+
+  if (duplicates.length > 0) {
+    dupSec.style.display = 'block';
+    dupCnt.textContent = duplicates.length + '개';
+    dupList.innerHTML = duplicates.map(function(d) {
+      return '<div style="padding:4px 0;border-bottom:1px dashed rgba(248,113,113,.12)">'
+        + '<span style="font-family:var(--mono);color:var(--red);margin-right:8px">' + d.topic.date + '</span>'
+        + '<span style="color:var(--text)">' + d.topic.topic + '</span>'
+        + '<div style="font-size:11px;color:var(--muted);margin-top:2px;padding-left:88px">중복: ' + d.dup.dateStr + ' 콘텐츠와 동일</div>'
+        + '</div>';
+    }).join('');
+  } else {
+    dupSec.style.display = 'none';
+  }
+
+  // 건너뛰기 버튼 라벨에 충돌 개수 반영
+  const conflictIds = new Set();
+  overwrites.forEach(function(o) { conflictIds.add(o.topic.id); });
+  duplicates.forEach(function(d) { conflictIds.add(d.topic.id); });
+  const remain = selected.length - conflictIds.size;
+  if (skipLabel) {
+    skipLabel.textContent = '건너뛰고 ' + remain + '개 생성';
+  }
+
+  openContentConflict();
+}
+
+// === 2단계: 충돌 항목 제외하고 진행 ===
+async function proceedSkipConflicts() {
+  const ctx = _pendingGenerate;
+  const conflictIds = new Set();
+  ctx.conflicts.overwrites.forEach(function(o) { conflictIds.add(o.topic.id); });
+  ctx.conflicts.duplicates.forEach(function(d) { conflictIds.add(d.topic.id); });
+  const filtered = ctx.selected.filter(function(t) { return !conflictIds.has(t.id); });
+
+  closeContentConflict();
+  if (filtered.length === 0) {
+    showToast('진행할 항목이 없습니다 (모두 충돌)', 'ng');
+    return;
+  }
+  return _executeGenerate(filtered);
+}
+
+// === 2단계: 모든 항목 강제 생성 (덮어쓰기 포함) ===
+async function proceedForceGenerate() {
+  const ctx = _pendingGenerate;
+  closeContentConflict();
+  return _executeGenerate(ctx.selected);
+}
+
+// === 실제 생성 실행 (공통) ===
+async function _executeGenerate(items) {
+  if (!items || items.length === 0) {
+    showToast('생성할 항목이 없습니다', 'ng');
+    return;
+  }
+
+  showToast(items.length + '개 콘텐츠 생성 중...', 'ok');
+
+  for (const t of items) {
     // 백엔드 연동 시 여기서 API 호출:
     //   const res = await apiPost('/admin/content/generate-from-topic',
     //     { date: t.date, category: t.cat, topic: t.topic, keyword: t.kw });
 
-    // 더미 본문
     const dummyBody = '[' + (CATEGORY_LABEL_MAP[t.cat] || t.cat) + '] ' + t.topic + '\n\n'
                     + '오늘은 「' + t.topic + '」에 대해 1분 안에 정리해드립니다.\n\n'
                     + '핵심 포인트는 다음과 같습니다.\n'
@@ -2921,7 +3119,6 @@ async function generateContentFromTopics() {
                     + '3. 실생활 적용: ...\n\n'
                     + '내일도 좋은 하루 되세요. — 1DAYECO';
 
-    // 아카이브에 저장
     saveToArchive(t.date, {
       category: t.cat,
       keyword: t.kw,
@@ -2933,12 +3130,12 @@ async function generateContentFromTopics() {
     });
 
     t.status = 'generated';
-    await new Promise(r => setTimeout(r, 200));
+    await new Promise(r => setTimeout(r, 150));
   }
 
   renderTopicList();
   loadContentArchive();
-  showToast(selected.length + '개 콘텐츠 생성 완료', 'ok');
+  showToast(items.length + '개 콘텐츠 생성 완료', 'ok');
 }
 
 // ════════════════════════════════════════════════════════════
