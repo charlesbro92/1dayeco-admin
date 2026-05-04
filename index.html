@@ -1934,7 +1934,20 @@ body.light-mode .km-bubble {
 
 <script>
 // ── 설정 ─────────────────────────────────────────────────────
-let API_BASE = localStorage.getItem('apiBase') || 'http://localhost:8000';
+// API_BASE 자동 감지 (v14)
+// 1순위: localStorage에 저장된 값 (수동 override)
+// 2순위: hostname 보고 자동 결정
+//   - localhost/127.0.0.1 → 로컬 백엔드
+//   - 그 외 (admin.onedayeco.com, github.io 등) → Railway 운영 백엔드
+let API_BASE = (function() {
+  const saved = localStorage.getItem('apiBase');
+  if (saved) return saved;
+  const host = location.hostname;
+  if (host === 'localhost' || host === '127.0.0.1' || host === '') {
+    return 'http://localhost:8000';
+  }
+  return 'https://web-production-761cd.up.railway.app';
+})();
 
 // ════════════════════════════════════════════════════════════
 // 테마 (다크 / 라이트) ──────────────────────────────────────
