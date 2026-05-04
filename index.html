@@ -5513,6 +5513,10 @@ function openSubDetail(id) {
   if (!sub) return;
   sdCurrentId = id;
 
+  // 저장 버튼 상태 초기화 (이전 모달에서 비활성화 상태일 수 있음)
+  const sdBtn = document.getElementById('sdSaveBtn');
+  if (sdBtn) { sdBtn.disabled = false; sdBtn.textContent = '💾 저장'; }
+
   document.getElementById('sdName').textContent          = sub.name;
   document.getElementById('sdInputName').value           = sub.name;
   document.getElementById('sdInputPhone').value          = sub.phone;
@@ -5574,54 +5578,60 @@ async function saveSubDetail() {
   if (!sub) return;
 
   const btn = document.getElementById('sdSaveBtn');
+  const originalText = btn ? btn.textContent : '💾 저장';
   if (btn) { btn.disabled = true; btn.textContent = '저장 중...'; }
 
-  // 카테고리 수집
-  const newCats = [];
-  if (document.getElementById('sdCatEconomy').checked)    newCats.push('economy');
-  if (document.getElementById('sdCatRealestate').checked) newCats.push('realestate');
-  if (document.getElementById('sdCatEnglish').checked)    newCats.push('english');
-  if (document.getElementById('sdCatTrivia').checked)     newCats.push('trivia');
-  // 모두 해제했으면 디폴트(4개)로 자동 채움
-  if (newCats.length === 0) {
-    showToast('관심사 1개 이상 선택해주세요. 자동으로 4개 모두 선택됩니다.', 'ok');
-    newCats.push('economy','realestate','english','trivia');
+  try {
+    // 카테고리 수집
+    const newCats = [];
+    if (document.getElementById('sdCatEconomy').checked)    newCats.push('economy');
+    if (document.getElementById('sdCatRealestate').checked) newCats.push('realestate');
+    if (document.getElementById('sdCatEnglish').checked)    newCats.push('english');
+    if (document.getElementById('sdCatTrivia').checked)     newCats.push('trivia');
+    // 모두 해제했으면 디폴트(4개)로 자동 채움
+    if (newCats.length === 0) {
+      showToast('관심사 1개 이상 선택해주세요. 자동으로 4개 모두 선택됩니다.', 'ok');
+      newCats.push('economy','realestate','english','trivia');
+    }
+
+    sub.name      = document.getElementById('sdInputName').value.trim()  || sub.name;
+    sub.phone     = document.getElementById('sdInputPhone').value.replace(/-/g,'').trim() || sub.phone;
+    sub.plan      = document.getElementById('sdInputPlan').value;
+    sub.status    = document.getElementById('sdInputStatus').value;
+    sub.send_hour = Number(document.getElementById('sdInputHour').value);
+    sub.email    = document.getElementById('sdInputEmail').value.trim() || null;
+    sub.memo     = document.getElementById('sdInputMemo').value.trim()  || null;
+    sub.categories = newCats;
+    const sdStart = document.getElementById('sdInputStartDate').value;
+    const sdEnd   = document.getElementById('sdInputEndDate').value;
+    if (sdStart) sub.created_at = sdStart + 'T00:00:00+09:00';
+    if (sdEnd)   sub.end_date   = sdEnd   + 'T23:59:59+09:00';
+
+    if (API_BASE) {
+      try {
+        await fetch(API_BASE + '/admin/subscribers/' + sub.id, {
+          method: 'PUT',
+          headers: {'Content-Type':'application/json'},
+          body: JSON.stringify({
+            name: sub.name, phone: sub.phone, plan: sub.plan,
+            status: sub.status, send_hour: sub.send_hour,
+            email: sub.email, memo: sub.memo,
+            categories: newCats,
+          })
+        });
+      } catch(e) { console.warn('DB 업데이트 실패:', e); }
+    }
+
+    saveSubsToStorage();
+    loadSubscribers();
+    loadRecentSubs();
+    loadKPIs();
+    showToast(sub.name + ' 님 정보가 저장되었습니다', 'ok');
+    closeSubDetail();
+  } finally {
+    // 어떤 경우(에러/성공)든 버튼 복원
+    if (btn) { btn.disabled = false; btn.textContent = '💾 저장'; }
   }
-
-  sub.name      = document.getElementById('sdInputName').value.trim()  || sub.name;
-  sub.phone     = document.getElementById('sdInputPhone').value.replace(/-/g,'').trim() || sub.phone;
-  sub.plan      = document.getElementById('sdInputPlan').value;
-  sub.status    = document.getElementById('sdInputStatus').value;
-  sub.send_hour = Number(document.getElementById('sdInputHour').value);
-  sub.email    = document.getElementById('sdInputEmail').value.trim() || null;
-  sub.memo     = document.getElementById('sdInputMemo').value.trim()  || null;
-  sub.categories = newCats;
-  const sdStart = document.getElementById('sdInputStartDate').value;
-  const sdEnd   = document.getElementById('sdInputEndDate').value;
-  if (sdStart) sub.created_at = sdStart + 'T00:00:00+09:00';
-  if (sdEnd)   sub.end_date   = sdEnd   + 'T23:59:59+09:00';
-
-  if (API_BASE) {
-    try {
-      await fetch(API_BASE + '/admin/subscribers/' + sub.id, {
-        method: 'PUT',
-        headers: {'Content-Type':'application/json'},
-        body: JSON.stringify({
-          name: sub.name, phone: sub.phone, plan: sub.plan,
-          status: sub.status, send_hour: sub.send_hour,
-          email: sub.email, memo: sub.memo,
-          categories: newCats,
-        })
-      });
-    } catch(e) { console.warn('DB 업데이트 실패:', e); }
-  }
-
-  saveSubsToStorage();
-  loadSubscribers();
-  loadRecentSubs();
-  loadKPIs();
-  showToast(sub.name + ' 님 정보가 저장되었습니다', 'ok');
-  closeSubDetail();
 }
 
 // ── 발송 시간 변경 ────────────────────────────────────────────
