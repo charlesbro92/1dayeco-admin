@@ -1679,6 +1679,28 @@ body.light-mode .km-bubble {
           <option value="7">오전 7시</option><option value="8">오전 8시</option><option value="9">오전 9시</option>
         </select>
       </div>
+      <!-- 받아볼 관심사 (4 카테고리) -->
+      <div>
+        <label style="font-size:10px;color:var(--muted);letter-spacing:.5px;display:block;margin-bottom:6px">받아볼 관심사 <span style="font-weight:400;color:var(--muted)">(1개 이상)</span></label>
+        <div id="sdCategories" style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
+          <label class="sd-cat-chip" data-cat="economy" style="display:flex;align-items:center;gap:8px;padding:8px 12px;border:1.5px solid var(--b);border-radius:7px;cursor:pointer;font-size:12px;color:var(--text);background:rgba(255,255,255,.02);transition:all .15s">
+            <input type="checkbox" id="sdCatEconomy" style="accent-color:var(--gold);cursor:pointer;width:14px;height:14px;flex-shrink:0">
+            <span>📊 경제</span>
+          </label>
+          <label class="sd-cat-chip" data-cat="realestate" style="display:flex;align-items:center;gap:8px;padding:8px 12px;border:1.5px solid var(--b);border-radius:7px;cursor:pointer;font-size:12px;color:var(--text);background:rgba(255,255,255,.02);transition:all .15s">
+            <input type="checkbox" id="sdCatRealestate" style="accent-color:var(--gold);cursor:pointer;width:14px;height:14px;flex-shrink:0">
+            <span>🏠 부동산</span>
+          </label>
+          <label class="sd-cat-chip" data-cat="english" style="display:flex;align-items:center;gap:8px;padding:8px 12px;border:1.5px solid var(--b);border-radius:7px;cursor:pointer;font-size:12px;color:var(--text);background:rgba(255,255,255,.02);transition:all .15s">
+            <input type="checkbox" id="sdCatEnglish" style="accent-color:var(--gold);cursor:pointer;width:14px;height:14px;flex-shrink:0">
+            <span>🇬🇧 영어</span>
+          </label>
+          <label class="sd-cat-chip" data-cat="trivia" style="display:flex;align-items:center;gap:8px;padding:8px 12px;border:1.5px solid var(--b);border-radius:7px;cursor:pointer;font-size:12px;color:var(--text);background:rgba(255,255,255,.02);transition:all .15s">
+            <input type="checkbox" id="sdCatTrivia" style="accent-color:var(--gold);cursor:pointer;width:14px;height:14px;flex-shrink:0">
+            <span>🧠 상식</span>
+          </label>
+        </div>
+      </div>
       <!-- 시작일 / 종료일 -->
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
         <div>
@@ -5435,11 +5457,50 @@ function openSubDetail(id) {
   document.getElementById('sdInputPlan').value           = sub.plan;
   document.getElementById('sdInputStatus').value         = sub.status;
   document.getElementById('sdInputHour').value           = String(sub.send_hour || 8);
+  document.getElementById('sdInputEmail').value          = sub.email || '';
+  document.getElementById('sdInputMemo').value           = sub.memo  || '';
   const sdCd = new Date(sub.created_at);
   document.getElementById('sdInputStartDate').value = sdCd.toISOString().slice(0,10);
   document.getElementById('sdInputEndDate').value   = sub.end_date ? new Date(sub.end_date).toISOString().slice(0,10) : '';
+
+  // 카테고리 체크박스 채우기 (없으면 4개 모두 디폴트)
+  let cats = sub.categories;
+  if (typeof cats === 'string') {
+    cats = cats.split(',').map(s => s.trim()).filter(Boolean);
+  }
+  if (!Array.isArray(cats) || cats.length === 0) {
+    cats = ['economy','realestate','english','trivia'];
+  }
+  document.getElementById('sdCatEconomy').checked    = cats.includes('economy');
+  document.getElementById('sdCatRealestate').checked = cats.includes('realestate');
+  document.getElementById('sdCatEnglish').checked    = cats.includes('english');
+  document.getElementById('sdCatTrivia').checked     = cats.includes('trivia');
+  // 체크된 칩 시각 효과
+  _refreshSdCatChipStyles();
+
   document.getElementById('subDetailOverlay').classList.add('open');
 }
+
+// 체크박스 체크 시 칩 시각 효과 갱신
+function _refreshSdCatChipStyles() {
+  document.querySelectorAll('.sd-cat-chip').forEach(function(label) {
+    const cb = label.querySelector('input[type="checkbox"]');
+    if (!cb) return;
+    if (cb.checked) {
+      label.style.borderColor = 'var(--gold)';
+      label.style.background  = 'rgba(201,168,76,.08)';
+    } else {
+      label.style.borderColor = 'var(--b)';
+      label.style.background  = 'rgba(255,255,255,.02)';
+    }
+  });
+}
+// 체크박스 변경 시 자동 갱신 (이벤트 위임)
+document.addEventListener('change', function(e) {
+  if (e.target && e.target.matches && e.target.matches('.sd-cat-chip input[type="checkbox"]')) {
+    _refreshSdCatChipStyles();
+  }
+});
 
 function closeSubDetail() {
   document.getElementById('subDetailOverlay').classList.remove('open');
@@ -5453,6 +5514,18 @@ async function saveSubDetail() {
   const btn = document.getElementById('sdSaveBtn');
   if (btn) { btn.disabled = true; btn.textContent = '저장 중...'; }
 
+  // 카테고리 수집
+  const newCats = [];
+  if (document.getElementById('sdCatEconomy').checked)    newCats.push('economy');
+  if (document.getElementById('sdCatRealestate').checked) newCats.push('realestate');
+  if (document.getElementById('sdCatEnglish').checked)    newCats.push('english');
+  if (document.getElementById('sdCatTrivia').checked)     newCats.push('trivia');
+  // 모두 해제했으면 디폴트(4개)로 자동 채움
+  if (newCats.length === 0) {
+    showToast('관심사 1개 이상 선택해주세요. 자동으로 4개 모두 선택됩니다.', 'ok');
+    newCats.push('economy','realestate','english','trivia');
+  }
+
   sub.name      = document.getElementById('sdInputName').value.trim()  || sub.name;
   sub.phone     = document.getElementById('sdInputPhone').value.replace(/-/g,'').trim() || sub.phone;
   sub.plan      = document.getElementById('sdInputPlan').value;
@@ -5460,6 +5533,7 @@ async function saveSubDetail() {
   sub.send_hour = Number(document.getElementById('sdInputHour').value);
   sub.email    = document.getElementById('sdInputEmail').value.trim() || null;
   sub.memo     = document.getElementById('sdInputMemo').value.trim()  || null;
+  sub.categories = newCats;
   const sdStart = document.getElementById('sdInputStartDate').value;
   const sdEnd   = document.getElementById('sdInputEndDate').value;
   if (sdStart) sub.created_at = sdStart + 'T00:00:00+09:00';
@@ -5474,6 +5548,7 @@ async function saveSubDetail() {
           name: sub.name, phone: sub.phone, plan: sub.plan,
           status: sub.status, send_hour: sub.send_hour,
           email: sub.email, memo: sub.memo,
+          categories: newCats,
         })
       });
     } catch(e) { console.warn('DB 업데이트 실패:', e); }
