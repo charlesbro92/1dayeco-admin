@@ -2019,7 +2019,19 @@ function showPage(name) {
 }
 
 function loadPage(name) {
-  if (name === 'overview')     { loadKPIs(); loadSendStatus(); loadContentSummary(); loadRecentSubs(); renderUsageKPI(); }
+  if (name === 'overview')     {
+    // 1. 캐시된 STATE 데이터로 KPI/최근가입자 즉시 표시 (0초)
+    loadKPIs(); loadRecentSubs(); loadContentSummary(); renderUsageKPI();
+    // 2. 백그라운드에서 최신 데이터 fetch (5개 함수 병렬, await 없이)
+    Promise.all([
+      loadSubscribers({silent: true}),  // 구독자 새로고침
+      loadSendStatus(),                  // 발송 현황
+    ]).then(() => {
+      // fetch 완료 후 KPI/최근가입자 다시 그리기 (최신 데이터 반영)
+      loadKPIs();
+      loadRecentSubs();
+    }).catch(e => console.warn('[overview] 백그라운드 갱신 실패:', e));
+  }
   if (name === 'subscribers')  loadSubscribers();
   if (name === 'send') {
     // 기간 필터 기본값: KST 이번 달 1일 ~ 말일
@@ -2515,8 +2527,44 @@ function renderSubCategories(categories) {
   }).join('');
 }
 
-async function loadSubscribers() {
-  // ── API에서 DB 구독자 동기화 ──────────────────────────────────
+// 구독자 테이블 렌더링 (STATE.subscribers 기반)
+function renderSubscribersTable() {
+  const searchVal    = (document.getElementById('subSearch')?.value || '').trim().toLowerCase();
+  const statusFilter = document.getElementById('subFilter')?.value || '';
+  const hourFilterVal= document.getElementById('hourFilter')?.value || '';
+
+  // STATE에서 필터 + like 검색 적용
+  const filtered = STATE.subscribers.filter(s => {
+    const matchStatus = !statusFilter || s.status === statusFilter;
+    const matchHour   = !hourFilterVal || String(s.send_hour) === hourFilterVal;
+    const matchSearch = !searchVal ||
+      s.name.toLowerCase().includes(searchVal) ||
+      s.phone.replace(/-/g,'').includes(searchVal.replace(/-/g,''));
+    return matchStatus && matchHour && matchSearch;
+  });
+
+  const countEl = document.getElementById('subCount');
+  if (countEl) countEl.textContent = `총 ${filtered.length}명`;
+
+  const tbody = document.getElementById('subTableBody');
+  if (!tbody) return; // 다른 페이지에 있으면 스킵
+  if (!filtered.length) {
+    tbody.innerHTML = `<tr><td colspan="13"><div class="empty"><span class="empty-ico">👥</span>${searchVal?'검색 결과가 없습니다':'구독자가 없습니다'}</div></td></tr>`;
+    return;
+  }
+  tbody.innerHTML = renderSubscribersRows(filtered);
+}
+
+async function loadSubscribers(opts) {
+  opts = opts || {};
+  const silent = !!opts.silent; // true면 로딩 표시 생략
+
+  // 1. 캐시(STATE.subscribers)로 즉시 렌더 (구독자 페이지일 때만)
+  if (!silent && document.getElementById('subTableBody')) {
+    renderSubscribersTable();
+  }
+
+  // 2. 백그라운드에서 API 호출 → DB 동기화
   if (API_BASE) {
     try {
       const res = await apiFetch('/admin/subscribers?limit=200');
@@ -2547,30 +2595,13 @@ async function loadSubscribers() {
     } catch(e) { console.warn('구독자 API 동기화 실패:', e); }
   }
 
-  const searchVal    = (document.getElementById('subSearch')?.value || '').trim().toLowerCase();
-  const statusFilter = document.getElementById('subFilter')?.value || '';
-  const hourFilterVal= document.getElementById('hourFilter')?.value || '';
+  // 3. 최신 데이터로 다시 렌더 (구독자 페이지일 때)
+  renderSubscribersTable();
+}
 
-  // STATE에서 필터 + like 검색 적용
-  const filtered = STATE.subscribers.filter(s => {
-    const matchStatus = !statusFilter || s.status === statusFilter;
-    const matchHour   = !hourFilterVal || String(s.send_hour) === hourFilterVal;
-    const matchSearch = !searchVal ||
-      s.name.toLowerCase().includes(searchVal) ||
-      s.phone.replace(/-/g,'').includes(searchVal.replace(/-/g,''));
-    return matchStatus && matchHour && matchSearch;
-  });
-
-  const countEl = document.getElementById('subCount');
-  if (countEl) countEl.textContent = `총 ${filtered.length}명`;
-
-  // ★ STATE.subscribers 항상 우선 사용 (API는 DB 연동 전까지 무시)
-  const tbody = document.getElementById('subTableBody');
-  if (!filtered.length) {
-    tbody.innerHTML = `<tr><td colspan="13"><div class="empty"><span class="empty-ico">👥</span>${searchVal?'검색 결과가 없습니다':'구독자가 없습니다'}</div></td></tr>`;
-    return;
-  }
-  tbody.innerHTML = filtered.map(s => {
+// 구독자 테이블 행 HTML 생성 (분리된 헬퍼)
+function renderSubscribersRows(filtered) {
+  return filtered.map(s => {
     const isCancelled = s.status === 'cancelled' || s.status === 'expired';
     const hourLabel   = `오전 ${s.send_hour||8}시`;
 
