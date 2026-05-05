@@ -6192,6 +6192,9 @@ async function saveSubDetail() {
             status: sub.status, send_hour: sub.send_hour,
             email: sub.email, memo: sub.memo,
             categories: newCats,
+            // 시작일/종료일도 포함 (사용자가 수정 가능)
+            created_at: sub.created_at,
+            end_date: sub.end_date,
           })
         });
         const result = await response.json().catch(() => ({}));
