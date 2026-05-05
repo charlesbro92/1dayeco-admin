@@ -2759,17 +2759,20 @@ async function loadSubscribers(opts) {
         const dbSubs = res.data
           .filter(s => !s.hidden)
           .map(s => ({
-          id:         s.id,
-          name:       s.name || '',
-          phone:      s.phone || '',
-          email:      s.email || null,
-          plan:       s.plan || 'free',
-          status:     s.status || 'trial',
-          send_hour:  s.send_hour || 8,
-          created_at: s.created_at || new Date().toISOString(),
-          end_date:   s.end_date || null,
-          memo:       s.memo || null,
-          categories: s.categories || ['economy','realestate','english','trivia'],
+          id:             s.id,
+          name:           s.name || '',
+          phone:          s.phone || '',
+          email:          s.email || null,
+          plan:           s.plan || 'free',
+          status:         s.status || 'trial',
+          send_hour:      s.send_hour || 8,
+          created_at:     s.created_at || new Date().toISOString(),
+          end_date:       s.end_date || null,
+          trial_end_date: s.trial_end_date || null,
+          notify_d1:      s.notify_d1 || false,
+          billing_key:    s.billing_key || null,
+          memo:           s.memo || null,
+          categories:     s.categories || ['economy','realestate','english','trivia'],
         }));
         // localStorage 구독자와 DB 구독자 병합 (DB 우선)
         const localSubs = STATE.subscribers.filter(ls =>
