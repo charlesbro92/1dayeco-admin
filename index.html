@@ -1683,8 +1683,11 @@ body.light-mode .km-bubble {
           <select id="addSubPlan" onchange="updateAddSubDates()"
             style="width:100%;background:var(--s3);border:1.5px solid var(--b);border-radius:7px;padding:9px 10px;font-size:13px;color:var(--text);font-family:var(--sans);outline:none">
             <option value="free">무료 체험 (5일)</option>
-            <option value="monthly">월간 (30일)</option>
-            <option value="yearly">연간 (365일)</option>
+            <option value="monthly">월 정액 (30일)</option>
+            <option value="pkg3m">3개월 일시불 (90일)</option>
+            <option value="pkg6m">6개월 일시불 (180일)</option>
+            <option value="pkg1y">1년 일시불 (365일)</option>
+            <option value="yearly">연간 (legacy 365일)</option>
           </select></div>
         <div><label style="font-size:10px;color:var(--muted);letter-spacing:.5px;display:block;margin-bottom:4px">발송 시간 *</label>
           <select id="addSubHour"
@@ -1760,7 +1763,12 @@ body.light-mode .km-bubble {
         <div>
           <label style="font-size:10px;color:var(--muted);letter-spacing:.5px;display:block;margin-bottom:4px">구독 플랜</label>
           <select id="sdInputPlan" style="width:100%;background:var(--s3);border:1.5px solid var(--b);border-radius:7px;padding:9px 12px;font-size:13px;color:var(--text);font-family:var(--sans);outline:none">
-            <option value="free">무료</option><option value="monthly">월간</option><option value="yearly">연간</option>
+            <option value="free">무료</option>
+            <option value="monthly">월 정액</option>
+            <option value="pkg3m">3개월 일시불</option>
+            <option value="pkg6m">6개월 일시불</option>
+            <option value="pkg1y">1년 일시불</option>
+            <option value="yearly">연간 (legacy)</option>
           </select>
         </div>
         <div>
@@ -2781,10 +2789,10 @@ function renderSubscribersRows(filtered) {
       <td><strong>${s.name}</strong>${newBadge}</td>
       <td class="t-phone" style="font-size:12px">${s.phone}</td>
       <td style="text-align:center">
-        <span class="badge ${s.plan}">${{monthly:'월간',yearly:'연간',free:'무료'}[s.plan]||s.plan}</span>
+        <span class="badge ${s.plan}">${{monthly:'월정액',yearly:'연간',free:'무료',pkg3m:'3개월',pkg6m:'6개월',pkg1y:'1년'}[s.plan]||s.plan}</span>
       </td>
       <td style="font-family:var(--mono);font-size:12px;text-align:right;color:var(--muted)">
-        ${{monthly:'₩9,900',yearly:'₩79,000',free:'₩0'}[s.plan]||''}
+        ${{monthly:'₩9,900',yearly:'₩79,000',free:'₩0',pkg3m:'₩14,900',pkg6m:'₩24,900',pkg1y:'₩41,900'}[s.plan]||''}
       </td>
       <td style="text-align:center"><span class="badge ${s.status}"><span class="badge-dot"></span>${{active:'활성',trial:'체험',cancelled:'해지',expired:'만료'}[s.status]||s.status}</span></td>
       <td style="text-align:center;white-space:nowrap">${renderSubCategories(s.categories)}</td>
@@ -5662,7 +5670,9 @@ function updateAddSubEndDate() {
   const start = document.getElementById('addSubStartDate').value;
   if (!start) return;
   const plan = document.getElementById('addSubPlan').value;
-  const days = plan === 'free' ? 5 : plan === 'monthly' ? 30 : 365;
+  // 모든 plan 지원
+  const PLAN_DAYS = { free: 5, monthly: 30, pkg3m: 90, pkg6m: 180, pkg1y: 365, yearly: 365 };
+  const days = PLAN_DAYS[plan] || 30;
   const end  = new Date(start + 'T00:00:00');
   end.setDate(end.getDate() + days);
   document.getElementById('addSubEndDate').value = end.toISOString().split('T')[0];
@@ -5713,14 +5723,14 @@ async function confirmAddSubscriber() {
   // 시작일 KST 00:00:00 고정 (서버 한국시간 기준)
   const createdAt = startDate + 'T00:00:00+09:00';
   // 종료일 자동계산 (미입력 시 플랜별 자동)
+  const PLAN_DAYS_MS = { free: 5, monthly: 30, pkg3m: 90, pkg6m: 180, pkg1y: 365, yearly: 365 };
   let endAt = null;
   if (endDate) {
     endAt = endDate + 'T23:59:59+09:00';
   } else {
     const start = new Date(createdAt);
-    if (plan === 'free')    endAt = new Date(start.getTime() + 5*86400000).toISOString();
-    else if (plan === 'monthly') endAt = new Date(start.getTime() + 30*86400000).toISOString();
-    else if (plan === 'yearly')  endAt = new Date(start.getTime() + 365*86400000).toISOString();
+    const days  = PLAN_DAYS_MS[plan] || 30;
+    endAt = new Date(start.getTime() + days*86400000).toISOString();
   }
   const emailVal = email || null;
   const memoVal  = memo  || null;
