@@ -1368,22 +1368,121 @@ body.light-mode .km-bubble {
 
   <!-- ── PAGE: 설정 ── -->
   <div class="content" id="page-settings">
-    <div class="panel" style="max-width:560px">
-      <div class="panel-head"><div class="panel-title">⚙️ 서비스 설정</div></div>
-      <div style="padding:24px;display:flex;flex-direction:column;gap:18px">
-        <div>
-          <label style="font-size:12px;color:var(--muted);display:block;margin-bottom:6px">API 서버 URL</label>
-          <input type="text" id="cfgApi" placeholder="https://your-api.railway.app" style="width:100%;background:var(--s3);border:1px solid var(--b);border-radius:8px;padding:10px 14px;font-size:14px;color:var(--text);font-family:var(--mono);outline:none">
+    <div style="max-width:980px;display:flex;flex-direction:column;gap:18px">
+
+      <!-- 서비스 기본 설정 -->
+      <div class="panel" style="max-width:560px">
+        <div class="panel-head"><div class="panel-title">⚙️ 서비스 설정</div></div>
+        <div style="padding:24px;display:flex;flex-direction:column;gap:18px">
+          <div>
+            <label style="font-size:12px;color:var(--muted);display:block;margin-bottom:6px">API 서버 URL</label>
+            <input type="text" id="cfgApi" placeholder="https://your-api.railway.app" style="width:100%;background:var(--s3);border:1px solid var(--b);border-radius:8px;padding:10px 14px;font-size:14px;color:var(--text);font-family:var(--mono);outline:none">
+          </div>
+          <div>
+            <label style="font-size:12px;color:var(--muted);display:block;margin-bottom:6px">기본 발송 시간 (KST)</label>
+            <select id="cfgHour" style="width:100%;background:var(--s3);border:1px solid var(--b);border-radius:8px;padding:10px 14px;font-size:14px;color:var(--text);font-family:var(--sans);outline:none;-webkit-appearance:none">
+              <option value="7">오전 7시</option>
+              <option value="8" selected>오전 8시</option>
+              <option value="9">오전 9시</option>
+            </select>
+          </div>
+          <button onclick="saveSettings()" style="background:var(--gold);color:var(--bg);border:none;padding:12px;border-radius:8px;font-size:14px;font-weight:700;font-family:var(--sans);cursor:pointer;transition:all .2s" onmouseover="this.style.background='#e8c97a'" onmouseout="this.style.background='var(--gold)'">설정 저장</button>
         </div>
-        <div>
-          <label style="font-size:12px;color:var(--muted);display:block;margin-bottom:6px">기본 발송 시간 (KST)</label>
-          <select id="cfgHour" style="width:100%;background:var(--s3);border:1px solid var(--b);border-radius:8px;padding:10px 14px;font-size:14px;color:var(--text);font-family:var(--sans);outline:none;-webkit-appearance:none">
-            <option value="7">오전 7시</option>
-            <option value="8" selected>오전 8시</option>
-            <option value="9">오전 9시</option>
-          </select>
+      </div>
+
+      <!-- 카테고리 관리 -->
+      <div class="panel">
+        <div class="panel-head" style="display:flex;justify-content:space-between;align-items:center">
+          <div class="panel-title">🗂️ 카테고리 관리</div>
+          <button onclick="openCategoryAdd()" style="background:var(--gold);color:var(--bg);border:none;padding:7px 14px;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer">+ 새 카테고리</button>
         </div>
-        <button onclick="saveSettings()" style="background:var(--gold);color:var(--bg);border:none;padding:12px;border-radius:8px;font-size:14px;font-weight:700;font-family:var(--sans);cursor:pointer;transition:all .2s" onmouseover="this.style.background='#e8c97a'" onmouseout="this.style.background='var(--gold)'">설정 저장</button>
+        <div style="padding:12px 22px 22px">
+          <div style="font-size:11px;color:var(--muted);margin-bottom:12px;line-height:1.5">
+            카테고리 이름·가격·설명을 관리합니다. 가격 변경은 신규 가입자부터 적용됩니다.<br>
+            활성화 토글: 비활성 카테고리는 신규 가입에서 안 보이지만, 기존 구독자는 영향 없음.
+          </div>
+          <div style="overflow-x:auto">
+            <table id="catManageTable" style="width:100%;border-collapse:collapse;font-size:12px">
+              <thead>
+                <tr style="border-bottom:1px solid var(--b);text-align:left;color:var(--muted);font-size:11px;letter-spacing:.3px">
+                  <th style="padding:8px 6px;font-weight:500;width:40px"></th>
+                  <th style="padding:8px 6px;font-weight:500">ID</th>
+                  <th style="padding:8px 6px;font-weight:500">이름</th>
+                  <th style="padding:8px 6px;font-weight:500;text-align:right">월간 가격</th>
+                  <th style="padding:8px 6px;font-weight:500;text-align:right">연간 가격</th>
+                  <th style="padding:8px 6px;font-weight:500;text-align:center">활성</th>
+                  <th style="padding:8px 6px;font-weight:500;text-align:center">순서</th>
+                  <th style="padding:8px 6px;font-weight:500;text-align:center;width:140px">작업</th>
+                </tr>
+              </thead>
+              <tbody id="catManageBody">
+                <tr><td colspan="8" style="padding:30px 0;text-align:center;color:var(--muted)">로딩 중…</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- 카테고리 추가/수정 모달 -->
+  <div class="overlay" id="categoryEditOverlay" onclick="if(event.target.id==='categoryEditOverlay')closeCategoryEdit()">
+    <div class="modal" style="max-width:520px;padding:0">
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:18px 22px;border-bottom:1px solid var(--b)">
+        <div class="modal-title" id="catModalTitle">카테고리 추가</div>
+        <button onclick="closeCategoryEdit()" style="background:none;border:none;color:var(--muted);font-size:18px;cursor:pointer">✕</button>
+      </div>
+      <div style="padding:20px 22px;display:flex;flex-direction:column;gap:14px">
+        <!-- ID (수정 시 readonly) -->
+        <div>
+          <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:4px">카테고리 ID <span style="color:var(--gold)">(영문 소문자, 변경 불가)</span></label>
+          <input type="text" id="catInputId" placeholder="예: stocks, medical" style="width:100%;background:var(--s3);border:1px solid var(--b);border-radius:6px;padding:9px 12px;font-size:13px;color:var(--text);font-family:var(--mono);outline:none">
+        </div>
+        <!-- 이름 + 이모지 -->
+        <div style="display:flex;gap:10px">
+          <div style="flex:0 0 80px">
+            <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:4px">이모지</label>
+            <input type="text" id="catInputEmoji" placeholder="📌" maxlength="4" style="width:100%;background:var(--s3);border:1px solid var(--b);border-radius:6px;padding:9px 12px;font-size:18px;color:var(--text);text-align:center;outline:none">
+          </div>
+          <div style="flex:1">
+            <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:4px">표시 이름</label>
+            <input type="text" id="catInputName" placeholder="예: 주식, 의학" style="width:100%;background:var(--s3);border:1px solid var(--b);border-radius:6px;padding:9px 12px;font-size:13px;color:var(--text);font-family:var(--sans);outline:none">
+          </div>
+        </div>
+        <!-- 설명 -->
+        <div>
+          <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:4px">설명 (구독자에게 보이는 카테고리 안내)</label>
+          <textarea id="catInputDesc" rows="3" placeholder="예: 주식 시장 동향과 종목 분석을 매일 한 편씩." style="width:100%;background:var(--s3);border:1px solid var(--b);border-radius:6px;padding:9px 12px;font-size:13px;color:var(--text);font-family:var(--sans);outline:none;resize:vertical"></textarea>
+        </div>
+        <!-- 가격 -->
+        <div style="display:flex;gap:10px">
+          <div style="flex:1">
+            <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:4px">월간 가격 (원)</label>
+            <input type="number" id="catInputMonthly" min="0" step="100" placeholder="2500" style="width:100%;background:var(--s3);border:1px solid var(--b);border-radius:6px;padding:9px 12px;font-size:13px;color:var(--text);font-family:var(--mono);outline:none;text-align:right">
+          </div>
+          <div style="flex:1">
+            <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:4px">연간 가격 (원)</label>
+            <input type="number" id="catInputYearly" min="0" step="1000" placeholder="25000" style="width:100%;background:var(--s3);border:1px solid var(--b);border-radius:6px;padding:9px 12px;font-size:13px;color:var(--text);font-family:var(--mono);outline:none;text-align:right">
+          </div>
+        </div>
+        <!-- 순서 + 활성 -->
+        <div style="display:flex;gap:10px;align-items:flex-end">
+          <div style="flex:1">
+            <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:4px">표시 순서 (작을수록 먼저)</label>
+            <input type="number" id="catInputOrder" min="0" step="1" placeholder="999" style="width:100%;background:var(--s3);border:1px solid var(--b);border-radius:6px;padding:9px 12px;font-size:13px;color:var(--text);font-family:var(--mono);outline:none">
+          </div>
+          <div style="flex:1">
+            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;padding:9px 12px;background:rgba(255,255,255,.02);border:1px solid var(--b);border-radius:6px;font-size:13px;color:var(--text)">
+              <input type="checkbox" id="catInputActive" checked style="cursor:pointer">
+              <span>✅ 활성 (신규 가입에서 노출)</span>
+            </label>
+          </div>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;padding:12px 22px;border-top:1px solid var(--b)">
+        <button class="m-btn" onclick="closeCategoryEdit()" style="flex:1">닫기</button>
+        <button class="m-btn" id="catSaveBtn" onclick="saveCategoryEdit()" style="flex:1;background:rgba(201,168,76,.1);border-color:rgba(201,168,76,.3);color:var(--gold)">💾 저장</button>
       </div>
     </div>
   </div>
@@ -5165,11 +5264,195 @@ function loadPayments() {
 }
 
 // ── 설정 ─────────────────────────────────────────────────────
-function loadSettings() { document.getElementById('cfgApi').value = API_BASE; }
+function loadSettings() {
+  document.getElementById('cfgApi').value = API_BASE;
+  loadCategoryList();
+}
 function saveSettings() {
   API_BASE = document.getElementById('cfgApi').value.trim();
   localStorage.setItem('apiBase', API_BASE);
   showToast('설정이 저장되었습니다', 'ok');
+}
+
+// ════════════════════════════════════════════════════════════
+// 카테고리 관리
+// ════════════════════════════════════════════════════════════
+let CATEGORIES_CACHE = [];   // 캐시
+let catEditMode = 'add';     // 'add' | 'edit'
+let catEditOriginalId = null;
+
+async function loadCategoryList() {
+  const tbody = document.getElementById('catManageBody');
+  if (!tbody) return;
+
+  try {
+    const res = await apiFetch('/admin/categories');
+    const cats = res && res.data ? res.data : [];
+    CATEGORIES_CACHE = cats;
+
+    if (!cats.length) {
+      tbody.innerHTML = '<tr><td colspan="8" style="padding:30px 0;text-align:center;color:var(--muted)">카테고리가 없습니다</td></tr>';
+      return;
+    }
+
+    tbody.innerHTML = cats.map(c => {
+      const monthly = (c.monthly_price || 0).toLocaleString('ko-KR');
+      const yearly  = (c.yearly_price  || 0).toLocaleString('ko-KR');
+      const activeIcon = c.active
+        ? '<span style="color:var(--green);font-size:14px">●</span>'
+        : '<span style="color:var(--muted);font-size:14px">○</span>';
+      return `
+        <tr style="border-bottom:1px solid var(--b)">
+          <td style="padding:10px 6px;font-size:18px;text-align:center">${c.emoji || '📌'}</td>
+          <td style="padding:10px 6px;font-family:var(--mono);font-size:11px;color:var(--muted)">${c.id}</td>
+          <td style="padding:10px 6px;font-weight:600;color:var(--text)">${c.name}</td>
+          <td style="padding:10px 6px;text-align:right;font-family:var(--mono);color:var(--gold)">₩${monthly}</td>
+          <td style="padding:10px 6px;text-align:right;font-family:var(--mono);color:var(--gold)">₩${yearly}</td>
+          <td style="padding:10px 6px;text-align:center">${activeIcon}</td>
+          <td style="padding:10px 6px;text-align:center;color:var(--muted);font-family:var(--mono)">${c.display_order || 0}</td>
+          <td style="padding:10px 6px;text-align:center;white-space:nowrap">
+            <button onclick="openCategoryEdit('${c.id}')" style="background:none;border:1px solid var(--b);color:var(--text);padding:5px 10px;border-radius:4px;font-size:11px;cursor:pointer;margin-right:4px">수정</button>
+            <button onclick="confirmCategoryDelete('${c.id}', '${(c.name || '').replace(/'/g, "\\'")}')" style="background:none;border:1px solid rgba(255,77,77,.4);color:var(--red);padding:5px 10px;border-radius:4px;font-size:11px;cursor:pointer">삭제</button>
+          </td>
+        </tr>`;
+    }).join('');
+  } catch (e) {
+    console.warn('[카테고리] 로드 실패:', e);
+    tbody.innerHTML = '<tr><td colspan="8" style="padding:30px 0;text-align:center;color:var(--red)">로드 실패: ' + (e.message || '') + '</td></tr>';
+  }
+}
+
+function openCategoryAdd() {
+  catEditMode = 'add';
+  catEditOriginalId = null;
+  document.getElementById('catModalTitle').textContent = '새 카테고리 추가';
+  document.getElementById('catInputId').value     = '';
+  document.getElementById('catInputId').readOnly  = false;
+  document.getElementById('catInputId').style.opacity = '1';
+  document.getElementById('catInputEmoji').value = '📌';
+  document.getElementById('catInputName').value  = '';
+  document.getElementById('catInputDesc').value  = '';
+  document.getElementById('catInputMonthly').value = '2500';
+  document.getElementById('catInputYearly').value  = '25000';
+  document.getElementById('catInputOrder').value   = String((CATEGORIES_CACHE.length + 1) * 10);
+  document.getElementById('catInputActive').checked = true;
+  // 저장 버튼 초기화
+  const btn = document.getElementById('catSaveBtn');
+  if (btn) { btn.disabled = false; btn.textContent = '💾 저장'; }
+  document.getElementById('categoryEditOverlay').classList.add('open');
+  setTimeout(() => document.getElementById('catInputId').focus(), 100);
+}
+
+function openCategoryEdit(catId) {
+  const cat = CATEGORIES_CACHE.find(c => c.id === catId);
+  if (!cat) { showToast('카테고리를 찾을 수 없습니다', 'ng'); return; }
+
+  catEditMode = 'edit';
+  catEditOriginalId = catId;
+  document.getElementById('catModalTitle').textContent = '카테고리 수정: ' + (cat.emoji || '') + ' ' + cat.name;
+  document.getElementById('catInputId').value     = cat.id;
+  document.getElementById('catInputId').readOnly  = true;
+  document.getElementById('catInputId').style.opacity = '0.5';
+  document.getElementById('catInputEmoji').value = cat.emoji || '📌';
+  document.getElementById('catInputName').value  = cat.name || '';
+  document.getElementById('catInputDesc').value  = cat.description || '';
+  document.getElementById('catInputMonthly').value = String(cat.monthly_price || 0);
+  document.getElementById('catInputYearly').value  = String(cat.yearly_price || 0);
+  document.getElementById('catInputOrder').value   = String(cat.display_order || 0);
+  document.getElementById('catInputActive').checked = !!cat.active;
+  // 저장 버튼 초기화 (이전 모달에서 disabled 잔존 방지)
+  const btn = document.getElementById('catSaveBtn');
+  if (btn) { btn.disabled = false; btn.textContent = '💾 저장'; }
+  document.getElementById('categoryEditOverlay').classList.add('open');
+  setTimeout(() => document.getElementById('catInputName').focus(), 100);
+}
+
+function closeCategoryEdit() {
+  document.getElementById('categoryEditOverlay').classList.remove('open');
+}
+
+async function saveCategoryEdit() {
+  const btn = document.getElementById('catSaveBtn');
+  if (btn) { btn.disabled = true; btn.textContent = '저장 중...'; }
+
+  try {
+    const id      = document.getElementById('catInputId').value.trim().toLowerCase();
+    const name    = document.getElementById('catInputName').value.trim();
+    const emoji   = document.getElementById('catInputEmoji').value.trim() || '📌';
+    const desc    = document.getElementById('catInputDesc').value.trim();
+    const monthly = parseInt(document.getElementById('catInputMonthly').value || '0', 10);
+    const yearly  = parseInt(document.getElementById('catInputYearly').value || '0', 10);
+    const order   = parseInt(document.getElementById('catInputOrder').value || '0', 10);
+    const active  = document.getElementById('catInputActive').checked;
+
+    // 검증
+    if (!id || !name) {
+      showToast('ID와 이름은 필수입니다', 'ng');
+      return;
+    }
+    if (catEditMode === 'add' && !/^[a-z][a-z0-9_]{1,29}$/.test(id)) {
+      showToast('ID는 영문 소문자로 시작하고 영문/숫자/_만 가능 (2~30자)', 'ng');
+      return;
+    }
+    if (monthly < 0 || yearly < 0) {
+      showToast('가격은 0 이상이어야 합니다', 'ng');
+      return;
+    }
+
+    const payload = {
+      name, emoji, description: desc,
+      monthly_price: monthly, yearly_price: yearly,
+      display_order: order, active,
+    };
+
+    let response;
+    if (catEditMode === 'add') {
+      payload.id = id;
+      response = await fetch(API_BASE + '/admin/categories', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify(payload),
+      });
+    } else {
+      response = await fetch(API_BASE + '/admin/categories/' + catEditOriginalId, {
+        method: 'PUT',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify(payload),
+      });
+    }
+    const result = await response.json().catch(() => ({}));
+
+    if (!response.ok || result.success === false) {
+      showToast(result.message || '저장 실패', 'ng');
+      return; // 모달 안 닫고 사용자가 다시 시도 가능
+    }
+
+    showToast(catEditMode === 'add' ? '카테고리가 추가되었습니다' : '카테고리가 수정되었습니다', 'ok');
+    closeCategoryEdit();
+    loadCategoryList(); // 목록 새로고침
+  } catch (e) {
+    console.error('[카테고리 저장] 에러:', e);
+    showToast('네트워크 오류. 잠시 후 다시 시도해주세요.', 'ng');
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '💾 저장'; }
+  }
+}
+
+async function confirmCategoryDelete(catId, catName) {
+  if (!confirm(`정말 "${catName}" 카테고리를 삭제하시겠습니까?\n\n사용 중인 활성 구독자가 있으면 삭제가 거부됩니다.`)) return;
+
+  try {
+    const response = await fetch(API_BASE + '/admin/categories/' + catId, { method: 'DELETE' });
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok || result.success === false) {
+      showToast(result.message || '삭제 실패', 'ng');
+      return;
+    }
+    showToast('카테고리가 삭제되었습니다', 'ok');
+    loadCategoryList();
+  } catch (e) {
+    showToast('네트워크 오류', 'ng');
+  }
 }
 
 // ── 체크박스 & 선택 발송 ─────────────────────────────────────
@@ -5578,7 +5861,6 @@ async function saveSubDetail() {
   if (!sub) return;
 
   const btn = document.getElementById('sdSaveBtn');
-  const originalText = btn ? btn.textContent : '💾 저장';
   if (btn) { btn.disabled = true; btn.textContent = '저장 중...'; }
 
   try {
@@ -5594,6 +5876,15 @@ async function saveSubDetail() {
       newCats.push('economy','realestate','english','trivia');
     }
 
+    // ── 백업 (실패 시 롤백용) ────────────────────────────
+    const backup = {
+      name: sub.name, phone: sub.phone, plan: sub.plan,
+      status: sub.status, send_hour: sub.send_hour,
+      email: sub.email, memo: sub.memo, categories: sub.categories,
+      created_at: sub.created_at, end_date: sub.end_date,
+    };
+
+    // ── 입력값 적용 (낙관적 업데이트) ──────────────────
     sub.name      = document.getElementById('sdInputName').value.trim()  || sub.name;
     sub.phone     = document.getElementById('sdInputPhone').value.replace(/-/g,'').trim() || sub.phone;
     sub.plan      = document.getElementById('sdInputPlan').value;
@@ -5607,9 +5898,10 @@ async function saveSubDetail() {
     if (sdStart) sub.created_at = sdStart + 'T00:00:00+09:00';
     if (sdEnd)   sub.end_date   = sdEnd   + 'T23:59:59+09:00';
 
+    // ── 백엔드 PUT 호출 ──────────────────────────────────
     if (API_BASE) {
       try {
-        await fetch(API_BASE + '/admin/subscribers/' + sub.id, {
+        const response = await fetch(API_BASE + '/admin/subscribers/' + sub.id, {
           method: 'PUT',
           headers: {'Content-Type':'application/json'},
           body: JSON.stringify({
@@ -5619,9 +5911,31 @@ async function saveSubDetail() {
             categories: newCats,
           })
         });
-      } catch(e) { console.warn('DB 업데이트 실패:', e); }
+        const result = await response.json().catch(() => ({}));
+
+        // 백엔드가 실패 응답하면 → 롤백 + 사용자 알림
+        if (!response.ok || result.success === false) {
+          // 롤백
+          Object.assign(sub, backup);
+          saveSubsToStorage();
+          loadSubscribers();
+          loadKPIs();
+          showToast(result.message || '저장 실패: 다시 시도해주세요', 'ng');
+          return; // 모달 닫지 않음 → 사용자가 수정 가능
+        }
+      } catch(e) {
+        console.warn('DB 업데이트 실패:', e);
+        // 네트워크 에러 시에도 롤백
+        Object.assign(sub, backup);
+        saveSubsToStorage();
+        loadSubscribers();
+        loadKPIs();
+        showToast('네트워크 오류. 잠시 후 다시 시도해주세요.', 'ng');
+        return;
+      }
     }
 
+    // ── 저장 성공 ────────────────────────────────────────
     saveSubsToStorage();
     loadSubscribers();
     loadRecentSubs();
