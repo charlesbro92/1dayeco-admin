@@ -1370,6 +1370,19 @@ body.light-mode .km-bubble {
   <div class="content" id="page-settings">
     <div style="max-width:980px;display:flex;flex-direction:column;gap:18px">
 
+      <!-- 서버 시간 -->
+      <div class="panel" style="max-width:560px">
+        <div class="panel-head"><div class="panel-title">🕐 서버 시간 (한국 KST)</div></div>
+        <div style="padding:18px 24px;display:flex;flex-direction:column;gap:8px">
+          <div id="serverTimeDisplay" style="font-size:24px;font-weight:700;color:var(--gold);font-family:var(--mono);letter-spacing:1px">
+            로딩 중...
+          </div>
+          <div id="serverTimeMeta" style="font-size:11px;color:var(--muted);line-height:1.6">
+            백엔드 Railway 서버 기준 시간 (1초마다 갱신)
+          </div>
+        </div>
+      </div>
+
       <!-- 서비스 기본 설정 -->
       <div class="panel" style="max-width:560px">
         <div class="panel-head"><div class="panel-title">⚙️ 서비스 설정</div></div>
@@ -1423,13 +1436,13 @@ body.light-mode .km-bubble {
               <thead>
                 <tr style="border-bottom:1px solid var(--b);text-align:left;color:var(--muted);font-size:11px;letter-spacing:.3px">
                   <th style="padding:8px 6px;font-weight:500;width:40px"></th>
-                  <th style="padding:8px 6px;font-weight:500">ID</th>
-                  <th style="padding:8px 6px;font-weight:500">이름</th>
-                  <th style="padding:8px 6px;font-weight:500;text-align:right">월간 가격</th>
-                  <th style="padding:8px 6px;font-weight:500;text-align:right">연간 가격</th>
-                  <th style="padding:8px 6px;font-weight:500;text-align:center">활성</th>
-                  <th style="padding:8px 6px;font-weight:500;text-align:center">순서</th>
-                  <th style="padding:8px 6px;font-weight:500;text-align:center;width:140px">작업</th>
+                  <th style="padding:8px 6px;font-weight:500">ID / 이름</th>
+                  <th style="padding:8px 6px;font-weight:500;text-align:right">월정액</th>
+                  <th style="padding:8px 6px;font-weight:500;text-align:right">3개월<br><span style="font-size:9px;opacity:.6">정가/할인</span></th>
+                  <th style="padding:8px 6px;font-weight:500;text-align:right">6개월<br><span style="font-size:9px;opacity:.6">정가/할인</span></th>
+                  <th style="padding:8px 6px;font-weight:500;text-align:right">1년<br><span style="font-size:9px;opacity:.6">정가/할인</span></th>
+                  <th style="padding:8px 6px;font-weight:500;text-align:center;width:50px">활성</th>
+                  <th style="padding:8px 6px;font-weight:500;text-align:center;width:130px">작업</th>
                 </tr>
               </thead>
               <tbody id="catManageBody">
@@ -1472,17 +1485,50 @@ body.light-mode .km-bubble {
           <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:4px">설명 (구독자에게 보이는 카테고리 안내)</label>
           <textarea id="catInputDesc" rows="3" placeholder="예: 주식 시장 동향과 종목 분석을 매일 한 편씩." style="width:100%;background:var(--s3);border:1px solid var(--b);border-radius:6px;padding:9px 12px;font-size:13px;color:var(--text);font-family:var(--sans);outline:none;resize:vertical"></textarea>
         </div>
-        <!-- 가격 -->
-        <div style="display:flex;gap:10px">
-          <div style="flex:1">
-            <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:4px">월간 가격 (원)</label>
-            <input type="number" id="catInputMonthly" min="0" step="100" placeholder="2500" style="width:100%;background:var(--s3);border:1px solid var(--b);border-radius:6px;padding:9px 12px;font-size:13px;color:var(--text);font-family:var(--mono);outline:none;text-align:right">
-          </div>
-          <div style="flex:1">
-            <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:4px">연간 가격 (원)</label>
-            <input type="number" id="catInputYearly" min="0" step="1000" placeholder="25000" style="width:100%;background:var(--s3);border:1px solid var(--b);border-radius:6px;padding:9px 12px;font-size:13px;color:var(--text);font-family:var(--mono);outline:none;text-align:right">
+        <!-- 가격: 월정액 -->
+        <div style="border:1px solid var(--b);border-radius:8px;padding:12px;background:rgba(255,255,255,.01)">
+          <div style="font-size:11px;color:var(--gold);font-weight:700;margin-bottom:8px;letter-spacing:.3px">🔄 월 정액 (자동 결제)</div>
+          <div>
+            <label style="font-size:10px;color:var(--muted);display:block;margin-bottom:3px">월 정액 가격 (원/월)</label>
+            <input type="number" id="catInputMonthly" min="0" step="100" placeholder="9900" style="width:100%;background:var(--s3);border:1px solid var(--b);border-radius:6px;padding:9px 12px;font-size:13px;color:var(--text);font-family:var(--mono);outline:none;text-align:right">
           </div>
         </div>
+
+        <!-- 가격: 일시불 3종 -->
+        <div style="border:1px solid var(--b);border-radius:8px;padding:12px;background:rgba(255,255,255,.01)">
+          <div style="font-size:11px;color:var(--gold);font-weight:700;margin-bottom:8px;letter-spacing:.3px">💳 일시불 (정가 / 할인가)</div>
+
+          <!-- 3개월 -->
+          <div style="margin-bottom:10px">
+            <label style="font-size:10px;color:var(--muted);display:block;margin-bottom:3px">3개월</label>
+            <div style="display:flex;gap:8px">
+              <input type="number" id="catInputPkg3mOriginal" min="0" step="100" placeholder="29900 (정가)" style="flex:1;background:var(--s3);border:1px solid var(--b);border-radius:6px;padding:8px 10px;font-size:12px;color:var(--text);font-family:var(--mono);outline:none;text-align:right">
+              <input type="number" id="catInputPkg3mPrice" min="0" step="100" placeholder="14900 (할인)" style="flex:1;background:var(--s3);border:1px solid rgba(201,168,76,.3);border-radius:6px;padding:8px 10px;font-size:12px;color:var(--gold);font-family:var(--mono);outline:none;text-align:right">
+            </div>
+            <div id="catPkg3mPct" style="font-size:10px;color:var(--muted);margin-top:3px;text-align:right">할인율: -</div>
+          </div>
+
+          <!-- 6개월 -->
+          <div style="margin-bottom:10px">
+            <label style="font-size:10px;color:var(--muted);display:block;margin-bottom:3px">6개월 <span style="color:var(--gold)">(가장 인기)</span></label>
+            <div style="display:flex;gap:8px">
+              <input type="number" id="catInputPkg6mOriginal" min="0" step="100" placeholder="59900 (정가)" style="flex:1;background:var(--s3);border:1px solid var(--b);border-radius:6px;padding:8px 10px;font-size:12px;color:var(--text);font-family:var(--mono);outline:none;text-align:right">
+              <input type="number" id="catInputPkg6mPrice" min="0" step="100" placeholder="24900 (할인)" style="flex:1;background:var(--s3);border:1px solid rgba(201,168,76,.3);border-radius:6px;padding:8px 10px;font-size:12px;color:var(--gold);font-family:var(--mono);outline:none;text-align:right">
+            </div>
+            <div id="catPkg6mPct" style="font-size:10px;color:var(--muted);margin-top:3px;text-align:right">할인율: -</div>
+          </div>
+
+          <!-- 1년 -->
+          <div>
+            <label style="font-size:10px;color:var(--muted);display:block;margin-bottom:3px">1년</label>
+            <div style="display:flex;gap:8px">
+              <input type="number" id="catInputPkg1yOriginal" min="0" step="100" placeholder="119900 (정가)" style="flex:1;background:var(--s3);border:1px solid var(--b);border-radius:6px;padding:8px 10px;font-size:12px;color:var(--text);font-family:var(--mono);outline:none;text-align:right">
+              <input type="number" id="catInputPkg1yPrice" min="0" step="100" placeholder="41900 (할인)" style="flex:1;background:var(--s3);border:1px solid rgba(201,168,76,.3);border-radius:6px;padding:8px 10px;font-size:12px;color:var(--gold);font-family:var(--mono);outline:none;text-align:right">
+            </div>
+            <div id="catPkg1yPct" style="font-size:10px;color:var(--muted);margin-top:3px;text-align:right">할인율: -</div>
+          </div>
+        </div>
+
         <!-- 순서 + 활성 -->
         <div style="display:flex;gap:10px;align-items:flex-end">
           <div style="flex:1">
@@ -5293,11 +5339,62 @@ function loadSettings() {
   document.getElementById('cfgApi').value = API_BASE;
   loadCategoryList();
   loadSystemSettings();
+  loadServerTime();
 }
 function saveSettings() {
   API_BASE = document.getElementById('cfgApi').value.trim();
   localStorage.setItem('apiBase', API_BASE);
   showToast('설정이 저장되었습니다', 'ok');
+}
+
+// ════════════════════════════════════════════════════════════
+// 서버 시간 (한국 KST)
+// ════════════════════════════════════════════════════════════
+let serverTimeOffsetMs = 0;  // 서버 - 클라이언트 시간 차이 (ms)
+let serverTimeTimerId  = null;
+
+async function loadServerTime() {
+  try {
+    const t0 = Date.now();
+    const res = await apiFetch('/admin/server-time');
+    const t1 = Date.now();
+    if (!res || !res.kst) return;
+
+    // 클라이언트와 서버 시간 차이 계산
+    const serverTime = new Date(res.kst).getTime();
+    const clientTime = (t0 + t1) / 2;  // 중간 시점 추정
+    serverTimeOffsetMs = serverTime - clientTime;
+
+    // 1초마다 표시 갱신
+    if (serverTimeTimerId) clearInterval(serverTimeTimerId);
+    serverTimeTimerId = setInterval(updateServerTimeDisplay, 1000);
+    updateServerTimeDisplay();
+
+    // 메타 정보
+    const offsetSec = Math.round(serverTimeOffsetMs / 1000);
+    const offsetText = Math.abs(offsetSec) < 2 ? '클라이언트와 동기화' :
+                       (offsetSec > 0 ? `+${offsetSec}초` : `${offsetSec}초`);
+    const metaEl = document.getElementById('serverTimeMeta');
+    if (metaEl) {
+      metaEl.innerHTML = `백엔드 Railway 서버 기준 시간 (클라이언트와 ${offsetText} 차이)`;
+    }
+  } catch (e) {
+    console.warn('[서버시간] 로드 실패:', e);
+    const display = document.getElementById('serverTimeDisplay');
+    if (display) display.textContent = '서버 연결 실패';
+  }
+}
+
+function updateServerTimeDisplay() {
+  const now = new Date(Date.now() + serverTimeOffsetMs);
+  const kstStr = now.toLocaleString('ko-KR', {
+    timeZone: 'Asia/Seoul',
+    year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit', second: '2-digit',
+    hour12: false
+  });
+  const display = document.getElementById('serverTimeDisplay');
+  if (display) display.textContent = kstStr;
 }
 
 // ════════════════════════════════════════════════════════════
@@ -5365,21 +5462,42 @@ async function loadCategoryList() {
       return;
     }
 
+    // 할인율 계산 헬퍼
+    const discountPct = (orig, price) => {
+      if (!orig || orig <= 0 || !price) return null;
+      return Math.round((1 - price / orig) * 1000) / 10;  // 소수점 1자리
+    };
+    // 가격 셀 (정가 줄긋기 + 할인가 + 할인율)
+    const renderPriceCell = (orig, price) => {
+      const o = orig || 0;
+      const p = price || 0;
+      const pct = discountPct(o, p);
+      const origStr = o ? `<span style="font-size:10px;color:var(--muted);text-decoration:line-through">₩${o.toLocaleString('ko-KR')}</span>` : '';
+      const priceStr = `<span style="color:var(--gold);font-weight:700">₩${p.toLocaleString('ko-KR')}</span>`;
+      const pctStr = pct ? `<span style="font-size:9px;color:#ff7676;display:block;line-height:1">${pct}% 할인</span>` : '';
+      return `<div style="display:flex;flex-direction:column;align-items:flex-end;gap:1px;line-height:1.3">${origStr}${priceStr}${pctStr}</div>`;
+    };
+
     tbody.innerHTML = cats.map(c => {
       const monthly = (c.monthly_price || 0).toLocaleString('ko-KR');
-      const yearly  = (c.yearly_price  || 0).toLocaleString('ko-KR');
       const activeIcon = c.active
         ? '<span style="color:var(--green);font-size:14px">●</span>'
         : '<span style="color:var(--muted);font-size:14px">○</span>';
       return `
         <tr style="border-bottom:1px solid var(--b)">
           <td style="padding:10px 6px;font-size:18px;text-align:center">${c.emoji || '📌'}</td>
-          <td style="padding:10px 6px;font-family:var(--mono);font-size:11px;color:var(--muted)">${c.id}</td>
-          <td style="padding:10px 6px;font-weight:600;color:var(--text)">${c.name}</td>
-          <td style="padding:10px 6px;text-align:right;font-family:var(--mono);color:var(--gold)">₩${monthly}</td>
-          <td style="padding:10px 6px;text-align:right;font-family:var(--mono);color:var(--gold)">₩${yearly}</td>
+          <td style="padding:10px 6px">
+            <div style="font-weight:600;color:var(--text)">${c.name}</div>
+            <div style="font-family:var(--mono);font-size:10px;color:var(--muted);margin-top:1px">${c.id}</div>
+          </td>
+          <td style="padding:10px 6px;text-align:right;font-family:var(--mono)">
+            <span style="color:var(--gold);font-weight:700">₩${monthly}</span>
+            <span style="font-size:9px;color:var(--muted);display:block">/월</span>
+          </td>
+          <td style="padding:10px 6px;text-align:right;font-family:var(--mono)">${renderPriceCell(c.pkg3m_original, c.pkg3m_price)}</td>
+          <td style="padding:10px 6px;text-align:right;font-family:var(--mono)">${renderPriceCell(c.pkg6m_original, c.pkg6m_price)}</td>
+          <td style="padding:10px 6px;text-align:right;font-family:var(--mono)">${renderPriceCell(c.pkg1y_original, c.pkg1y_price)}</td>
           <td style="padding:10px 6px;text-align:center">${activeIcon}</td>
-          <td style="padding:10px 6px;text-align:center;color:var(--muted);font-family:var(--mono)">${c.display_order || 0}</td>
           <td style="padding:10px 6px;text-align:center;white-space:nowrap">
             <button onclick="openCategoryEdit('${c.id}')" style="background:none;border:1px solid var(--b);color:var(--text);padding:5px 10px;border-radius:4px;font-size:11px;cursor:pointer;margin-right:4px">수정</button>
             <button onclick="confirmCategoryDelete('${c.id}', '${(c.name || '').replace(/'/g, "\\'")}')" style="background:none;border:1px solid rgba(255,77,77,.4);color:var(--red);padding:5px 10px;border-radius:4px;font-size:11px;cursor:pointer">삭제</button>
@@ -5392,6 +5510,36 @@ async function loadCategoryList() {
   }
 }
 
+// 모달 입력 필드 일괄 설정 (plan별 가격 8개)
+function setCategoryFormPrices(c) {
+  c = c || {};
+  document.getElementById('catInputMonthly').value      = String(c.monthly_price    || 9900);
+  document.getElementById('catInputPkg3mOriginal').value = String(c.pkg3m_original || 29900);
+  document.getElementById('catInputPkg3mPrice').value    = String(c.pkg3m_price    || 14900);
+  document.getElementById('catInputPkg6mOriginal').value = String(c.pkg6m_original || 59900);
+  document.getElementById('catInputPkg6mPrice').value    = String(c.pkg6m_price    || 24900);
+  document.getElementById('catInputPkg1yOriginal').value = String(c.pkg1y_original || 119900);
+  document.getElementById('catInputPkg1yPrice').value    = String(c.pkg1y_price    || 41900);
+  updateCategoryDiscountPreview();
+}
+
+// 할인율 자동 계산 + 표시
+function updateCategoryDiscountPreview() {
+  const calc = (origId, priceId, pctId) => {
+    const o = parseFloat(document.getElementById(origId).value || '0');
+    const p = parseFloat(document.getElementById(priceId).value || '0');
+    const pctEl = document.getElementById(pctId);
+    if (!pctEl) return;
+    if (!o || o <= 0) { pctEl.textContent = '할인율: -'; return; }
+    if (p > o) { pctEl.innerHTML = '<span style="color:var(--red)">⚠️ 할인가가 정가보다 큼</span>'; return; }
+    const pct = Math.round((1 - p / o) * 1000) / 10;
+    pctEl.innerHTML = `할인율: <strong style="color:#ff7676">${pct}%</strong>`;
+  };
+  calc('catInputPkg3mOriginal', 'catInputPkg3mPrice', 'catPkg3mPct');
+  calc('catInputPkg6mOriginal', 'catInputPkg6mPrice', 'catPkg6mPct');
+  calc('catInputPkg1yOriginal', 'catInputPkg1yPrice', 'catPkg1yPct');
+}
+
 function openCategoryAdd() {
   catEditMode = 'add';
   catEditOriginalId = null;
@@ -5402,14 +5550,14 @@ function openCategoryAdd() {
   document.getElementById('catInputEmoji').value = '📌';
   document.getElementById('catInputName').value  = '';
   document.getElementById('catInputDesc').value  = '';
-  document.getElementById('catInputMonthly').value = '2500';
-  document.getElementById('catInputYearly').value  = '25000';
+  setCategoryFormPrices(null);  // 디폴트 가격으로
   document.getElementById('catInputOrder').value   = String((CATEGORIES_CACHE.length + 1) * 10);
   document.getElementById('catInputActive').checked = true;
   // 저장 버튼 초기화
   const btn = document.getElementById('catSaveBtn');
   if (btn) { btn.disabled = false; btn.textContent = '💾 저장'; }
   document.getElementById('categoryEditOverlay').classList.add('open');
+  attachPriceChangeListeners();
   setTimeout(() => document.getElementById('catInputId').focus(), 100);
 }
 
@@ -5426,15 +5574,28 @@ function openCategoryEdit(catId) {
   document.getElementById('catInputEmoji').value = cat.emoji || '📌';
   document.getElementById('catInputName').value  = cat.name || '';
   document.getElementById('catInputDesc').value  = cat.description || '';
-  document.getElementById('catInputMonthly').value = String(cat.monthly_price || 0);
-  document.getElementById('catInputYearly').value  = String(cat.yearly_price || 0);
+  setCategoryFormPrices(cat);  // 현재 가격 채움
   document.getElementById('catInputOrder').value   = String(cat.display_order || 0);
   document.getElementById('catInputActive').checked = !!cat.active;
   // 저장 버튼 초기화 (이전 모달에서 disabled 잔존 방지)
   const btn = document.getElementById('catSaveBtn');
   if (btn) { btn.disabled = false; btn.textContent = '💾 저장'; }
   document.getElementById('categoryEditOverlay').classList.add('open');
+  attachPriceChangeListeners();
   setTimeout(() => document.getElementById('catInputName').focus(), 100);
+}
+
+// 가격 input 변경 시 할인율 자동 갱신
+function attachPriceChangeListeners() {
+  ['catInputPkg3mOriginal','catInputPkg3mPrice',
+   'catInputPkg6mOriginal','catInputPkg6mPrice',
+   'catInputPkg1yOriginal','catInputPkg1yPrice'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el && !el._listenerAttached) {
+      el.addEventListener('input', updateCategoryDiscountPreview);
+      el._listenerAttached = true;
+    }
+  });
 }
 
 function closeCategoryEdit() {
@@ -5451,9 +5612,16 @@ async function saveCategoryEdit() {
     const emoji   = document.getElementById('catInputEmoji').value.trim() || '📌';
     const desc    = document.getElementById('catInputDesc').value.trim();
     const monthly = parseInt(document.getElementById('catInputMonthly').value || '0', 10);
-    const yearly  = parseInt(document.getElementById('catInputYearly').value || '0', 10);
     const order   = parseInt(document.getElementById('catInputOrder').value || '0', 10);
     const active  = document.getElementById('catInputActive').checked;
+
+    // 일시불 plan별 가격
+    const pkg3mOriginal = parseInt(document.getElementById('catInputPkg3mOriginal').value || '0', 10);
+    const pkg3mPrice    = parseInt(document.getElementById('catInputPkg3mPrice').value    || '0', 10);
+    const pkg6mOriginal = parseInt(document.getElementById('catInputPkg6mOriginal').value || '0', 10);
+    const pkg6mPrice    = parseInt(document.getElementById('catInputPkg6mPrice').value    || '0', 10);
+    const pkg1yOriginal = parseInt(document.getElementById('catInputPkg1yOriginal').value || '0', 10);
+    const pkg1yPrice    = parseInt(document.getElementById('catInputPkg1yPrice').value    || '0', 10);
 
     // 검증
     if (!id || !name) {
@@ -5464,15 +5632,29 @@ async function saveCategoryEdit() {
       showToast('ID는 영문 소문자로 시작하고 영문/숫자/_만 가능 (2~30자)', 'ng');
       return;
     }
-    if (monthly < 0 || yearly < 0) {
+    const allPrices = [monthly, pkg3mOriginal, pkg3mPrice, pkg6mOriginal, pkg6mPrice, pkg1yOriginal, pkg1yPrice];
+    if (allPrices.some(v => v < 0)) {
       showToast('가격은 0 이상이어야 합니다', 'ng');
+      return;
+    }
+    // 일시불 할인가 ≤ 정가 검증
+    if (pkg3mPrice > pkg3mOriginal || pkg6mPrice > pkg6mOriginal || pkg1yPrice > pkg1yOriginal) {
+      showToast('할인가가 정가보다 클 수 없습니다', 'ng');
       return;
     }
 
     const payload = {
       name, emoji, description: desc,
-      monthly_price: monthly, yearly_price: yearly,
-      display_order: order, active,
+      monthly_price:    monthly,
+      monthly_original: monthly,  // 월정액은 정가=가격 (할인 없음)
+      pkg3m_original:   pkg3mOriginal,
+      pkg3m_price:      pkg3mPrice,
+      pkg6m_original:   pkg6mOriginal,
+      pkg6m_price:      pkg6mPrice,
+      pkg1y_original:   pkg1yOriginal,
+      pkg1y_price:      pkg1yPrice,
+      display_order:    order,
+      active,
     };
 
     let response;
