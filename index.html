@@ -1368,24 +1368,17 @@ body.light-mode .km-bubble {
 
   <!-- ── PAGE: 설정 ── -->
   <div class="content" id="page-settings">
-    <div style="max-width:980px;display:flex;flex-direction:column;gap:18px">
+    <div style="max-width:1400px;display:flex;flex-direction:column;gap:18px">
 
-      <!-- 서버 시간 -->
-      <div class="panel" style="max-width:560px">
-        <div class="panel-head"><div class="panel-title">🕐 서버 시간 (한국 KST)</div></div>
-        <div style="padding:18px 24px;display:flex;flex-direction:column;gap:8px">
-          <div id="serverTimeDisplay" style="font-size:24px;font-weight:700;color:var(--gold);font-family:var(--mono);letter-spacing:1px">
-            로딩 중...
-          </div>
-          <div id="serverTimeMeta" style="font-size:11px;color:var(--muted);line-height:1.6">
-            백엔드 Railway 서버 기준 시간 (1초마다 갱신)
-          </div>
+      <!-- 서비스 기본 설정 + 카테고리 관리 (좌우 배치) -->
+      <div style="display:flex;gap:18px;flex-wrap:wrap;align-items:flex-start">
+
+        <!-- 좌측: 서비스 기본 설정 -->
+        <div class="panel" style="flex:0 0 460px;max-width:460px">
+        <div class="panel-head" style="display:flex;justify-content:space-between;align-items:center">
+          <div class="panel-title">⚙️ 서비스 설정</div>
+          <span id="serviceSettingsLastSaved" style="font-size:11px;color:var(--muted);font-weight:400">최근 저장: -</span>
         </div>
-      </div>
-
-      <!-- 서비스 기본 설정 -->
-      <div class="panel" style="max-width:560px">
-        <div class="panel-head"><div class="panel-title">⚙️ 서비스 설정</div></div>
         <div style="padding:24px;display:flex;flex-direction:column;gap:18px">
           <div>
             <label style="font-size:12px;color:var(--muted);display:block;margin-bottom:6px">API 서버 URL</label>
@@ -1420,10 +1413,13 @@ body.light-mode .km-bubble {
         </div>
       </div>
 
-      <!-- 카테고리 관리 -->
-      <div class="panel">
-        <div class="panel-head" style="display:flex;justify-content:space-between;align-items:center">
-          <div class="panel-title">🗂️ 카테고리 관리</div>
+      <!-- 우측: 카테고리 관리 -->
+      <div class="panel" style="flex:1;min-width:600px">
+        <div class="panel-head" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px">
+          <div style="display:flex;align-items:center;gap:12px">
+            <div class="panel-title">🗂️ 카테고리 관리</div>
+            <span id="categoryLastSaved" style="font-size:11px;color:var(--muted);font-weight:400">최근 저장: -</span>
+          </div>
           <button onclick="openCategoryAdd()" style="background:var(--gold);color:var(--bg);border:none;padding:7px 14px;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer">+ 새 카테고리</button>
         </div>
         <div style="padding:12px 22px 22px">
@@ -1452,6 +1448,8 @@ body.light-mode .km-bubble {
           </div>
         </div>
       </div>
+
+      </div><!-- /좌우 flex 컨테이너 -->
 
     </div>
   </div>
@@ -5339,62 +5337,34 @@ function loadSettings() {
   document.getElementById('cfgApi').value = API_BASE;
   loadCategoryList();
   loadSystemSettings();
-  loadServerTime();
 }
 function saveSettings() {
   API_BASE = document.getElementById('cfgApi').value.trim();
   localStorage.setItem('apiBase', API_BASE);
   showToast('설정이 저장되었습니다', 'ok');
+  updateServiceSettingsLastSaved();  // 저장 시각 갱신
 }
 
 // ════════════════════════════════════════════════════════════
-// 서버 시간 (한국 KST)
+// 마지막 저장 시간 표시 (KST)
 // ════════════════════════════════════════════════════════════
-let serverTimeOffsetMs = 0;  // 서버 - 클라이언트 시간 차이 (ms)
-let serverTimeTimerId  = null;
-
-async function loadServerTime() {
-  try {
-    const t0 = Date.now();
-    const res = await apiFetch('/admin/server-time');
-    const t1 = Date.now();
-    if (!res || !res.kst) return;
-
-    // 클라이언트와 서버 시간 차이 계산
-    const serverTime = new Date(res.kst).getTime();
-    const clientTime = (t0 + t1) / 2;  // 중간 시점 추정
-    serverTimeOffsetMs = serverTime - clientTime;
-
-    // 1초마다 표시 갱신
-    if (serverTimeTimerId) clearInterval(serverTimeTimerId);
-    serverTimeTimerId = setInterval(updateServerTimeDisplay, 1000);
-    updateServerTimeDisplay();
-
-    // 메타 정보
-    const offsetSec = Math.round(serverTimeOffsetMs / 1000);
-    const offsetText = Math.abs(offsetSec) < 2 ? '클라이언트와 동기화' :
-                       (offsetSec > 0 ? `+${offsetSec}초` : `${offsetSec}초`);
-    const metaEl = document.getElementById('serverTimeMeta');
-    if (metaEl) {
-      metaEl.innerHTML = `백엔드 Railway 서버 기준 시간 (클라이언트와 ${offsetText} 차이)`;
-    }
-  } catch (e) {
-    console.warn('[서버시간] 로드 실패:', e);
-    const display = document.getElementById('serverTimeDisplay');
-    if (display) display.textContent = '서버 연결 실패';
-  }
-}
-
-function updateServerTimeDisplay() {
-  const now = new Date(Date.now() + serverTimeOffsetMs);
-  const kstStr = now.toLocaleString('ko-KR', {
+function formatKstNow() {
+  return new Date().toLocaleString('ko-KR', {
     timeZone: 'Asia/Seoul',
     year: 'numeric', month: '2-digit', day: '2-digit',
     hour: '2-digit', minute: '2-digit', second: '2-digit',
     hour12: false
   });
-  const display = document.getElementById('serverTimeDisplay');
-  if (display) display.textContent = kstStr;
+}
+
+function updateServiceSettingsLastSaved(timeStr) {
+  const el = document.getElementById('serviceSettingsLastSaved');
+  if (el) el.textContent = '최근 저장: ' + (timeStr || formatKstNow());
+}
+
+function updateCategoryLastSaved(timeStr) {
+  const el = document.getElementById('categoryLastSaved');
+  if (el) el.textContent = '최근 저장: ' + (timeStr || formatKstNow());
 }
 
 // ════════════════════════════════════════════════════════════
@@ -5408,6 +5378,21 @@ async function loadSystemSettings() {
     const trialDays = data.trial_days?.value || '3';
     const el = document.getElementById('cfgTrialDays');
     if (el) el.value = trialDays;
+    // 최근 저장 시간 표시 (모든 settings 중 가장 최신 updated_at)
+    let latestUpdated = null;
+    for (const key in data) {
+      const u = data[key]?.updated_at;
+      if (u && (!latestUpdated || u > latestUpdated)) latestUpdated = u;
+    }
+    if (latestUpdated) {
+      const dt = new Date(latestUpdated).toLocaleString('ko-KR', {
+        timeZone: 'Asia/Seoul',
+        year: 'numeric', month: '2-digit', day: '2-digit',
+        hour: '2-digit', minute: '2-digit', second: '2-digit',
+        hour12: false
+      });
+      updateServiceSettingsLastSaved(dt);
+    }
   } catch (e) {
     console.warn('[설정] 로드 실패:', e);
   }
@@ -5436,6 +5421,7 @@ async function saveTrialDays() {
       return;
     }
     showToast(`무료 체험 기간이 ${n}일로 저장되었습니다`, 'ok');
+    updateServiceSettingsLastSaved();  // 저장 시각 갱신
   } catch (e) {
     showToast('네트워크 오류', 'ng');
   }
@@ -5460,6 +5446,22 @@ async function loadCategoryList() {
     if (!cats.length) {
       tbody.innerHTML = '<tr><td colspan="8" style="padding:30px 0;text-align:center;color:var(--muted)">카테고리가 없습니다</td></tr>';
       return;
+    }
+
+    // 최신 updated_at 찾아서 헤더에 표시
+    let latestUpdated = null;
+    cats.forEach(c => {
+      const u = c.updated_at;
+      if (u && (!latestUpdated || u > latestUpdated)) latestUpdated = u;
+    });
+    if (latestUpdated) {
+      const dt = new Date(latestUpdated).toLocaleString('ko-KR', {
+        timeZone: 'Asia/Seoul',
+        year: 'numeric', month: '2-digit', day: '2-digit',
+        hour: '2-digit', minute: '2-digit', second: '2-digit',
+        hour12: false
+      });
+      updateCategoryLastSaved(dt);
     }
 
     // 할인율 계산 헬퍼
