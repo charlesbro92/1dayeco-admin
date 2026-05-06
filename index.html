@@ -895,22 +895,24 @@ body.light-mode .km-bubble {
         </div>
       </div>
       <div class="panel-body" style="padding:16px">
-        <!-- 1. 카테고리별 발송 대상 -->
-        <div style="margin-bottom:14px">
-          <div style="font-size:11px;color:var(--muted);margin-bottom:8px;font-weight:500">📊 카테고리별 발송 대상</div>
-          <div id="prevCategoriesGrid" style="display:grid;grid-template-columns:repeat(auto-fill, minmax(220px, 1fr));gap:8px">
-            <div style="padding:14px;text-align:center;color:var(--muted);font-size:12px">로딩 중...</div>
+        <!-- 1+2. 좌우 5:5 배치 (좌: 카테고리, 우: 콘텐츠) -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px">
+          <!-- 좌측: 카테고리별 발송 대상 -->
+          <div>
+            <div style="font-size:11px;color:var(--muted);margin-bottom:8px;font-weight:500">📊 카테고리별 발송 대상</div>
+            <div id="prevCategoriesGrid" style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+              <div style="padding:14px;text-align:center;color:var(--muted);font-size:12px;grid-column:span 2">로딩 중...</div>
+            </div>
           </div>
-        </div>
-
-        <!-- 2. 콘텐츠 미리보기 (탭) -->
-        <div style="margin-bottom:14px">
-          <div style="font-size:11px;color:var(--muted);margin-bottom:8px;font-weight:500">📝 콘텐츠 미리보기</div>
-          <div id="prevTabBar" style="display:flex;gap:4px;border-bottom:1px solid var(--b);margin-bottom:10px;flex-wrap:wrap">
-            <!-- 탭 버튼 동적 생성 -->
-          </div>
-          <div id="prevContentBox" style="background:var(--s2);border:1px solid var(--b);border-radius:8px;padding:14px;min-height:120px;font-size:13px;line-height:1.6;white-space:pre-wrap;max-height:240px;overflow-y:auto">
-            <span style="color:var(--muted)">콘텐츠를 불러오는 중...</span>
+          <!-- 우측: 콘텐츠 미리보기 (탭) -->
+          <div>
+            <div style="font-size:11px;color:var(--muted);margin-bottom:8px;font-weight:500">📝 콘텐츠 미리보기</div>
+            <div id="prevTabBar" style="display:flex;gap:4px;border-bottom:1px solid var(--b);margin-bottom:10px;flex-wrap:wrap;min-height:32px">
+              <!-- 탭 버튼 동적 생성 -->
+            </div>
+            <div id="prevContentBox" style="background:var(--s2);border:1px solid var(--b);border-radius:8px;padding:14px;min-height:160px;font-size:13px;line-height:1.6;white-space:pre-wrap;max-height:280px;overflow-y:auto">
+              <span style="color:var(--muted)">콘텐츠를 불러오는 중...</span>
+            </div>
           </div>
         </div>
 
@@ -926,7 +928,7 @@ body.light-mode .km-bubble {
             onmouseout="this.style.borderColor='var(--b)';this.style.color='var(--text)'">
             🧪 본인에게만 테스트
           </button>
-          <button onclick="confirmSendNow()" id="sendAllBtn"
+          <button onclick="confirmExecuteSend()" id="sendAllBtn"
             style="background:linear-gradient(135deg, var(--gold), #b08d3f);border:none;color:#1a1a1a;padding:8px 18px;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;font-family:var(--sans);letter-spacing:.3px">
             📤 <span id="sendAllBtnLabel">발송 시작</span>
           </button>
@@ -2222,15 +2224,18 @@ body.light-mode .km-bubble {
 <!-- 발송 확인 모달 -->
 <div class="overlay" id="sendConfirm">
   <div class="modal">
-    <div class="m-title">📤 지금 발송하시겠습니까?</div>
-    <p class="m-desc">현재 활성 구독자 전체에게 오늘의 1DAYECO 콘텐츠를 즉시 발송합니다. 이미 받은 구독자는 중복 발송되지 않습니다.</p>
+    <div class="m-title">📤 발송 페이지로 이동</div>
+    <p class="m-desc">발송 현황 페이지에서 오늘의 콘텐츠를 미리 확인하고 발송할 수 있습니다.</p>
     <div style="background:rgba(201,168,76,.08);border:1px solid rgba(201,168,76,.2);border-radius:8px;padding:12px 14px;margin:10px 0;font-size:12px;color:var(--muted);line-height:1.7">
-      💡 발송 전 구독자 목록을 확인하시겠습니까?<br>
-      <button onclick="closeSendConfirm();showPage('subscribers')" style="margin-top:6px;background:none;border:1px solid var(--b);color:var(--gold);padding:4px 12px;border-radius:5px;font-size:11px;font-family:var(--sans);cursor:pointer" onmouseover="this.style.borderColor='var(--gold)'" onmouseout="this.style.borderColor='var(--b)'">👥 구독자 페이지로 이동</button>
+      💡 발송 페이지에서 확인 가능한 것:<br>
+      • 카테고리별 발송 대상 인원<br>
+      • 오늘 작성된 콘텐츠 미리보기<br>
+      • 본인 번호로 테스트 발송<br>
+      • 발송 가능 / 불가 카테고리 안내
     </div>
     <div class="m-btns">
       <button class="m-btn" onclick="closeSendConfirm()">취소</button>
-      <button class="m-btn primary" onclick="executeSendNow()">발송하기</button>
+      <button class="m-btn primary" onclick="goToSendPage()">발송 페이지로 이동 →</button>
     </div>
   </div>
 </div>
@@ -3274,8 +3279,9 @@ async function loadSendPreview() {
     document.getElementById('prevDateInfo').textContent =
       `— ${todayDisplay} · 활성 구독자 ${totalSubs}명`;
 
-    // 5. 카테고리 그리드 렌더링
+    // 5. 카테고리 그리드 렌더링 (좌측 영역, 2x2)
     const grid = document.getElementById('prevCategoriesGrid');
+    grid.style.gridTemplateColumns = '1fr 1fr';
     const categories = ['economy', 'realestate', 'english', 'trivia'];
     grid.innerHTML = categories.map(cat => {
       const meta = CATEGORY_META[cat];
@@ -6877,6 +6883,37 @@ async function restoreSub(id, name, targetStatus) {
 // ── 즉시 발송 ─────────────────────────────────────────────────
 function confirmSendNow() { document.getElementById('sendConfirm').classList.add('open'); }
 function closeSendConfirm() { document.getElementById('sendConfirm').classList.remove('open'); }
+
+// 발송 페이지에서 "📤 발송 시작" 클릭 시 - 진짜 발송 확인
+function confirmExecuteSend() {
+  // 발송 가능 인원 확인
+  const sendableCount = ['economy','realestate','english','trivia'].reduce((sum, cat) => {
+    const hasContent = !!_prevState.contents[cat];
+    return sum + (hasContent ? (_prevState.subsByCategory[cat] || []).length : 0);
+  }, 0);
+  if (sendableCount === 0) {
+    showToast('발송 가능한 대상이 없습니다', 'ng');
+    return;
+  }
+  if (!confirm(`${sendableCount}명에게 오늘의 콘텐츠를 발송하시겠습니까?\n\n발송 후 취소할 수 없습니다.`)) return;
+  executeSendNow();
+}
+
+function goToSendPage() {
+  closeSendConfirm();
+  // 발송 페이지로 이동 (현재 페이지가 발송 페이지면 그대로)
+  if (currentPage !== 'send') {
+    showPage('send');
+  } else {
+    // 이미 발송 페이지면 미리보기 새로고침
+    loadSendPreview();
+  }
+  // 발송 미리보기 패널로 스크롤
+  setTimeout(() => {
+    const previewPanel = document.querySelector('#page-send .panel');
+    if (previewPanel) previewPanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, 100);
+}
 async function executeSendNow() {
   closeSendConfirm();
   const btn = document.getElementById('sendNowBtn');
@@ -6921,6 +6958,9 @@ async function executeSendNow() {
     loadSendStatus();
     loadKPIs();
     loadSendHistory();
+    loadTodaySendStats();
+    loadSendLogs();
+    loadSendPreview();
   } catch(e) {
     STATE._todayFailed += STATE.subscribers.filter(s => ['active','trial'].includes(s.status)).length;
     showToast('발송 오류: ' + e.message, 'ng');
