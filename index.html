@@ -257,10 +257,22 @@ tr:hover td { background:rgba(255,255,255,.02); }
 .badge.monthly { background:rgba(96,165,250,.1); color:var(--blue); }
 .badge.yearly  { background:rgba(201,168,76,.1); color:var(--gold); }
 .badge.free    { background:rgba(255,255,255,.06); color:var(--muted); }
+.badge.pkg3m   { background:rgba(139,92,246,.1); color:#8b5cf6; }
+.badge.pkg6m   { background:rgba(20,184,166,.1); color:#14b8a6; }
+.badge.pkg1y   { background:rgba(245,158,11,.1); color:var(--amber); }
 .badge.success { background:rgba(74,222,128,.1); color:var(--green); }
 .badge.failed  { background:rgba(248,113,113,.1); color:var(--red); }
 .badge.pending { background:rgba(251,191,36,.1); color:var(--amber); }
 .badge-dot { width:5px;height:5px;border-radius:50%;background:currentColor; }
+
+/* payment_status pill (구독자/결제이력 공통) */
+.payment-pill {
+  display:inline-flex; align-items:center;
+  font-size:10px; font-weight:700;
+  padding:3px 9px; border-radius:100px;
+  font-family:var(--mono);
+  letter-spacing:.2px;
+}
 
 /* ── SEND PROGRESS ── */
 .send-progress { padding:20px; }
@@ -852,12 +864,8 @@ body.light-mode .km-bubble {
         <option value="active">유료</option>
         <option value="cancelled">해지</option>
       </select>
-      <select id="hourFilter" onchange="loadSubscribers()" style="background:var(--s2);border:1px solid var(--b);color:#E0DDD4;padding:8px 14px;font-size:12px;border-radius:6px;font-family:var(--sans);outline:none">
-        <option value="">전체 시간</option>
-        <option value="7">오전 7시</option>
-        <option value="8">오전 8시</option>
-        <option value="9">오전 9시</option>
-      </select>
+      <!-- 시간 필터: 8시 고정으로 숨김 처리 (legacy 호환 위해 hidden으로 유지) -->
+      <input type="hidden" id="hourFilter" value="">
       <span id="bulkCount" style="font-size:11px;color:var(--muted);white-space:nowrap">0명 선택</span>
       <button onclick="sendToSelected()"
         style="background:var(--gold);color:var(--bg);border:none;padding:7px 14px;
@@ -872,7 +880,7 @@ body.light-mode .km-bubble {
           <thead><tr>
             <th style="width:36px"><input type="checkbox" id="checkAll" onclick="toggleCheckAll(this)"
               style="accent-color:var(--gold);cursor:pointer;width:14px;height:14px"></th>
-            <th>이름</th><th>전화번호</th><th style="text-align:center">플랜</th><th style="text-align:right">금액</th><th style="text-align:center">상태</th><th style="text-align:center">관심사</th><th style="text-align:center">발송시간</th><th style="text-align:center">가입시각</th><th style="text-align:center">시작일</th><th style="text-align:center">종료일</th><th style="width:120px">이메일</th><th style="width:120px">메모</th><th style="width:120px;text-align:center">작업</th>
+            <th>이름</th><th>전화번호</th><th style="text-align:center">플랜</th><th style="text-align:right">금액</th><th style="text-align:center">상태</th><th style="text-align:center">결제</th><th style="text-align:center">관심사</th><th style="text-align:center">가입시각</th><th style="text-align:center">시작일</th><th style="text-align:center">종료일</th><th style="width:120px">이메일</th><th style="width:120px">메모</th><th style="width:120px;text-align:center">작업</th>
           </tr></thead>
           <tbody id="subTableBody"><tr><td colspan="14"><div class="empty"><span class="empty-ico">👥</span>구독자가 없습니다</div></td></tr></tbody>
         </table>
@@ -910,7 +918,7 @@ body.light-mode .km-bubble {
             <div id="prevTabBar" style="display:flex;gap:4px;border-bottom:1px solid var(--b);margin-bottom:10px;flex-wrap:wrap;min-height:32px">
               <!-- 탭 버튼 동적 생성 -->
             </div>
-            <div id="prevContentBox" style="background:var(--s2);border:1px solid var(--b);border-radius:8px;padding:14px;min-height:160px;font-size:13px;line-height:1.6;white-space:pre-wrap;max-height:280px;overflow-y:auto">
+            <div id="prevContentBox" style="background:var(--s2);border:1px solid var(--b);border-radius:8px;padding:14px;min-height:160px;font-size:13px;line-height:1.6;max-height:280px;overflow-y:auto">
               <span style="color:var(--muted)">콘텐츠를 불러오는 중...</span>
             </div>
           </div>
@@ -997,7 +1005,6 @@ body.light-mode .km-bubble {
               style="background:none;border:1px solid var(--b);color:var(--muted);padding:4px 10px;border-radius:5px;font-size:11px;cursor:pointer">다음 ›</button>
           </div>
         </div>
-        </table>
       </div>
     </div>
 
@@ -1525,11 +1532,13 @@ body.light-mode .km-bubble {
           </div>
           <div>
             <label style="font-size:12px;color:var(--muted);display:block;margin-bottom:6px">기본 발송 시간 (KST)</label>
-            <select id="cfgHour" style="width:100%;background:var(--s3);border:1px solid var(--b);border-radius:8px;padding:10px 14px;font-size:14px;color:var(--text);font-family:var(--sans);outline:none;-webkit-appearance:none">
-              <option value="7">오전 7시</option>
-              <option value="8" selected>오전 8시</option>
-              <option value="9">오전 9시</option>
-            </select>
+            <div style="background:var(--s3);border:1px solid var(--b);border-radius:8px;padding:10px 14px;font-size:14px;color:var(--text);display:flex;align-items:center;gap:10px">
+              <span style="font-weight:600">오전 8시 고정</span>
+              <span style="font-size:11px;color:var(--muted)">·</span>
+              <span style="font-size:11px;color:var(--muted)">카카오톡 알림톡 정책상 8시 예약 발송으로 고정</span>
+            </div>
+            <!-- legacy 호환: cfgHour 값은 유지하되 사용자 변경 불가 -->
+            <input type="hidden" id="cfgHour" value="8">
           </div>
 
           <!-- 무료 체험 기간 -->
@@ -1576,7 +1585,7 @@ body.light-mode .km-bubble {
                   <th style="padding:8px 6px;font-weight:500;text-align:right">3개월<br><span style="font-size:9px;opacity:.6">정가/할인</span></th>
                   <th style="padding:8px 6px;font-weight:500;text-align:right">6개월<br><span style="font-size:9px;opacity:.6">정가/할인</span></th>
                   <th style="padding:8px 6px;font-weight:500;text-align:right">1년<br><span style="font-size:9px;opacity:.6">정가/할인</span></th>
-                  <th style="padding:8px 6px;font-weight:500;text-align:center;width:50px">활성</th>
+                  <th style="padding:8px 6px;font-weight:500;text-align:center;width:70px">노출</th>
                   <th style="padding:8px 6px;font-weight:500;text-align:center;width:130px">작업</th>
                 </tr>
               </thead>
@@ -1673,10 +1682,14 @@ body.light-mode .km-bubble {
             <input type="number" id="catInputOrder" min="0" step="1" placeholder="999" style="width:100%;background:var(--s3);border:1px solid var(--b);border-radius:6px;padding:9px 12px;font-size:13px;color:var(--text);font-family:var(--mono);outline:none">
           </div>
           <div style="flex:1">
-            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;padding:9px 12px;background:rgba(255,255,255,.02);border:1px solid var(--b);border-radius:6px;font-size:13px;color:var(--text)">
-              <input type="checkbox" id="catInputActive" checked style="cursor:pointer">
-              <span>✅ 활성 (신규 가입에서 노출)</span>
-            </label>
+            <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:4px">노출 상태</label>
+            <select id="catInputVisibility" style="width:100%;background:var(--s3);border:1px solid var(--b);border-radius:6px;padding:9px 12px;font-size:13px;color:var(--text);font-family:var(--sans);outline:none">
+              <option value="active">🟢 운영중 (랜딩 정식 노출, 신청 가능)</option>
+              <option value="coming_soon">🟡 출시 예정 (랜딩 COMING SOON 영역)</option>
+              <option value="hidden">⚪ 숨김 (랜딩에서 완전 숨김)</option>
+            </select>
+            <!-- legacy 호환 hidden checkbox -->
+            <input type="checkbox" id="catInputActive" checked style="display:none">
           </div>
         </div>
       </div>
@@ -1882,18 +1895,17 @@ body.light-mode .km-bubble {
         <div><label style="font-size:10px;color:var(--muted);letter-spacing:.5px;display:block;margin-bottom:4px">구독 플랜 *</label>
           <select id="addSubPlan" onchange="updateAddSubDates()"
             style="width:100%;background:var(--s3);border:1.5px solid var(--b);border-radius:7px;padding:9px 10px;font-size:13px;color:var(--text);font-family:var(--sans);outline:none">
-            <option value="free">무료 체험 (5일)</option>
             <option value="monthly">월 정액 (30일)</option>
             <option value="pkg3m">3개월 일시불 (90일)</option>
-            <option value="pkg6m">6개월 일시불 (180일)</option>
+            <option value="pkg6m" selected>6개월 일시불 (180일)</option>
             <option value="pkg1y">1년 일시불 (365일)</option>
-            <option value="yearly">연간 (legacy 365일)</option>
           </select></div>
-        <div><label style="font-size:10px;color:var(--muted);letter-spacing:.5px;display:block;margin-bottom:4px">발송 시간 *</label>
-          <select id="addSubHour"
-            style="width:100%;background:var(--s3);border:1.5px solid var(--b);border-radius:7px;padding:9px 10px;font-size:13px;color:var(--text);font-family:var(--sans);outline:none">
-            <option value="7">오전 7시</option><option value="8" selected>오전 8시</option><option value="9">오전 9시</option>
-          </select></div>
+        <div><label style="font-size:10px;color:var(--muted);letter-spacing:.5px;display:block;margin-bottom:4px">발송 시간</label>
+          <div style="background:var(--s3);border:1.5px solid var(--b);border-radius:7px;padding:9px 10px;font-size:12px;color:var(--muted);font-family:var(--sans)">
+            오전 8시 고정 <span style="font-size:10px;opacity:.7">(KST)</span>
+          </div>
+          <input type="hidden" id="addSubHour" value="8">
+        </div>
       </div>
 
       <!-- 구독 시작일 + 종료일 -->
@@ -1963,12 +1975,10 @@ body.light-mode .km-bubble {
         <div>
           <label style="font-size:10px;color:var(--muted);letter-spacing:.5px;display:block;margin-bottom:4px">구독 플랜</label>
           <select id="sdInputPlan" style="width:100%;background:var(--s3);border:1.5px solid var(--b);border-radius:7px;padding:9px 12px;font-size:13px;color:var(--text);font-family:var(--sans);outline:none">
-            <option value="free">무료</option>
             <option value="monthly">월 정액</option>
             <option value="pkg3m">3개월 일시불</option>
             <option value="pkg6m">6개월 일시불</option>
             <option value="pkg1y">1년 일시불</option>
-            <option value="yearly">연간 (legacy)</option>
           </select>
         </div>
         <div>
@@ -1979,12 +1989,13 @@ body.light-mode .km-bubble {
           </select>
         </div>
       </div>
-      <!-- 발송시간 -->
+      <!-- 발송시간: 8시 고정 (변경 불가) -->
       <div>
         <label style="font-size:10px;color:var(--muted);letter-spacing:.5px;display:block;margin-bottom:4px">발송 시간</label>
-        <select id="sdInputHour" style="width:100%;background:var(--s3);border:1.5px solid var(--b);border-radius:7px;padding:9px 12px;font-size:13px;color:var(--text);font-family:var(--sans);outline:none">
-          <option value="7">오전 7시</option><option value="8">오전 8시</option><option value="9">오전 9시</option>
-        </select>
+        <div style="background:var(--s3);border:1.5px solid var(--b);border-radius:7px;padding:9px 12px;font-size:12px;color:var(--muted);font-family:var(--sans)">
+          오전 8시 고정 <span style="font-size:10px;opacity:.7">(전체 구독자 공통)</span>
+        </div>
+        <input type="hidden" id="sdInputHour" value="8">
       </div>
       <!-- 받아볼 관심사 (4 카테고리) -->
       <div>
@@ -2207,10 +2218,11 @@ body.light-mode .km-bubble {
   </div>
 </div>
 
-<!-- 시간 변경 피커 모달 -->
+<!-- 시간 변경 피커 모달: 8시 고정으로 비활성. 향후 시간 변경 기능 부활 시 주석 제거 -->
+<!-- HIDDEN_HOUR_PICKER_START
 <div class="overlay" id="hourPickerOverlay" onclick="if(event.target.id==='hourPickerOverlay')closeHourPicker()">
   <div class="modal" style="max-width:320px;padding:28px 24px">
-    <div class="m-title" style="font-size:16px">⏰ 발송 시간 변경</div>
+    <div class="m-title" style="font-size:16px">발송 시간 변경</div>
     <p class="m-desc" style="margin-bottom:18px"><strong id="hpName"></strong> 님의 메시지 발송 시간을 선택해 주세요.</p>
     <div style="display:flex;gap:8px;margin-bottom:20px">
       <button id="hpBtn7"  class="hp-btn" onclick="selectHourPick(7)" >오전 7시</button>
@@ -2220,6 +2232,7 @@ body.light-mode .km-bubble {
     <button class="m-btn" onclick="closeHourPicker()" style="width:100%">취소</button>
   </div>
 </div>
+HIDDEN_HOUR_PICKER_END -->
 
 <!-- 발송 확인 모달 -->
 <div class="overlay" id="sendConfirm">
@@ -2258,6 +2271,38 @@ let API_BASE = (function() {
   }
   return 'https://web-production-761cd.up.railway.app';
 })();
+
+// ════════════════════════════════════════════════════════════
+// 공통 헬퍼 (plan 라벨, payment_status 라벨 등) ────────────
+// ════════════════════════════════════════════════════════════
+const PLAN_LABELS = {
+  monthly: '월 정액',
+  pkg3m:   '3개월',
+  pkg6m:   '6개월',
+  pkg1y:   '1년',
+  // legacy (UI에서 신규 노출 안 됨, 과거 데이터 표시용만)
+  free:    '무료',
+  yearly:  '연간',
+};
+
+function planLabel(plan) {
+  if (!plan) return '—';
+  return PLAN_LABELS[plan] || plan;
+}
+
+const PAYMENT_STATUS_LABELS = {
+  pending:    { text: '대기중',   color: '#94a3b8', bg: 'rgba(148,163,184,.12)' },
+  completed:  { text: '결제완료', color: '#10b981', bg: 'rgba(16,185,129,.12)'  },
+  cancelled:  { text: '취소',     color: '#f59e0b', bg: 'rgba(245,158,11,.12)'  },
+  failed:     { text: '결제오류', color: '#ef4444', bg: 'rgba(239,68,68,.12)'   },
+  refunded:   { text: '환불',     color: '#8b5cf6', bg: 'rgba(139,92,246,.12)'  },
+};
+
+function paymentStatusLabel(status) {
+  const conf = PAYMENT_STATUS_LABELS[status];
+  if (!conf) return `<span class="payment-pill" style="color:#94a3b8;background:rgba(148,163,184,.12)">—</span>`;
+  return `<span class="payment-pill" style="color:${conf.color};background:${conf.bg}">${conf.text}</span>`;
+}
 
 // ════════════════════════════════════════════════════════════
 // 테마 (다크 / 라이트) ──────────────────────────────────────
@@ -2456,26 +2501,38 @@ function loadKPIs() {
   const active  = subs.filter(s => s.status === 'active').length;
   const trial   = subs.filter(s => s.status === 'trial').length;
 
-  // 유료 플랜 카운트 (trial 포함 — 가입한 모든 유료 플랜)
-  const monthlyAll = livingSubs.filter(s => s.plan === 'monthly').length;
-  const yearlyAll  = livingSubs.filter(s => s.plan === 'yearly').length;
+  // 유료 플랜 카운트 (모든 유료 플랜 합산: monthly, pkg3m/6m/1y, yearly legacy)
+  const PAID_PLANS = ['monthly', 'pkg3m', 'pkg6m', 'pkg1y', 'yearly'];
+  const paidLiving = livingSubs.filter(s => PAID_PLANS.includes(s.plan));
+  const monthlyCount = paidLiving.filter(s => s.plan === 'monthly').length;
+  const pkgCount     = paidLiving.filter(s => ['pkg3m','pkg6m','pkg1y'].includes(s.plan)).length;
+  const yearlyCount  = paidLiving.filter(s => s.plan === 'yearly').length;
 
-  // 실제 청구 대상 (active만 — 매출 계산용)
-  const monthlyPaying = subs.filter(s => s.plan === 'monthly' && s.status === 'active').length;
-  const yearlyPaying  = subs.filter(s => s.plan === 'yearly'  && s.status === 'active').length;
+  // 매출 추정 (active만 — 실제 결제 발생)
+  // 월할 환산: monthly = 9900, pkg3m = 14900/3, pkg6m = 24900/6, pkg1y = 41900/12
+  const PLAN_MRR = {
+    monthly: 9900,
+    pkg3m:   Math.round(14900 / 3),
+    pkg6m:   Math.round(24900 / 6),
+    pkg1y:   Math.round(41900 / 12),
+    yearly:  Math.round(79000 / 12),
+  };
+  const rev = subs
+    .filter(s => s.status === 'active' && PLAN_MRR[s.plan])
+    .reduce((sum, s) => sum + PLAN_MRR[s.plan], 0);
 
   const now     = Date.now();
   const new7d   = subs.filter(s => now - new Date(s.created_at) < 7*86400*1000).length;
   const total   = livingSubs.length;
-  const paid    = monthlyAll + yearlyAll;
-  const rev     = monthlyPaying * 9900 + yearlyPaying * (79000/12);
+  const paid    = paidLiving.length;
   const send    = STATE.today_send;
 
   setKPI('kpi-total', total.toLocaleString() + ' 명', 'gold',
     '<span class="up">↑ ' + new7d + '명</span> 최근 7일' + (trial > 0 ? ` · <span style="color:#5eea91">체험 중 ${trial}명</span>` : ''));
-  setKPI('kpi-paid',  paid.toLocaleString() + ' 명', 'green',
-    '월간 ' + monthlyAll + ' + 연간 ' + yearlyAll);
-  setKPI('kpi-rev',   '₩ ' + Math.floor(rev).toLocaleString('ko-KR'), 'blue', '이번 달 추정');
+  // 유료 카운트: 월정액 + 일시불 묶음 (legacy yearly는 0이면 숨김)
+  const breakdown = '월정액 ' + monthlyCount + ' + 일시불 ' + pkgCount + (yearlyCount > 0 ? ` + 연간 ${yearlyCount}` : '');
+  setKPI('kpi-paid',  paid.toLocaleString() + ' 명', 'green', breakdown);
+  setKPI('kpi-rev',   '₩ ' + Math.floor(rev).toLocaleString('ko-KR'), 'blue', '이번 달 추정 (월할)');
   setKPI('kpi-send', send.sent + ' 건', 'amber',
     '( 완료 ' + send.sent + ' · 실패 <span style="color:' + (send.failed>0?'var(--red)':'var(--muted)') + '">' + send.failed + ' )</span>');
 }
@@ -2792,7 +2849,7 @@ async function loadRecentSubs() {
         onmouseout="this.style.background=''">` +
       '<td><strong>' + s.name + '</strong>' + newBadge + '</td>' +
       '<td class="t-phone">' + s.phone + '</td>' +
-      '<td><span class="badge ' + s.plan + '">' + ({monthly:'월간',yearly:'연간',free:'무료'}[s.plan]||s.plan) + '</span></td>' +
+      '<td><span class="badge ' + s.plan + '">' + planLabel(s.plan) + '</span></td>' +
       '<td><span class="badge ' + s.status + '"><span class="badge-dot"></span>' + ({active:'활성',trial:'체험',cancelled:'해지',expired:'만료'}[s.status]||s.status) + '</span></td>' +
       '<td style="font-family:var(--mono);font-size:11px;color:var(--muted)">' + timeStr + '</td>' +
       '<td style="font-family:var(--mono);font-size:11px">' + cd.toLocaleDateString('ko-KR') + '</td>' +
@@ -3001,8 +3058,6 @@ function renderSubscribersRows(filtered) {
       : `<div style="display:flex;gap:4px;align-items:center;flex-wrap:nowrap">
            <button onclick="cancelSub('${s.id}','${s.name}')"
              style="background:none;border:1px solid var(--b);color:var(--muted);padding:4px 10px;border-radius:4px;font-size:11px;cursor:pointer;font-family:var(--sans);white-space:nowrap">${s.status==='trial'?'체험취소':'해지'}</button>
-           <button onclick="changeHour('${s.id}','${s.name}',${s.send_hour||8})"
-             style="background:var(--gold-d);border:1px solid var(--b);color:var(--gold);padding:4px 8px;border-radius:4px;font-size:10px;cursor:pointer;font-family:var(--sans);white-space:nowrap" title="발송 시간 변경">⏰</button>
          </div>`;
 
     const diffDays = (Date.now() - new Date(s.created_at).getTime()) / (1000*60*60*24);
@@ -3025,14 +3080,14 @@ function renderSubscribersRows(filtered) {
       <td><strong>${s.name}</strong>${newBadge}${notifyD1Badge}</td>
       <td class="t-phone" style="font-size:12px">${s.phone}</td>
       <td style="text-align:center">
-        <span class="badge ${s.plan}">${{monthly:'월정액',yearly:'연간',free:'무료',pkg3m:'3개월',pkg6m:'6개월',pkg1y:'1년'}[s.plan]||s.plan}</span>
+        <span class="badge ${s.plan}">${planLabel(s.plan)}</span>
       </td>
       <td style="font-family:var(--mono);font-size:12px;text-align:right;color:var(--muted)">
         ${{monthly:'₩9,900',yearly:'₩79,000',free:'₩0',pkg3m:'₩14,900',pkg6m:'₩24,900',pkg1y:'₩41,900'}[s.plan]||''}
       </td>
       <td style="text-align:center"><span class="badge ${s.status}"><span class="badge-dot"></span>${{active:'활성',trial:'체험',cancelled:'해지',expired:'만료'}[s.status]||s.status}</span></td>
+      <td style="text-align:center">${paymentStatusLabel(s.payment_status)}</td>
       <td style="text-align:center;white-space:nowrap">${renderSubCategories(s.categories)}</td>
-      <td style="font-family:var(--mono);font-size:11px;color:var(--gold);text-align:center">${hourLabel}</td>
       <td style="font-family:var(--mono);font-size:11px;color:var(--muted);text-align:center">${joinTimeStr}</td>
       <td style="font-family:var(--mono);font-size:11px;color:var(--muted);text-align:center">${startDate}</td>
       <td style="font-family:var(--mono);font-size:11px;color:${endColor};text-align:center">${endDateStr}</td>
@@ -3405,10 +3460,10 @@ function renderPrevContent() {
   }
   const topic = content.topic || content.headline || '제목 없음';
   const body  = content.body  || content.summary  || '본문 없음';
-  document.getElementById('prevContentBox').innerHTML = `
-    <div style="font-size:14px;font-weight:700;margin-bottom:10px;color:var(--gold)">📌 ${escapeHtml(topic)}</div>
-    <div style="font-size:13px;line-height:1.6;color:var(--text)">${escapeHtml(body)}</div>
-  `;
+  // 백틱 직후 개행/공백이 white-space:pre-wrap 컨테이너에서 빈 줄로 보이는 문제 방지 (한 줄 템플릿)
+  document.getElementById('prevContentBox').innerHTML =
+    `<div style="font-size:14px;font-weight:700;margin-bottom:10px;color:var(--gold)">📌 ${escapeHtml(topic)}</div>` +
+    `<div style="font-size:13px;line-height:1.6;color:var(--text);white-space:pre-wrap">${escapeHtml(body)}</div>`;
 }
 
 // HTML 이스케이프
@@ -5467,9 +5522,10 @@ function getArchiveList() {
     return true;
   });
 
-  // 날짜 DESC, 같은 날짜 안에서는 카테고리 ASC
+  // 정렬: 날짜 DESC (최신이 위), 같은 날짜 안에서는 카테고리 ASC
+  // (참고: _renderArchiveTable에서 정렬 select 기반 재정렬하므로 여기는 기본값)
   return all.sort(function(a, b) {
-    if (a.dateStr !== b.dateStr) return a.dateStr.localeCompare(b.dateStr);
+    if (a.dateStr !== b.dateStr) return (b.dateStr || '').localeCompare(a.dateStr || '');
     return (a.cat || '').localeCompare(b.cat || '');
   });
 }
@@ -5604,7 +5660,7 @@ function resetArchiveDateRange() {
 
 function _renderArchiveTable() {
   // === 필터 값 수집 ===
-  const catFilter = document.getElementById('contentCatFilter')?.value  || '';
+  const catFilter = (document.getElementById('contentCatFilter')?.value || '').trim().toLowerCase();
   const searchValRaw = (document.getElementById('archiveSearch')?.value || '').trim();
   const searchVal = searchValRaw.toLowerCase();
   const periodSel = document.getElementById('archivePeriod')?.value || 'all';
@@ -5613,9 +5669,15 @@ function _renderArchiveTable() {
   const dateFrom = range.from;
   const dateTo   = range.to;
 
+  // pill UI 상태를 hidden select 값과 동기화 (외부에서 값 바뀐 경우 대응)
+  document.querySelectorAll('#catPillFilter .cat-pill').forEach(function(b) {
+    const pillCat = (b.dataset.cat || '').toLowerCase();
+    b.classList.toggle('active', pillCat === catFilter);
+  });
+
   // === 필터링 ===
   let rows = getArchiveList();
-  if (catFilter) rows = rows.filter(r => r.cat === catFilter);
+  if (catFilter) rows = rows.filter(r => (r.cat || '').toLowerCase() === catFilter);
   if (dateFrom)  rows = rows.filter(r => r.dateStr >= dateFrom);
   if (dateTo)    rows = rows.filter(r => r.dateStr <= dateTo);
   if (searchVal) {
@@ -5891,38 +5953,127 @@ function saveContentEdit() {
 
 // ── 매출 ─────────────────────────────────────────────────────
 async function loadRevenue() {
-  const data = MOCK.revenue;
-  const maxAmt = Math.max(...data.map(d=>d.amount));
-  const total = data.reduce((s,d)=>s+d.amount,0);
-  const thisMonth = data[data.length-1]?.amount || 0;
+  // 실제 구독자 데이터로 월별 매출 계산
+  // 매출 발생 시점 = 결제일 (체험 종료 후, payment_status='completed')
+  // 베타 단계: 가입 시점 기준 추정 사용 (active 상태인 구독자만)
+  const subs = (STATE.subscribers || []).filter(s => !s.hidden);
 
-  document.getElementById('revMonth').textContent = `₩ ${Math.floor(thisMonth).toLocaleString()}`;
-  document.getElementById('revTotal').textContent = `₩ ${Math.floor(total).toLocaleString()}`;
-  document.getElementById('revCount').textContent = `${Math.floor(thisMonth/9900).toLocaleString()} 건`;
+  // plan별 결제 금액 (정가)
+  const PLAN_AMOUNT = {
+    monthly: 9900, pkg3m: 14900, pkg6m: 24900, pkg1y: 41900,
+    yearly: 79000, free: 0,
+  };
 
-  document.getElementById('revBars').innerHTML = data.map(d=>`
-    <div class="rev-bar-wrap">
-      <div class="rev-bar" style="height:${Math.round(d.amount/maxAmt*100)}%"></div>
-      <div class="rev-bar-label">${d.month}</div>
-    </div>`).join('');
+  // 최근 12개월 시계열 생성 (오래된 → 최신, KST 기준)
+  const now = new Date();
+  const months = [];
+  for (let i = 11; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const ym = d.toISOString().slice(0, 7);  // YYYY-MM
+    const monthLabel = (d.getMonth() + 1) + '월';
+    months.push({ ym, month: monthLabel, amount: 0, count: 0 });
+  }
+
+  // 각 구독자의 결제 발생 월에 매출 합산
+  // - active 또는 payment_status=completed인 구독자만
+  // - 결제 발생 월 = trial_end_date의 월 (체험 끝나고 청구되는 시점)
+  //   trial_end_date 없으면 created_at 기준
+  subs.forEach(s => {
+    const isPaid = s.status === 'active' || s.payment_status === 'completed';
+    if (!isPaid) return;
+    const amt = PLAN_AMOUNT[s.plan];
+    if (!amt) return;
+
+    const billDate = s.trial_end_date || s.created_at;
+    if (!billDate) return;
+    const ym = billDate.slice(0, 7);  // YYYY-MM
+    const slot = months.find(m => m.ym === ym);
+    if (slot) {
+      slot.amount += amt;
+      slot.count  += 1;
+    }
+  });
+
+  const maxAmt = Math.max(...months.map(m => m.amount), 1);  // 0 division 방지
+  const total = months.reduce((s, m) => s + m.amount, 0);
+  const thisMonth = months[months.length - 1]?.amount || 0;
+  const thisMonthCount = months[months.length - 1]?.count || 0;
+
+  document.getElementById('revMonth').textContent  = `₩ ${Math.floor(thisMonth).toLocaleString()}`;
+  document.getElementById('revTotal').textContent  = `₩ ${Math.floor(total).toLocaleString()}`;
+  document.getElementById('revCount').textContent  = `${thisMonthCount.toLocaleString()} 건`;
+
+  // 차트 렌더 (시간 순 정렬 보장)
+  document.getElementById('revBars').innerHTML = months.map(m => {
+    const heightPct = Math.max(2, Math.round(m.amount / maxAmt * 100));
+    const tip = `${m.month}: ₩${Math.floor(m.amount).toLocaleString()} (${m.count}건)`;
+    return `
+      <div class="rev-bar-wrap" title="${tip}">
+        <div class="rev-bar" style="height:${heightPct}%"></div>
+        <div class="rev-bar-label">${m.month}</div>
+      </div>`;
+  }).join('');
 }
 
 // ── 결제 이력 ─────────────────────────────────────────────────
-function loadPayments() {
-  const mock = MOCK.subscribers.filter(s=>s.plan!=='free').slice(0,8).map((s,i)=>({
-    name:s.name, plan:s.plan, amount:s.plan==='yearly'?79000:9900,
-    status:'paid', order:`haru1min_${Date.now().toString(36).slice(-8)}${i}`,
-    date:new Date(Date.now()-i*86400*1000).toLocaleString('ko-KR'),
-  }));
-  document.getElementById('payBody').innerHTML = mock.map(p=>`
-    <tr>
-      <td style="font-family:var(--mono);font-size:11px">${p.date}</td>
-      <td><strong>${p.name}</strong></td>
-      <td><span class="badge ${p.plan}">${{monthly:'월간',yearly:'연간'}[p.plan]}</span></td>
-      <td style="font-family:var(--mono)">₩${p.amount.toLocaleString()}</td>
-      <td><span class="badge success">결제완료</span></td>
-      <td style="font-family:var(--mono);font-size:10px;color:var(--muted)">${p.order}</td>
-    </tr>`).join('');
+async function loadPayments() {
+  // 실제 구독자 중 결제 관련 상태(완료/취소/오류/환불)가 있는 사용자 조회
+  // pending(체험 중)은 결제이력에서 제외
+  const tbody = document.getElementById('payBody');
+  if (!tbody) return;
+
+  let subs = [];
+  try {
+    const r = await fetch(API_BASE + '/admin/subscribers');
+    const d = await r.json();
+    subs = (d.data || []).filter(s => {
+      const ps = s.payment_status;
+      // pending(체험 중)은 결제 발생 전 → 결제이력에서 제외
+      // null/undefined도 제외 (마이그레이션 전 데이터)
+      return ps && ps !== 'pending';
+    });
+  } catch (e) {
+    // API 실패 시 mock 폴백
+    subs = (MOCK.subscribers || []).filter(s => s.plan !== 'free').slice(0,8).map((s,i)=>({
+      name: s.name, phone: s.phone, plan: s.plan,
+      payment_status: 'completed',
+      created_at: new Date(Date.now()-i*86400*1000).toISOString(),
+    }));
+  }
+
+  // plan별 금액 (정가 기준)
+  const PLAN_AMOUNTS = {
+    monthly: 9900, pkg3m: 14900, pkg6m: 24900, pkg1y: 41900,
+    yearly: 79000,  // legacy
+    free: 0,
+  };
+
+  if (subs.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:40px;color:var(--muted)">결제 이력이 없습니다.</td></tr>';
+    return;
+  }
+
+  // 최신 순 정렬
+  subs.sort((a, b) => {
+    const da = a.updated_at || a.created_at || '';
+    const db = b.updated_at || b.created_at || '';
+    return db.localeCompare(da);
+  });
+
+  tbody.innerHTML = subs.map(s => {
+    const amount = PLAN_AMOUNTS[s.plan] || 0;
+    const dateStr = (s.updated_at || s.created_at || '').slice(0, 19).replace('T', ' ');
+    const orderId = 'order_' + (s.id || '').slice(-8);
+    return `
+      <tr>
+        <td style="font-family:var(--mono);font-size:11px">${dateStr}</td>
+        <td><strong>${s.name || '—'}</strong></td>
+        <td><span class="badge ${s.plan}">${planLabel(s.plan)}</span></td>
+        <td style="font-family:var(--mono)">₩${amount.toLocaleString()}</td>
+        <td>${paymentStatusLabel(s.payment_status)}</td>
+        <td style="font-family:var(--mono);font-size:10px;color:var(--muted)">${orderId}</td>
+      </tr>`;
+  }).join('');
 }
 
 // ── 설정 ─────────────────────────────────────────────────────
@@ -6033,7 +6184,27 @@ async function loadCategoryList() {
 
   try {
     const res = await apiFetch('/admin/categories');
-    const cats = res && res.data ? res.data : [];
+    let cats = res && res.data ? res.data : [];
+
+    // 중복 제거 (id 기준 유니크 보장 — 항목 13)
+    // 같은 id가 여러 번 오면 마지막 값(updated_at 최신) 유지
+    const seenIds = new Map();
+    cats.forEach(c => {
+      if (!c || !c.id) return;
+      const prev = seenIds.get(c.id);
+      if (!prev) {
+        seenIds.set(c.id, c);
+      } else {
+        // 더 최신 updated_at만 유지
+        const prevTs = prev.updated_at || '';
+        const curTs  = c.updated_at || '';
+        if (curTs >= prevTs) seenIds.set(c.id, c);
+      }
+    });
+    cats = Array.from(seenIds.values()).sort((a, b) =>
+      (a.display_order || 999) - (b.display_order || 999)
+    );
+
     CATEGORIES_CACHE = cats;
 
     if (!cats.length) {
@@ -6073,16 +6244,24 @@ async function loadCategoryList() {
       return `<div style="display:flex;flex-direction:column;align-items:flex-end;gap:1px;line-height:1.3">${origStr}${priceStr}${pctStr}</div>`;
     };
 
+    // visibility 셀 (active / coming_soon / hidden)
+    const renderVisibilityCell = (c) => {
+      const vis = c.visibility || (c.active ? 'active' : 'hidden');
+      const conf = {
+        active:      { color: '#10b981', bg: 'rgba(16,185,129,.12)',  label: '운영중' },
+        coming_soon: { color: '#f59e0b', bg: 'rgba(245,158,11,.12)',  label: '출시예정' },
+        hidden:      { color: '#94a3b8', bg: 'rgba(148,163,184,.12)', label: '숨김' },
+      }[vis] || { color: '#94a3b8', bg: 'rgba(148,163,184,.12)', label: '—' };
+      return `<span style="display:inline-block;font-size:10px;font-weight:700;padding:3px 9px;border-radius:100px;color:${conf.color};background:${conf.bg};white-space:nowrap">${conf.label}</span>`;
+    };
+
     tbody.innerHTML = cats.map(c => {
       const monthly = (c.monthly_price || 0).toLocaleString('ko-KR');
-      const activeIcon = c.active
-        ? '<span style="color:var(--green);font-size:14px">●</span>'
-        : '<span style="color:var(--muted);font-size:14px">○</span>';
       return `
         <tr style="border-bottom:1px solid var(--b)">
           <td style="padding:10px 6px;font-size:18px;text-align:center">${c.emoji || '📌'}</td>
           <td style="padding:10px 6px">
-            <div style="font-weight:600;color:var(--text)">${c.name}</div>
+            <div style="font-weight:600;color:var(--text)">${c.name || ''}</div>
             <div style="font-family:var(--mono);font-size:10px;color:var(--muted);margin-top:1px">${c.id}</div>
           </td>
           <td style="padding:10px 6px;text-align:right;font-family:var(--mono)">
@@ -6092,7 +6271,7 @@ async function loadCategoryList() {
           <td style="padding:10px 6px;text-align:right;font-family:var(--mono)">${renderPriceCell(c.pkg3m_original, c.pkg3m_price)}</td>
           <td style="padding:10px 6px;text-align:right;font-family:var(--mono)">${renderPriceCell(c.pkg6m_original, c.pkg6m_price)}</td>
           <td style="padding:10px 6px;text-align:right;font-family:var(--mono)">${renderPriceCell(c.pkg1y_original, c.pkg1y_price)}</td>
-          <td style="padding:10px 6px;text-align:center">${activeIcon}</td>
+          <td style="padding:10px 6px;text-align:center">${renderVisibilityCell(c)}</td>
           <td style="padding:10px 6px;text-align:center;white-space:nowrap">
             <button onclick="openCategoryEdit('${c.id}')" style="background:none;border:1px solid var(--b);color:var(--text);padding:5px 10px;border-radius:4px;font-size:11px;cursor:pointer;margin-right:4px">수정</button>
             <button onclick="confirmCategoryDelete('${c.id}', '${(c.name || '').replace(/'/g, "\\'")}')" style="background:none;border:1px solid rgba(255,77,77,.4);color:var(--red);padding:5px 10px;border-radius:4px;font-size:11px;cursor:pointer">삭제</button>
@@ -6148,6 +6327,8 @@ function openCategoryAdd() {
   setCategoryFormPrices(null);  // 디폴트 가격으로
   document.getElementById('catInputOrder').value   = String((CATEGORIES_CACHE.length + 1) * 10);
   document.getElementById('catInputActive').checked = true;
+  const visEl = document.getElementById('catInputVisibility');
+  if (visEl) visEl.value = 'active';
   // 저장 버튼 초기화
   const btn = document.getElementById('catSaveBtn');
   if (btn) { btn.disabled = false; btn.textContent = '💾 저장'; }
@@ -6172,6 +6353,12 @@ function openCategoryEdit(catId) {
   setCategoryFormPrices(cat);  // 현재 가격 채움
   document.getElementById('catInputOrder').value   = String(cat.display_order || 0);
   document.getElementById('catInputActive').checked = !!cat.active;
+  const visEl = document.getElementById('catInputVisibility');
+  if (visEl) {
+    // visibility 우선, 없으면 active 폴백
+    const vis = cat.visibility || (cat.active ? 'active' : 'hidden');
+    visEl.value = vis;
+  }
   // 저장 버튼 초기화 (이전 모달에서 disabled 잔존 방지)
   const btn = document.getElementById('catSaveBtn');
   if (btn) { btn.disabled = false; btn.textContent = '💾 저장'; }
@@ -6208,7 +6395,10 @@ async function saveCategoryEdit() {
     const desc    = document.getElementById('catInputDesc').value.trim();
     const monthly = parseInt(document.getElementById('catInputMonthly').value || '0', 10);
     const order   = parseInt(document.getElementById('catInputOrder').value || '0', 10);
-    const active  = document.getElementById('catInputActive').checked;
+    const visEl   = document.getElementById('catInputVisibility');
+    const visibility = visEl ? visEl.value : 'active';
+    // active는 visibility와 동기화 (legacy 호환)
+    const active = (visibility !== 'hidden');
 
     // 일시불 plan별 가격
     const pkg3mOriginal = parseInt(document.getElementById('catInputPkg3mOriginal').value || '0', 10);
@@ -6249,6 +6439,7 @@ async function saveCategoryEdit() {
       pkg1y_original:   pkg1yOriginal,
       pkg1y_price:      pkg1yPrice,
       display_order:    order,
+      visibility,
       active,
     };
 
