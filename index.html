@@ -883,6 +883,57 @@ body.light-mode .km-bubble {
 
   <!-- ── PAGE: 발송 현황 ── -->
   <div class="content" id="page-send">
+    <!-- 발송 준비 패널 (미리보기) -->
+    <div class="panel" style="margin-bottom:14px;border:1px solid rgba(201,168,76,.25)">
+      <div class="panel-head" style="background:linear-gradient(135deg, rgba(201,168,76,.08), rgba(201,168,76,.02))">
+        <div class="panel-title">🚀 오늘 발송 준비 <span id="prevDateInfo" style="color:var(--muted);font-weight:400;font-size:11px;margin-left:8px"></span></div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <button onclick="loadSendPreview()" 
+            style="background:none;border:1px solid var(--b);color:var(--muted);padding:5px 10px;border-radius:6px;font-size:11px;cursor:pointer">
+            🔄 새로고침
+          </button>
+        </div>
+      </div>
+      <div class="panel-body" style="padding:16px">
+        <!-- 1. 카테고리별 발송 대상 -->
+        <div style="margin-bottom:14px">
+          <div style="font-size:11px;color:var(--muted);margin-bottom:8px;font-weight:500">📊 카테고리별 발송 대상</div>
+          <div id="prevCategoriesGrid" style="display:grid;grid-template-columns:repeat(auto-fill, minmax(220px, 1fr));gap:8px">
+            <div style="padding:14px;text-align:center;color:var(--muted);font-size:12px">로딩 중...</div>
+          </div>
+        </div>
+
+        <!-- 2. 콘텐츠 미리보기 (탭) -->
+        <div style="margin-bottom:14px">
+          <div style="font-size:11px;color:var(--muted);margin-bottom:8px;font-weight:500">📝 콘텐츠 미리보기</div>
+          <div id="prevTabBar" style="display:flex;gap:4px;border-bottom:1px solid var(--b);margin-bottom:10px;flex-wrap:wrap">
+            <!-- 탭 버튼 동적 생성 -->
+          </div>
+          <div id="prevContentBox" style="background:var(--s2);border:1px solid var(--b);border-radius:8px;padding:14px;min-height:120px;font-size:13px;line-height:1.6;white-space:pre-wrap;max-height:240px;overflow-y:auto">
+            <span style="color:var(--muted)">콘텐츠를 불러오는 중...</span>
+          </div>
+        </div>
+
+        <!-- 3. 경고 / 안내 -->
+        <div id="prevWarnings" style="display:none;background:rgba(255,118,118,.08);border:1px solid rgba(255,118,118,.3);border-radius:8px;padding:10px 12px;margin-bottom:14px;font-size:12px;color:#ff9999"></div>
+
+        <!-- 4. 발송 액션 버튼 -->
+        <div style="display:flex;gap:8px;align-items:center;justify-content:flex-end;flex-wrap:wrap">
+          <span id="prevSummary" style="margin-right:auto;font-size:12px;color:var(--muted)"></span>
+          <button onclick="executeSendTest()" id="sendTestBtn"
+            style="background:none;border:1px solid var(--b);color:var(--text);padding:8px 14px;border-radius:6px;font-size:12px;cursor:pointer;font-family:var(--sans)"
+            onmouseover="this.style.borderColor='var(--gold)';this.style.color='var(--gold)'"
+            onmouseout="this.style.borderColor='var(--b)';this.style.color='var(--text)'">
+            🧪 본인에게만 테스트
+          </button>
+          <button onclick="confirmSendNow()" id="sendAllBtn"
+            style="background:linear-gradient(135deg, var(--gold), #b08d3f);border:none;color:#1a1a1a;padding:8px 18px;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;font-family:var(--sans);letter-spacing:.3px">
+            📤 <span id="sendAllBtnLabel">발송 시작</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
     <!-- 오늘 발송 통계 카드 -->
     <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(180px, 1fr));gap:12px;margin-bottom:14px">
       <div class="panel" style="padding:14px 18px">
@@ -2297,6 +2348,7 @@ function loadPage(name) {
     if (fromEl && !fromEl.value) fromEl.value = past14;
     if (toEl   && !toEl.value)   toEl.value   = todayStr;
     sendHistPage = 1; // 페이지 초기화
+    loadSendPreview();
     loadSendHistory();
     loadTodaySendStats();
     loadSendLogs();
@@ -3170,6 +3222,227 @@ async function loadSendLogs() {
   } catch (e) {
     console.warn('[발송이력] 로드 실패:', e);
     tbody.innerHTML = '<tr><td colspan="7" style="padding:30px 0;text-align:center;color:var(--red)">로드 실패: ' + (e.message || '') + '</td></tr>';
+  }
+}
+
+// ════════════════════════════════════════════════════════
+// 발송 미리보기 패널 (영역 A)
+// ════════════════════════════════════════════════════════
+
+// 카테고리 메타 (이모지 + 한글 라벨)
+const CATEGORY_META = {
+  economy:    { emoji: '🏛️', label: '경제' },
+  realestate: { emoji: '🏠', label: '부동산' },
+  english:    { emoji: '🇬🇧', label: '영어' },
+  trivia:     { emoji: '💡', label: '상식' },
+};
+
+// 미리보기 상태
+let _prevState = {
+  contents: {},       // {category: contentObj}
+  subsByCategory: {}, // {category: [sub, ...]}
+  selectedTab: null,  // 현재 선택된 탭 카테고리
+};
+
+async function loadSendPreview() {
+  try {
+    // 1. 오늘 KST 날짜
+    const todayStr = getKSTDateStr ? getKSTDateStr() : new Date(new Date().getTime()+9*3600000).toISOString().slice(0,10);
+    const todayDisplay = new Date(todayStr + 'T12:00:00+09:00').toLocaleDateString('ko-KR', {
+      year: 'numeric', month: 'long', day: 'numeric', weekday: 'short'
+    });
+
+    // 2. 활성 구독자 카테고리별 분류
+    const activeSubs = STATE.subscribers.filter(s => ['active','trial'].includes(s.status));
+    const subsByCategory = { economy: [], realestate: [], english: [], trivia: [] };
+    activeSubs.forEach(s => {
+      const cats = s.categories || [];
+      // 첫 매칭 카테고리에만 배정 (백엔드와 동일 로직)
+      const firstCat = cats.find(c => subsByCategory[c]);
+      if (firstCat) subsByCategory[firstCat].push(s);
+    });
+
+    // 3. 오늘 콘텐츠 (localStorage 아카이브 사용)
+    const todayItems = (typeof getArchiveByDate === 'function')
+      ? getArchiveByDate(todayStr) : {};
+
+    _prevState.contents = todayItems;
+    _prevState.subsByCategory = subsByCategory;
+
+    // 4. 헤더 정보 표시
+    const totalSubs = activeSubs.length;
+    document.getElementById('prevDateInfo').textContent =
+      `— ${todayDisplay} · 활성 구독자 ${totalSubs}명`;
+
+    // 5. 카테고리 그리드 렌더링
+    const grid = document.getElementById('prevCategoriesGrid');
+    const categories = ['economy', 'realestate', 'english', 'trivia'];
+    grid.innerHTML = categories.map(cat => {
+      const meta = CATEGORY_META[cat];
+      const count = subsByCategory[cat].length;
+      const hasContent = !!todayItems[cat];
+      const isOk = hasContent && count > 0;
+      const isWarn = !hasContent && count > 0;
+      const isEmpty = count === 0;
+
+      const bgColor = isOk ? 'rgba(94,234,145,.06)' :
+                       isWarn ? 'rgba(255,118,118,.08)' :
+                       'rgba(255,255,255,.02)';
+      const borderColor = isOk ? 'rgba(94,234,145,.3)' :
+                           isWarn ? 'rgba(255,118,118,.3)' :
+                           'var(--b)';
+      const statusIcon = isOk ? '✅' : isWarn ? '⚠️' : '⏸';
+      const statusText = isOk ? '발송 준비됨' :
+                          isWarn ? '콘텐츠 없음' :
+                          '대상 없음';
+      const statusColor = isOk ? 'var(--green)' :
+                           isWarn ? '#ff9999' :
+                           'var(--muted)';
+
+      return `<div style="background:${bgColor};border:1px solid ${borderColor};border-radius:8px;padding:12px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+          <div style="font-size:13px;font-weight:600">${meta.emoji} ${meta.label}</div>
+          <div style="font-size:11px;color:${statusColor}">${statusIcon}</div>
+        </div>
+        <div style="display:flex;align-items:baseline;gap:6px;margin-bottom:4px">
+          <span style="font-size:20px;font-weight:700;color:${isEmpty ? 'var(--muted)' : 'var(--text)'};font-family:var(--mono)">${count}</span>
+          <span style="font-size:11px;color:var(--muted)">명</span>
+        </div>
+        <div style="font-size:10px;color:${statusColor}">${statusText}</div>
+      </div>`;
+    }).join('');
+
+    // 6. 탭 바 + 콘텐츠 박스
+    const availableTabs = categories.filter(cat => todayItems[cat]);
+    const tabBar = document.getElementById('prevTabBar');
+
+    if (availableTabs.length === 0) {
+      tabBar.innerHTML = '';
+      document.getElementById('prevContentBox').innerHTML =
+        '<span style="color:var(--muted)">⚠️ 오늘 작성된 콘텐츠가 없습니다. 콘텐츠 페이지에서 작성해주세요.</span>';
+      _prevState.selectedTab = null;
+    } else {
+      // 디폴트: 첫 번째 탭
+      if (!_prevState.selectedTab || !availableTabs.includes(_prevState.selectedTab)) {
+        _prevState.selectedTab = availableTabs[0];
+      }
+      tabBar.innerHTML = availableTabs.map(cat => {
+        const meta = CATEGORY_META[cat];
+        const isActive = cat === _prevState.selectedTab;
+        return `<button onclick="prevSelectTab('${cat}')"
+          style="background:${isActive ? 'var(--gold)' : 'none'};
+                 border:1px solid ${isActive ? 'var(--gold)' : 'var(--b)'};
+                 color:${isActive ? '#1a1a1a' : 'var(--muted)'};
+                 padding:6px 12px;border-radius:6px 6px 0 0;
+                 font-size:11px;cursor:pointer;font-family:var(--sans);
+                 ${isActive ? 'font-weight:700' : ''}
+                 border-bottom-color:${isActive ? 'var(--gold)' : 'transparent'}">
+          ${meta.emoji} ${meta.label}
+        </button>`;
+      }).join('');
+      renderPrevContent();
+    }
+
+    // 7. 경고 메시지
+    const warnEl = document.getElementById('prevWarnings');
+    const warnings = [];
+    categories.forEach(cat => {
+      const count = subsByCategory[cat].length;
+      const hasContent = !!todayItems[cat];
+      if (count > 0 && !hasContent) {
+        warnings.push(`${CATEGORY_META[cat].emoji} <strong>${CATEGORY_META[cat].label}</strong> 카테고리 콘텐츠가 없어 ${count}명에게 발송 불가`);
+      }
+    });
+    if (warnings.length > 0) {
+      warnEl.style.display = 'block';
+      warnEl.innerHTML = warnings.map(w => '⚠️ ' + w).join('<br>');
+    } else {
+      warnEl.style.display = 'none';
+    }
+
+    // 8. 요약 + 발송 버튼 라벨
+    const sendableCount = categories.reduce((sum, cat) => {
+      return sum + (todayItems[cat] ? subsByCategory[cat].length : 0);
+    }, 0);
+    document.getElementById('prevSummary').innerHTML =
+      sendableCount > 0
+        ? `발송 가능: <strong style="color:var(--text)">${sendableCount}명</strong> / 전체 ${totalSubs}명`
+        : '<span style="color:#ff9999">⚠️ 발송 가능한 대상이 없습니다</span>';
+
+    document.getElementById('sendAllBtnLabel').textContent =
+      sendableCount > 0 ? `${sendableCount}명에게 발송 시작` : '발송 시작';
+    document.getElementById('sendAllBtn').disabled = sendableCount === 0;
+    document.getElementById('sendAllBtn').style.opacity = sendableCount === 0 ? '0.4' : '1';
+    document.getElementById('sendAllBtn').style.cursor = sendableCount === 0 ? 'not-allowed' : 'pointer';
+
+  } catch (e) {
+    console.warn('[발송미리보기] 로드 실패:', e);
+  }
+}
+
+// 탭 선택
+function prevSelectTab(category) {
+  _prevState.selectedTab = category;
+  loadSendPreview(); // 전체 다시 그림 (탭 활성 상태 갱신)
+}
+
+// 콘텐츠 박스 렌더링
+function renderPrevContent() {
+  const cat = _prevState.selectedTab;
+  if (!cat) return;
+  const content = _prevState.contents[cat];
+  if (!content) {
+    document.getElementById('prevContentBox').innerHTML =
+      '<span style="color:var(--muted)">콘텐츠가 없습니다.</span>';
+    return;
+  }
+  const topic = content.topic || content.headline || '제목 없음';
+  const body  = content.body  || content.summary  || '본문 없음';
+  document.getElementById('prevContentBox').innerHTML = `
+    <div style="font-size:14px;font-weight:700;margin-bottom:10px;color:var(--gold)">📌 ${escapeHtml(topic)}</div>
+    <div style="font-size:13px;line-height:1.6;color:var(--text)">${escapeHtml(body)}</div>
+  `;
+}
+
+// HTML 이스케이프
+function escapeHtml(str) {
+  if (!str) return '';
+  return String(str)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+}
+
+// 본인에게만 테스트 발송
+async function executeSendTest() {
+  const phone = prompt('테스트할 본인 전화번호를 입력해주세요 (- 없이):');
+  if (!phone) return;
+  const cleanPhone = phone.replace(/-/g, '').trim();
+  if (!/^01[0-9]{8,9}$/.test(cleanPhone)) {
+    showToast('전화번호 형식이 올바르지 않습니다', 'ng');
+    return;
+  }
+  if (!confirm(`${cleanPhone} 으로만 테스트 발송할까요?`)) return;
+
+  const btn = document.getElementById('sendTestBtn');
+  btn.disabled = true; btn.innerHTML = '<span class="spin"></span> 테스트 중...';
+  try {
+    const res = await apiPost('/admin/send-daily-content', {
+      test_phone: cleanPhone,
+    });
+    if (res && res.success !== false) {
+      const ch = res.results?.[0]?.channel || 'sms';
+      const chLabel = ch === 'alimtalk' ? '알림톡' : 'SMS';
+      showToast(`테스트 발송 완료 (${chLabel}) ✅`, 'ok');
+      loadTodaySendStats();
+      loadSendLogs();
+    } else {
+      showToast('테스트 실패: ' + (res?.message || res?.error || ''), 'ng');
+    }
+  } catch (e) {
+    showToast('테스트 오류: ' + e.message, 'ng');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '🧪 본인에게만 테스트';
   }
 }
 
