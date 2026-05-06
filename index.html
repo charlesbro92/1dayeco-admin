@@ -3257,14 +3257,15 @@ async function loadSendPreview() {
       year: 'numeric', month: 'long', day: 'numeric', weekday: 'short'
     });
 
-    // 2. 활성 구독자 카테고리별 분류
+    // 2. 활성 구독자 카테고리별 분류 (1인이 여러 카테고리 구독 시 모두 카운트)
     const activeSubs = STATE.subscribers.filter(s => ['active','trial'].includes(s.status));
     const subsByCategory = { economy: [], realestate: [], english: [], trivia: [] };
     activeSubs.forEach(s => {
       const cats = s.categories || [];
-      // 첫 매칭 카테고리에만 배정 (백엔드와 동일 로직)
-      const firstCat = cats.find(c => subsByCategory[c]);
-      if (firstCat) subsByCategory[firstCat].push(s);
+      // 사용자가 구독 중인 모든 카테고리에 추가 (각 카테고리별 1통씩 발송됨)
+      cats.forEach(c => {
+        if (subsByCategory[c]) subsByCategory[c].push(s);
+      });
     });
 
     // 3. 오늘 콘텐츠 (localStorage 아카이브 사용)
@@ -3372,11 +3373,11 @@ async function loadSendPreview() {
     }, 0);
     document.getElementById('prevSummary').innerHTML =
       sendableCount > 0
-        ? `발송 가능: <strong style="color:var(--text)">${sendableCount}명</strong> / 전체 ${totalSubs}명`
+        ? `발송 메시지: <strong style="color:var(--text)">${sendableCount}건</strong> / 활성 구독자 ${totalSubs}명`
         : '<span style="color:#ff9999">⚠️ 발송 가능한 대상이 없습니다</span>';
 
     document.getElementById('sendAllBtnLabel').textContent =
-      sendableCount > 0 ? `${sendableCount}명에게 발송 시작` : '발송 시작';
+      sendableCount > 0 ? `${sendableCount}건 발송 시작` : '발송 시작';
     document.getElementById('sendAllBtn').disabled = sendableCount === 0;
     document.getElementById('sendAllBtn').style.opacity = sendableCount === 0 ? '0.4' : '1';
     document.getElementById('sendAllBtn').style.cursor = sendableCount === 0 ? 'not-allowed' : 'pointer';
@@ -6886,7 +6887,7 @@ function closeSendConfirm() { document.getElementById('sendConfirm').classList.r
 
 // 발송 페이지에서 "📤 발송 시작" 클릭 시 - 진짜 발송 확인
 function confirmExecuteSend() {
-  // 발송 가능 인원 확인
+  // 발송 가능 메시지 건수 확인
   const sendableCount = ['economy','realestate','english','trivia'].reduce((sum, cat) => {
     const hasContent = !!_prevState.contents[cat];
     return sum + (hasContent ? (_prevState.subsByCategory[cat] || []).length : 0);
@@ -6895,7 +6896,7 @@ function confirmExecuteSend() {
     showToast('발송 가능한 대상이 없습니다', 'ng');
     return;
   }
-  if (!confirm(`${sendableCount}명에게 오늘의 콘텐츠를 발송하시겠습니까?\n\n발송 후 취소할 수 없습니다.`)) return;
+  if (!confirm(`총 ${sendableCount}건의 메시지를 발송하시겠습니까?\n\n(다중 카테고리 구독자는 카테고리당 1통씩 받습니다)\n\n발송 후 취소할 수 없습니다.`)) return;
   executeSendNow();
 }
 
