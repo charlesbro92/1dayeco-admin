@@ -1639,7 +1639,7 @@ body.light-mode .km-bubble {
           <div style="margin-bottom:10px">
             <label style="font-size:10px;color:var(--muted);display:block;margin-bottom:3px">3개월</label>
             <div style="display:flex;gap:8px">
-              <input type="number" id="catInputPkg3mOriginal" min="0" step="100" placeholder="29900 (정가)" style="flex:1;background:var(--s3);border:1px solid var(--b);border-radius:6px;padding:8px 10px;font-size:12px;color:var(--text);font-family:var(--mono);outline:none;text-align:right">
+              <input type="number" id="catInputPkg3mOriginal" min="0" step="100" placeholder="29700 (정가)" style="flex:1;background:var(--s3);border:1px solid var(--b);border-radius:6px;padding:8px 10px;font-size:12px;color:var(--text);font-family:var(--mono);outline:none;text-align:right">
               <input type="number" id="catInputPkg3mPrice" min="0" step="100" placeholder="14900 (할인)" style="flex:1;background:var(--s3);border:1px solid rgba(201,168,76,.3);border-radius:6px;padding:8px 10px;font-size:12px;color:var(--gold);font-family:var(--mono);outline:none;text-align:right">
             </div>
             <div id="catPkg3mPct" style="font-size:10px;color:var(--muted);margin-top:3px;text-align:right">할인율: -</div>
@@ -1649,7 +1649,7 @@ body.light-mode .km-bubble {
           <div style="margin-bottom:10px">
             <label style="font-size:10px;color:var(--muted);display:block;margin-bottom:3px">6개월 <span style="color:var(--gold)">(가장 인기)</span></label>
             <div style="display:flex;gap:8px">
-              <input type="number" id="catInputPkg6mOriginal" min="0" step="100" placeholder="59900 (정가)" style="flex:1;background:var(--s3);border:1px solid var(--b);border-radius:6px;padding:8px 10px;font-size:12px;color:var(--text);font-family:var(--mono);outline:none;text-align:right">
+              <input type="number" id="catInputPkg6mOriginal" min="0" step="100" placeholder="59400 (정가)" style="flex:1;background:var(--s3);border:1px solid var(--b);border-radius:6px;padding:8px 10px;font-size:12px;color:var(--text);font-family:var(--mono);outline:none;text-align:right">
               <input type="number" id="catInputPkg6mPrice" min="0" step="100" placeholder="24900 (할인)" style="flex:1;background:var(--s3);border:1px solid rgba(201,168,76,.3);border-radius:6px;padding:8px 10px;font-size:12px;color:var(--gold);font-family:var(--mono);outline:none;text-align:right">
             </div>
             <div id="catPkg6mPct" style="font-size:10px;color:var(--muted);margin-top:3px;text-align:right">할인율: -</div>
@@ -1659,7 +1659,7 @@ body.light-mode .km-bubble {
           <div>
             <label style="font-size:10px;color:var(--muted);display:block;margin-bottom:3px">1년</label>
             <div style="display:flex;gap:8px">
-              <input type="number" id="catInputPkg1yOriginal" min="0" step="100" placeholder="119900 (정가)" style="flex:1;background:var(--s3);border:1px solid var(--b);border-radius:6px;padding:8px 10px;font-size:12px;color:var(--text);font-family:var(--mono);outline:none;text-align:right">
+              <input type="number" id="catInputPkg1yOriginal" min="0" step="100" placeholder="118800 (정가)" style="flex:1;background:var(--s3);border:1px solid var(--b);border-radius:6px;padding:8px 10px;font-size:12px;color:var(--text);font-family:var(--mono);outline:none;text-align:right">
               <input type="number" id="catInputPkg1yPrice" min="0" step="100" placeholder="41900 (할인)" style="flex:1;background:var(--s3);border:1px solid rgba(201,168,76,.3);border-radius:6px;padding:8px 10px;font-size:12px;color:var(--gold);font-family:var(--mono);outline:none;text-align:right">
             </div>
             <div id="catPkg1yPct" style="font-size:10px;color:var(--muted);margin-top:3px;text-align:right">할인율: -</div>
@@ -6109,11 +6109,11 @@ async function loadCategoryList() {
 function setCategoryFormPrices(c) {
   c = c || {};
   document.getElementById('catInputMonthly').value      = String(c.monthly_price    || 9900);
-  document.getElementById('catInputPkg3mOriginal').value = String(c.pkg3m_original || 29900);
+  document.getElementById('catInputPkg3mOriginal').value = String(c.pkg3m_original || 29700);
   document.getElementById('catInputPkg3mPrice').value    = String(c.pkg3m_price    || 14900);
-  document.getElementById('catInputPkg6mOriginal').value = String(c.pkg6m_original || 59900);
+  document.getElementById('catInputPkg6mOriginal').value = String(c.pkg6m_original || 59400);
   document.getElementById('catInputPkg6mPrice').value    = String(c.pkg6m_price    || 24900);
-  document.getElementById('catInputPkg1yOriginal').value = String(c.pkg1y_original || 119900);
+  document.getElementById('catInputPkg1yOriginal').value = String(c.pkg1y_original || 118800);
   document.getElementById('catInputPkg1yPrice').value    = String(c.pkg1y_price    || 41900);
   updateCategoryDiscountPreview();
 }
