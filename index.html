@@ -6810,13 +6810,23 @@ async function executeBulkSend() {
 
     // ── 발송 이력 기록 ──────────────────────────────────────
     const now = new Date();
+    // 모드별 content 표기 결정
+    let logContent = '';
+    if (mode === 'custom') {
+      logContent = customMsg;
+    } else if (mode === 'override') {
+      logContent = `[강제 카테고리: ${_bulkOverrideCat}] 일일 콘텐츠`;
+    } else {
+      logContent = '[자동 매칭] 각 구독자의 카테고리 콘텐츠';
+    }
     BULK_SEND_LOG.unshift({
       id:         'bulk_' + now.getTime(),
       time:       now.toLocaleTimeString('ko-KR', {hour:'2-digit',minute:'2-digit'}),
       timeObj:    now,
       type:       'bulk',
+      mode:       mode,
       recipients: recipientResults,
-      content:    msg,
+      content:    logContent,
       success:    sentCount,
       failed:     failCount,
     });
