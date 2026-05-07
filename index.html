@@ -700,7 +700,7 @@ body.light-mode .km-bubble {
 <!-- SIDEBAR -->
 <aside class="sidebar">
   <div class="sb-logo">1DAYECO<small>Admin Dashboard</small>
-    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v43</span>
+    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v44</span>
   </div>
   <nav class="sb-nav">
     <div class="sb-group">운영</div>
@@ -4694,11 +4694,14 @@ async function generateTopics() {
 
     // ── 진행 모달 표시 (AbortController 받음) ──
     const catLabel = (typeof CATEGORY_LABEL_MAP !== 'undefined' && CATEGORY_LABEL_MAP[cat]) || cat;
+    // 예상 소요 시간: 30개 → 5초, 180개 → 15초 정도 (대충 0.07~0.1초/개)
+    const estimatedSec = Math.max(5, Math.min(40, Math.round(days * 0.08 + 3)));
     const ctrl = showProgressModal({
       title:    '🎯 주제 생성 중',
       subtitle: `AI가 ${catLabel} 카테고리 ${days}개 주제를 생성하고 있습니다<br>`
-              + `<span style="font-size:11px;opacity:.8">(약 5~30초 소요)</span>`,
-      indeterminate: true,
+              + `<span style="font-size:11px;opacity:.8">(약 ${estimatedSec}초 예상)</span>`,
+      mode:          'estimated',
+      estimatedSec:  estimatedSec,
     });
     setProgressDetail(`▶ 카테고리: ${catLabel} · 기간: ${days}일 · 제외: ${excludeTopics.length}개`);
 
@@ -5153,8 +5156,10 @@ let _progressState = {
  * @param {Object} opts
  * @param {string} opts.title    — 모달 제목 (예: "🎯 주제 생성 중", "📝 콘텐츠 생성 중")
  * @param {string} opts.subtitle — 부제목 (예: "AI가 180개 주제를 생성하고 있습니다")
- * @param {boolean} opts.indeterminate — true면 진행률 바 대신 무한 회전 표시
- * @param {number}  opts.total — 전체 항목 수 (indeterminate=false일 때)
+ * @param {string|boolean} opts.mode — 'progress' (정확한 N/N) | 'estimated' (시간 기반 추정) | true/false (호환)
+ * @param {boolean} opts.indeterminate — (legacy) true면 'estimated' 모드와 동일
+ * @param {number}  opts.total — 전체 항목 수 (mode='progress'일 때)
+ * @param {number}  opts.estimatedSec — 예상 소요 시간(초). 'estimated' 모드에서 사용 (기본 15)
  * @returns {AbortController}    — 취소 시그널 (백엔드 fetch에 전달)
  */
 function showProgressModal(opts) {
@@ -5167,8 +5172,11 @@ function showProgressModal(opts) {
 
   const title       = opts.title       || '⏳ 처리 중';
   const subtitle    = opts.subtitle    || '';
-  const indet       = !!opts.indeterminate;
+  // 모드 결정: mode 우선, 없으면 indeterminate 사용 (legacy)
+  let mode = opts.mode;
+  if (!mode) mode = opts.indeterminate ? 'estimated' : 'progress';
   const total       = opts.total       || 0;
+  const estimatedSec = opts.estimatedSec || 15;  // 기본 15초 추정
 
   // 모달 컨테이너
   let overlay = document.getElementById('progressModalOverlay');
@@ -5181,6 +5189,30 @@ function showProgressModal(opts) {
       + 'display:flex;align-items:center;justify-content:center;padding:24px;'
       + 'font-family:var(--sans);';
     document.body.appendChild(overlay);
+  }
+
+  // 진행률 바 영역 — 모드별 다름
+  let progressArea = '';
+  if (mode === 'estimated') {
+    // 시간 기반 추정 진행률: 0~95%까지 시그모이드 곡선으로 차오름
+    progressArea = `
+      <div id="progressModalText" style="font-size:12px;color:var(--text);margin-bottom:8px;font-family:var(--mono);display:flex;justify-content:space-between">
+        <span>준비 중...</span>
+        <span id="progressModalPct">0%</span>
+      </div>
+      <div style="width:100%;height:6px;background:var(--s3);border-radius:3px;overflow:hidden">
+        <div id="progressModalFill" style="width:0%;height:100%;background:var(--gold);transition:width .5s ease-out"></div>
+      </div>`;
+  } else {
+    // 정확한 진행률 (N / total)
+    progressArea = `
+      <div id="progressModalText" style="font-size:12px;color:var(--text);margin-bottom:8px;font-family:var(--mono);display:flex;justify-content:space-between">
+        <span>0 / ${total}</span>
+        <span id="progressModalPct">0%</span>
+      </div>
+      <div style="width:100%;height:6px;background:var(--s3);border-radius:3px;overflow:hidden">
+        <div id="progressModalFill" style="width:0%;height:100%;background:var(--gold);transition:width .3s"></div>
+      </div>`;
   }
 
   overlay.innerHTML = `
@@ -5202,17 +5234,7 @@ function showProgressModal(opts) {
 
       <!-- 진행률 바 영역 -->
       <div id="progressBarArea">
-        ${indet
-          ? `<div style="height:4px;background:var(--s3);border-radius:3px;overflow:hidden;margin-bottom:10px;position:relative">
-               <div style="position:absolute;width:35%;height:100%;background:var(--gold);
-                 animation:indetSlide 1.4s cubic-bezier(0.4,0,0.2,1) infinite;border-radius:3px"></div>
-             </div>`
-          : `<div id="progressModalText" style="font-size:12px;color:var(--text);margin-bottom:8px;font-family:var(--mono)">
-               0 / ${total}
-             </div>
-             <div style="width:100%;height:6px;background:var(--s3);border-radius:3px;overflow:hidden">
-               <div id="progressModalFill" style="width:0%;height:100%;background:var(--gold);transition:width .3s"></div>
-             </div>`}
+        ${progressArea}
       </div>
 
       <!-- 현재 처리 중 항목 -->
@@ -5239,7 +5261,27 @@ function showProgressModal(opts) {
     </div>
   `;
 
-  // 키프레임 CSS 한 번만 주입
+  // estimated 모드: 시간 기반으로 0~95%까지 자연스럽게 차오르게
+  if (mode === 'estimated') {
+    _progressState.estimatedStartTime = Date.now();
+    _progressState.estimatedDuration  = estimatedSec * 1000;
+    _progressState._tickerId = setInterval(function() {
+      const elapsed = Date.now() - _progressState.estimatedStartTime;
+      const ratio   = elapsed / _progressState.estimatedDuration;
+      // 시그모이드 곡선: 천천히 시작, 중간에 빠르게, 95%에서 거의 멈춤
+      // f(x) = 95 * (1 - exp(-2.5 * x))
+      const pct = Math.min(95, Math.round(95 * (1 - Math.exp(-2.5 * ratio))));
+      const elapsedSec = Math.floor(elapsed / 1000);
+      const txtSpan = document.querySelector('#progressModalText > span:first-child');
+      const pctSpan = document.getElementById('progressModalPct');
+      const fill    = document.getElementById('progressModalFill');
+      if (txtSpan) txtSpan.textContent = `${elapsedSec}초 경과`;
+      if (pctSpan) pctSpan.textContent = pct + '%';
+      if (fill)    fill.style.width    = pct + '%';
+    }, 200);
+  }
+
+  // 키프레임 CSS 한 번만 주입 (legacy indet slide — 더 이상 사용 안 하지만 호환용)
   if (!document.getElementById('progressModalKeyframes')) {
     const st = document.createElement('style');
     st.id = 'progressModalKeyframes';
@@ -5305,6 +5347,11 @@ function hideProgressModal(opts) {
     clearInterval(_progressState.countdownTimerId);
     _progressState.countdownTimerId = null;
   }
+  // 추정 진행률 ticker 정리
+  if (_progressState._tickerId) {
+    clearInterval(_progressState._tickerId);
+    _progressState._tickerId = null;
+  }
   // ESC 핸들러 해제
   if (_progressState._escHandler) {
     document.removeEventListener('keydown', _progressState._escHandler);
@@ -5328,7 +5375,22 @@ function hideProgressModal(opts) {
 function finishProgressModal(opts) {
   opts = opts || {};
   const isError = !!opts.error;
-  const card    = document.getElementById('progressModalCard');
+
+  // 추정 진행률 ticker 정리 (이제 정확한 결과 알았으니 멈춤)
+  if (_progressState._tickerId) {
+    clearInterval(_progressState._tickerId);
+    _progressState._tickerId = null;
+  }
+
+  // 진행률 바를 100%로 즉시 점프 (성공 시)
+  if (!isError) {
+    const fill    = document.getElementById('progressModalFill');
+    const pctSpan = document.getElementById('progressModalPct');
+    if (fill)    fill.style.width = '100%';
+    if (pctSpan) pctSpan.textContent = '100%';
+  }
+
+  const card = document.getElementById('progressModalCard');
   if (!card) return;
 
   const accentColor = isError ? 'var(--red)' : 'var(--green)';
