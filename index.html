@@ -700,7 +700,7 @@ body.light-mode .km-bubble {
 <!-- SIDEBAR -->
 <aside class="sidebar">
   <div class="sb-logo">1DAYECO<small>Admin Dashboard</small>
-    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v40</span>
+    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v41</span>
   </div>
   <nav class="sb-nav">
     <div class="sb-group">운영</div>
@@ -3168,12 +3168,14 @@ async function loadSubscribers(opts) {
     renderSubscribersTable();
   }
 
-  // 2. 백그라운드에서 API 호출 → DB 동기화
+  // 2. 백그라운드에서 API 호출 → DB가 진실의 출처
+  // ⚠️ 이전엔 localStorage 구독자와 병합했으나, 그 결과 DB에서 삭제된 구독자가
+  //    유령처럼 남는 버그 발생. DB 응답을 STATE로 직접 사용하도록 변경.
   if (API_BASE) {
     try {
       const res = await apiFetch('/admin/subscribers?limit=200');
-      if (res && res.data && res.data.length > 0) {
-        // DB 데이터를 STATE에 병합 (phone 기준 중복 제거)
+      if (res && res.data) {
+        // DB 데이터를 STATE에 그대로 사용 (병합 X)
         const dbSubs = res.data
           .filter(s => !s.hidden)
           .map(s => ({
@@ -3198,11 +3200,7 @@ async function loadSubscribers(opts) {
           last_send_channel:     s.last_send_channel || null,
           last_sent_at:          s.last_sent_at || null,
         }));
-        // localStorage 구독자와 DB 구독자 병합 (DB 우선)
-        const localSubs = STATE.subscribers.filter(ls =>
-          !dbSubs.find(db => db.phone === ls.phone || db.id === ls.id)
-        );
-        STATE.subscribers = [...dbSubs, ...localSubs];
+        STATE.subscribers = dbSubs;
         saveSubsToStorage();
       }
     } catch(e) { console.warn('구독자 API 동기화 실패:', e); }
