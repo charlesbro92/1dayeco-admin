@@ -880,7 +880,7 @@ body.light-mode .km-bubble {
           <thead><tr>
             <th style="width:36px"><input type="checkbox" id="checkAll" onclick="toggleCheckAll(this)"
               style="accent-color:var(--gold);cursor:pointer;width:14px;height:14px"></th>
-            <th>이름</th><th>전화번호</th><th style="text-align:center">플랜</th><th style="text-align:right">금액</th><th style="text-align:center">상태</th><th style="text-align:center">결제</th><th style="text-align:center">관심사</th><th style="text-align:center">가입시각</th><th style="text-align:center">시작일</th><th style="text-align:center">종료일</th><th style="width:120px">이메일</th><th style="width:120px">메모</th><th style="width:120px;text-align:center">작업</th>
+            <th>이름</th><th>전화번호</th><th style="text-align:center">플랜</th><th style="text-align:right">금액</th><th style="text-align:center">상태</th><th style="text-align:center">결제</th><th style="text-align:center">카톡</th><th style="text-align:center">관심사</th><th style="text-align:center">가입시각</th><th style="text-align:center">시작일</th><th style="text-align:center">종료일</th><th style="width:120px">이메일</th><th style="width:120px">메모</th><th style="width:120px;text-align:center">작업</th>
           </tr></thead>
           <tbody id="subTableBody"><tr><td colspan="14"><div class="empty"><span class="empty-ico">👥</span>구독자가 없습니다</div></td></tr></tbody>
         </table>
@@ -2049,6 +2049,32 @@ body.light-mode .km-bubble {
           onfocus="this.style.borderColor='var(--gold)'" onblur="this.style.borderColor='var(--b)'"
           placeholder="미입력 시 저장 안됨"></textarea>
       </div>
+
+      <!-- 친구톡 / 발송 상태 (read-only 정보) -->
+      <div style="background:rgba(255,255,255,.02);border:1px solid var(--b);border-radius:8px;padding:12px;margin-top:6px">
+        <div style="font-size:10px;color:var(--muted);letter-spacing:.5px;margin-bottom:8px;display:flex;align-items:center;gap:6px">
+          <span>📡 발송 상태</span>
+          <span style="font-size:9px;font-weight:400;color:var(--muted);opacity:.6">(자동 갱신)</span>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px 16px;font-size:12px">
+          <div>
+            <div style="color:var(--muted);font-size:10px;margin-bottom:3px">카카오톡 채널</div>
+            <div id="sdKakaoChannel" style="font-weight:600">—</div>
+          </div>
+          <div>
+            <div style="color:var(--muted);font-size:10px;margin-bottom:3px">결제 상태</div>
+            <div id="sdPaymentStatus" style="font-weight:600">—</div>
+          </div>
+          <div>
+            <div style="color:var(--muted);font-size:10px;margin-bottom:3px">마지막 발송 채널</div>
+            <div id="sdLastSendChannel" style="font-weight:600">—</div>
+          </div>
+          <div>
+            <div style="color:var(--muted);font-size:10px;margin-bottom:3px">마지막 발송 시각</div>
+            <div id="sdLastSentAt" style="font-weight:600;font-family:var(--mono);font-size:11px">—</div>
+          </div>
+        </div>
+      </div>
     </div>
     <!-- 푸터 -->
     <div style="display:flex;gap:8px;padding:12px 22px;border-top:1px solid var(--b)">
@@ -2302,6 +2328,22 @@ function paymentStatusLabel(status) {
   const conf = PAYMENT_STATUS_LABELS[status];
   if (!conf) return `<span class="payment-pill" style="color:#94a3b8;background:rgba(148,163,184,.12)">—</span>`;
   return `<span class="payment-pill" style="color:${conf.color};background:${conf.bg}">${conf.text}</span>`;
+}
+
+// 카카오톡 채널 친구추가 상태 셀 (구독자 테이블)
+function renderKakaoChannelCell(s) {
+  const added   = !!s.kakao_channel_added;
+  const clicked = !!s.clicked_channel_link;
+
+  if (added) {
+    // 추가 완료
+    return `<span class="payment-pill" style="color:#10b981;background:rgba(16,185,129,.12)" title="카카오톡 채널 친구추가 완료">✓ 추가</span>`;
+  }
+  if (clicked) {
+    // 추가 버튼은 눌렀지만 사용자가 "친구 추가 완료" 버튼은 안 누름 (의도는 있음)
+    return `<span class="payment-pill" style="color:#f59e0b;background:rgba(245,158,11,.12)" title="채널 추가 버튼 클릭, 완료 미확인">⏳ 시도</span>`;
+  }
+  return `<span class="payment-pill" style="color:#ef4444;background:rgba(239,68,68,.12)" title="채널 미추가 — 친구톡 발송 불가, SMS로 폴백됨">✗ 미추가</span>`;
 }
 
 // ════════════════════════════════════════════════════════════
@@ -2937,7 +2979,7 @@ function renderSubscribersTable() {
   const tbody = document.getElementById('subTableBody');
   if (!tbody) return; // 다른 페이지에 있으면 스킵
   if (!filtered.length) {
-    tbody.innerHTML = `<tr><td colspan="13"><div class="empty"><span class="empty-ico">👥</span>${searchVal?'검색 결과가 없습니다':'구독자가 없습니다'}</div></td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="14"><div class="empty"><span class="empty-ico">👥</span>${searchVal?'검색 결과가 없습니다':'구독자가 없습니다'}</div></td></tr>`;
     return;
   }
   tbody.innerHTML = renderSubscribersRows(filtered);
@@ -2975,6 +3017,12 @@ async function loadSubscribers(opts) {
           billing_key:    s.billing_key || null,
           memo:           s.memo || null,
           categories:     s.categories || ['economy','realestate','english','trivia'],
+          // ── 친구톡 관련 (v22+) ──
+          payment_status:        s.payment_status || 'pending',
+          kakao_channel_added:   !!s.kakao_channel_added,
+          clicked_channel_link:  !!s.clicked_channel_link,
+          last_send_channel:     s.last_send_channel || null,
+          last_sent_at:          s.last_sent_at || null,
         }));
         // localStorage 구독자와 DB 구독자 병합 (DB 우선)
         const localSubs = STATE.subscribers.filter(ls =>
@@ -3087,6 +3135,7 @@ function renderSubscribersRows(filtered) {
       </td>
       <td style="text-align:center"><span class="badge ${s.status}"><span class="badge-dot"></span>${{active:'활성',trial:'체험',cancelled:'해지',expired:'만료'}[s.status]||s.status}</span></td>
       <td style="text-align:center">${paymentStatusLabel(s.payment_status)}</td>
+      <td style="text-align:center">${renderKakaoChannelCell(s)}</td>
       <td style="text-align:center;white-space:nowrap">${renderSubCategories(s.categories)}</td>
       <td style="font-family:var(--mono);font-size:11px;color:var(--muted);text-align:center">${joinTimeStr}</td>
       <td style="font-family:var(--mono);font-size:11px;color:var(--muted);text-align:center">${startDate}</td>
@@ -6866,6 +6915,39 @@ function openSubDetail(id) {
   document.getElementById('sdCatTrivia').checked     = cats.includes('trivia');
   // 체크된 칩 시각 효과
   _refreshSdCatChipStyles();
+
+  // 발송 상태 정보 채우기 (read-only)
+  const kakaoEl = document.getElementById('sdKakaoChannel');
+  if (kakaoEl) kakaoEl.innerHTML = renderKakaoChannelCell(sub);
+
+  const payEl = document.getElementById('sdPaymentStatus');
+  if (payEl) payEl.innerHTML = paymentStatusLabel(sub.payment_status);
+
+  const channelMap = {
+    friendtalk: '<span style="color:#FEE500">💬 친구톡</span>',
+    alimtalk:   '<span style="color:#10b981">📨 알림톡</span>',
+    sms:        '<span style="color:#94a3b8">📱 SMS</span>',
+  };
+  const lastChEl = document.getElementById('sdLastSendChannel');
+  if (lastChEl) {
+    lastChEl.innerHTML = sub.last_send_channel
+      ? (channelMap[sub.last_send_channel] || sub.last_send_channel)
+      : '<span style="color:var(--muted);opacity:.6">— (아직 발송 없음)</span>';
+  }
+
+  const lastTimeEl = document.getElementById('sdLastSentAt');
+  if (lastTimeEl) {
+    if (sub.last_sent_at) {
+      const dt = new Date(sub.last_sent_at);
+      lastTimeEl.textContent = dt.toLocaleString('ko-KR', {
+        timeZone: 'Asia/Seoul',
+        year: '2-digit', month: '2-digit', day: '2-digit',
+        hour: '2-digit', minute: '2-digit', hour12: false,
+      });
+    } else {
+      lastTimeEl.innerHTML = '<span style="color:var(--muted);opacity:.6">—</span>';
+    }
+  }
 
   document.getElementById('subDetailOverlay').classList.add('open');
 }
