@@ -1251,11 +1251,44 @@ body.light-mode .km-bubble {
             <button class="cat-pill" data-cat="english" onclick="selectCatFilter(this)">🇬🇧 영어</button>
             <button class="cat-pill" data-cat="trivia" onclick="selectCatFilter(this)">🧠 상식</button>
           </div>
+          <!-- 액션 바 (체크박스 선택 후 일괄 처리) -->
+          <div id="archiveActionBar" style="width:100%;display:flex;gap:6px;align-items:center;flex-wrap:wrap;padding:6px 0">
+            <span id="archiveSelectCount" style="font-size:11px;color:var(--muted);min-width:60px">0개 선택</span>
+            <button onclick="archiveSelectAll()" class="arch-act-btn" title="전체 선택">전체 선택</button>
+            <button onclick="archiveClearSelection()" class="arch-act-btn" title="선택 해제">선택 해제</button>
+            <span style="color:var(--b);margin:0 4px">|</span>
+            <label style="display:inline-flex;align-items:center;gap:4px;font-size:11px;color:var(--muted);cursor:pointer">
+              <input type="checkbox" id="archiveShowHidden" onchange="onToggleShowHidden()" style="cursor:pointer">
+              숨김 보기
+            </label>
+            <span style="color:var(--b);margin:0 4px">|</span>
+            <button onclick="archiveBulkHide()"   class="arch-act-btn arch-warn"   title="선택 항목 숨김 (발송 X, 복구 가능)">🙈 숨김</button>
+            <button onclick="archiveBulkUnhide()" class="arch-act-btn"             title="숨김 해제 (복구)">♻️ 복구</button>
+            <button onclick="archiveBulkDelete()" class="arch-act-btn arch-danger" title="영구 삭제 (복구 불가)">🔥 영구 삭제</button>
+          </div>
+          <style>
+            .arch-act-btn {
+              background:var(--s3); border:1px solid var(--b); color:var(--text);
+              padding:5px 10px; border-radius:5px; font-size:11px; cursor:pointer;
+              font-family:var(--sans); transition:all .15s;
+            }
+            .arch-act-btn:hover { border-color:var(--gold); color:var(--gold); }
+            .arch-act-btn.arch-warn { border-color:rgba(251,191,36,.4); }
+            .arch-act-btn.arch-warn:hover { background:rgba(251,191,36,.1); border-color:#fbbf24; color:#fbbf24; }
+            .arch-act-btn.arch-danger { border-color:rgba(248,113,113,.4); }
+            .arch-act-btn.arch-danger:hover { background:rgba(248,113,113,.12); border-color:#f87171; color:#f87171; }
+            .arch-row.is-hidden { opacity:.45; }
+            .arch-row.is-hidden td { font-style:italic; }
+            .arch-checkbox { cursor:pointer; transform:scale(1.1); }
+          </style>
         </div>
         <div class="panel-body split-body" style="flex:1 1 auto;min-height:0;overflow-y:auto">
           <table>
             <thead>
               <tr>
+                <th style="background:var(--s1);position:sticky;top:0;z-index:2;text-align:center;width:32px">
+                  <input type="checkbox" id="archiveCheckAll" onclick="onToggleArchiveCheckAll()" class="arch-checkbox" title="전체 선택 토글">
+                </th>
                 <th style="background:var(--s1);position:sticky;top:0;z-index:2">날짜</th>
                 <th style="background:var(--s1);position:sticky;top:0;z-index:2;text-align:center">카테고리</th>
                 <th style="background:var(--s1);position:sticky;top:0;z-index:2">주제</th>
@@ -1264,7 +1297,7 @@ body.light-mode .km-bubble {
                 <th style="background:var(--s1);position:sticky;top:0;z-index:2;text-align:center">토큰</th>
               </tr>
             </thead>
-            <tbody id="contentBody"><tr><td colspan="6"><div class="empty"><span class="empty-ico">📝</span>생성된 콘텐츠가 없습니다</div></td></tr></tbody>
+            <tbody id="contentBody"><tr><td colspan="7"><div class="empty"><span class="empty-ico">📝</span>생성된 콘텐츠가 없습니다</div></td></tr></tbody>
           </table>
           <!-- hidden input for backward compatibility (모든 카테고리 ID 받을 수 있음) -->
           <input type="hidden" id="contentCatFilter" value="">
@@ -5688,7 +5721,9 @@ const CAT_LABEL = {
 async function syncArchiveFromBackend() {
   if (!API_BASE) return;
   try {
-    const res = await apiFetch('/admin/contents');
+    // 숨김 보기 토글이 켜져있으면 include_hidden=1 추가
+    const url = _archiveShowHidden ? '/admin/contents?include_hidden=1' : '/admin/contents';
+    const res = await apiFetch(url);
     if (res && Array.isArray(res.data)) {
       // created_at 오름차순으로 정렬 (오래된 것부터)
       // → forEach로 같은 키에 덮어쓰면 가장 최근 것이 남음
@@ -5699,15 +5734,19 @@ async function syncArchiveFromBackend() {
         if (ta > tb) return 1;
         return 0;
       });
+      // 백엔드에서 받은 키 set (이번 fetch에 포함된 행만)
+      const fetched = new Set();
       let added = 0;
       sorted.forEach(function(row) {
         const dateStr = row.date_str || row.dateStr;
         if (!dateStr) return;
         const cat = row.category || '';
         if (!['economy','realestate','english','trivia'].includes(cat)) return;
+        const k = archKey(dateStr, cat);
+        fetched.add(k);
         // 복합키로 저장: 같은 날짜라도 다른 카테고리면 별도 항목
         // 같은 (날짜+카테고리)는 가장 최근 것으로 덮어쓰기 (정렬로 보장됨)
-        CONTENT_ARCHIVE[archKey(dateStr, cat)] = {
+        CONTENT_ARCHIVE[k] = {
           cat:         cat,
           kw:          row.keyword || '',
           topic:       row.headline || '',
@@ -5717,11 +5756,20 @@ async function syncArchiveFromBackend() {
           tok:         row.token_used || 0,
           source:      'generated',
           generatedAt: row.created_at || '',
+          hidden:      !!row.hidden,           // v3: hidden 필드 보존
         };
         added++;
       });
+      // 숨김 보기 OFF + 백엔드에 없는 (=숨김된) 로컬 캐시 행 제거
+      // → 숨김 처리 직후 즉시 사라지게
+      if (!_archiveShowHidden) {
+        Object.keys(CONTENT_ARCHIVE).forEach(function(k) {
+          if (!isArchKey(k)) return;
+          if (!fetched.has(k)) delete CONTENT_ARCHIVE[k];
+        });
+      }
       saveArchiveToStorage();
-      console.log('백엔드 아카이브 동기화: ' + added + '건');
+      console.log('백엔드 아카이브 동기화: ' + added + '건' + (_archiveShowHidden ? ' (숨김 포함)' : ''));
     }
   } catch (e) {
     console.warn('아카이브 동기화 실패:', e);
@@ -5818,6 +5866,173 @@ function resetArchiveDateRange() {
   _renderArchiveTable();
 }
 
+// ── 아카이브 일괄 액션 (숨김/영구 삭제/복구) ───────────────
+// ARCHIVE_SELECTED: 선택된 행 키 set ("dateStr|category" 포맷)
+const ARCHIVE_SELECTED = new Set();
+
+function archiveSelKey(dateStr, cat) { return dateStr + '|' + cat; }
+
+function onArchiveRowCheck(el) {
+  const key = archiveSelKey(el.dataset.date, el.dataset.cat);
+  if (el.checked) ARCHIVE_SELECTED.add(key);
+  else ARCHIVE_SELECTED.delete(key);
+  updateArchiveSelectCount();
+  // 헤더 체크박스 상태 동기화
+  const allChecks = document.querySelectorAll('#contentBody input.arch-checkbox');
+  const checked   = document.querySelectorAll('#contentBody input.arch-checkbox:checked');
+  const headEl = document.getElementById('archiveCheckAll');
+  if (headEl) {
+    headEl.checked = allChecks.length > 0 && checked.length === allChecks.length;
+    headEl.indeterminate = checked.length > 0 && checked.length < allChecks.length;
+  }
+}
+
+function onToggleArchiveCheckAll() {
+  const headEl = document.getElementById('archiveCheckAll');
+  if (!headEl) return;
+  const target = headEl.checked;
+  document.querySelectorAll('#contentBody input.arch-checkbox').forEach(function(ck) {
+    ck.checked = target;
+    const key = archiveSelKey(ck.dataset.date, ck.dataset.cat);
+    if (target) ARCHIVE_SELECTED.add(key);
+    else ARCHIVE_SELECTED.delete(key);
+  });
+  updateArchiveSelectCount();
+}
+
+function archiveSelectAll() {
+  const headEl = document.getElementById('archiveCheckAll');
+  if (headEl) { headEl.checked = true; onToggleArchiveCheckAll(); }
+}
+
+function archiveClearSelection() {
+  ARCHIVE_SELECTED.clear();
+  document.querySelectorAll('#contentBody input.arch-checkbox').forEach(function(ck) { ck.checked = false; });
+  const headEl = document.getElementById('archiveCheckAll');
+  if (headEl) { headEl.checked = false; headEl.indeterminate = false; }
+  updateArchiveSelectCount();
+}
+
+function updateArchiveSelectCount() {
+  const cntEl = document.getElementById('archiveSelectCount');
+  if (cntEl) cntEl.textContent = ARCHIVE_SELECTED.size + '개 선택';
+}
+
+// 숨김 보기 토글
+let _archiveShowHidden = false;
+function onToggleShowHidden() {
+  _archiveShowHidden = !!document.getElementById('archiveShowHidden')?.checked;
+  // 백엔드 재호출 (include_hidden 파라미터)
+  loadContentArchive();
+}
+
+// === 일괄 숨김 (soft delete) ===
+async function archiveBulkHide() {
+  if (ARCHIVE_SELECTED.size === 0) {
+    showToast('숨길 항목을 먼저 선택해 주세요', 'ng');
+    return;
+  }
+  if (!confirm(`선택한 ${ARCHIVE_SELECTED.size}개 콘텐츠를 숨김 처리합니다.\n\n· 발송되지 않습니다\n· 어드민 기본 뷰에서 사라집니다\n· "숨김 보기" 토글로 다시 볼 수 있습니다\n· 언제든 복구 가능합니다\n\n계속하시겠습니까?`)) return;
+
+  const items = [];
+  ARCHIVE_SELECTED.forEach(function(key) {
+    const parts = key.split('|');
+    if (parts[0] && parts[1]) items.push({ date_str: parts[0], category: parts[1] });
+  });
+  try {
+    const res = await apiPost('/admin/contents/hide', { items: items });
+    if (res && res.success) {
+      showToast(`${res.hidden_count || items.length}개 숨김 처리 완료`, 'ok');
+      ARCHIVE_SELECTED.clear();
+      // 로컬 캐시도 즉시 갱신 (UI 반영)
+      items.forEach(function(it) {
+        const k = archKey(it.date_str, it.category);
+        if (CONTENT_ARCHIVE[k]) {
+          CONTENT_ARCHIVE[k].hidden = true;
+        }
+      });
+      saveArchiveToStorage();
+      loadContentArchive();
+    } else {
+      showToast('숨김 처리 실패: ' + (res?.error || '알 수 없는 오류'), 'ng');
+    }
+  } catch (e) {
+    showToast('서버 오류: ' + (e.message || ''), 'ng');
+  }
+}
+
+// === 일괄 복구 (unhide) ===
+async function archiveBulkUnhide() {
+  if (ARCHIVE_SELECTED.size === 0) {
+    showToast('복구할 항목을 먼저 선택해 주세요', 'ng');
+    return;
+  }
+  const items = [];
+  ARCHIVE_SELECTED.forEach(function(key) {
+    const parts = key.split('|');
+    if (parts[0] && parts[1]) items.push({ date_str: parts[0], category: parts[1] });
+  });
+  try {
+    const res = await apiPost('/admin/contents/unhide', { items: items });
+    if (res && res.success) {
+      showToast(`${res.unhidden_count || items.length}개 복구 완료`, 'ok');
+      ARCHIVE_SELECTED.clear();
+      items.forEach(function(it) {
+        const k = archKey(it.date_str, it.category);
+        if (CONTENT_ARCHIVE[k]) {
+          CONTENT_ARCHIVE[k].hidden = false;
+        }
+      });
+      saveArchiveToStorage();
+      loadContentArchive();
+    } else {
+      showToast('복구 실패: ' + (res?.error || ''), 'ng');
+    }
+  } catch (e) {
+    showToast('서버 오류: ' + (e.message || ''), 'ng');
+  }
+}
+
+// === 일괄 영구 삭제 (hard delete) ===
+async function archiveBulkDelete() {
+  if (ARCHIVE_SELECTED.size === 0) {
+    showToast('삭제할 항목을 먼저 선택해 주세요', 'ng');
+    return;
+  }
+  const cnt = ARCHIVE_SELECTED.size;
+  if (!confirm(`⚠️ 영구 삭제 경고\n\n선택한 ${cnt}개 콘텐츠를 DB에서 완전히 삭제합니다.\n\n· 복구 불가능합니다\n· 이 작업은 되돌릴 수 없습니다\n\n정말 삭제하시겠습니까?`)) return;
+  // 더블 컨펌
+  const confirmText = prompt(`확인을 위해 "삭제"라고 입력해 주세요`);
+  if (confirmText !== '삭제') {
+    showToast('취소되었습니다', 'ng');
+    return;
+  }
+
+  const items = [];
+  ARCHIVE_SELECTED.forEach(function(key) {
+    const parts = key.split('|');
+    if (parts[0] && parts[1]) items.push({ date_str: parts[0], category: parts[1] });
+  });
+  try {
+    const res = await apiPost('/admin/contents/delete-batch', { items: items });
+    if (res && res.success) {
+      showToast(`${res.deleted_count || items.length}개 영구 삭제 완료`, 'ok');
+      ARCHIVE_SELECTED.clear();
+      // 로컬 캐시에서도 제거
+      items.forEach(function(it) {
+        const k = archKey(it.date_str, it.category);
+        delete CONTENT_ARCHIVE[k];
+      });
+      saveArchiveToStorage();
+      loadContentArchive();
+    } else {
+      showToast('삭제 실패: ' + (res?.error || ''), 'ng');
+    }
+  } catch (e) {
+    showToast('서버 오류: ' + (e.message || ''), 'ng');
+  }
+}
+
 function _renderArchiveTable() {
   // === 필터 값 수집 ===
   const catFilter = (document.getElementById('contentCatFilter')?.value || '').trim().toLowerCase();
@@ -5885,13 +6100,19 @@ function _renderArchiveTable() {
   const emptyMsg = hasFilter ? '검색 결과가 없습니다' : '생성된 콘텐츠가 없습니다';
   const emptyIco = hasFilter ? '🔍' : '📝';
 
-  // === 렌더 ===
+  // === 렌더 (체크박스 컬럼 추가, 숨김 표시) ===
   document.getElementById('contentBody').innerHTML = rows.length === 0
-    ? '<tr><td colspan="6"><div class="empty"><span class="empty-ico">' + emptyIco + '</span>' + emptyMsg + '</div></td></tr>'
+    ? '<tr><td colspan="7"><div class="empty"><span class="empty-ico">' + emptyIco + '</span>' + emptyMsg + '</div></td></tr>'
     : rows.map(function(r) {
         var aiBadge = r.source === 'generated'
           ? ' <span style="background:rgba(74,222,128,.12);border:1px solid rgba(74,222,128,.25);color:var(--green);font-size:9px;padding:1px 4px;border-radius:3px">AI</span>'
           : '';
+        var hiddenBadge = r.hidden
+          ? ' <span style="background:rgba(248,113,113,.12);border:1px solid rgba(248,113,113,.3);color:#f87171;font-size:9px;padding:1px 4px;border-radius:3px">숨김</span>'
+          : '';
+        // 체크박스 키 (date+category)
+        const ckId = 'ck-' + r.dateStr + '-' + (r.cat || '');
+        const isChecked = ARCHIVE_SELECTED.has(r.dateStr + '|' + (r.cat || ''));
         // 검색어 하이라이트 (날짜 외 텍스트 컬럼들)
         const topicCell    = searchVal ? _highlightText(r.topic || r.kw || '', searchValRaw)
                                        : (r.topic || r.kw || '');
@@ -5899,18 +6120,34 @@ function _renderArchiveTable() {
                                        : (r.kw || '');
         const headlineCell = searchVal ? _highlightText(r.headline || '', searchValRaw)
                                        : (r.headline || '');
-        return '<tr onclick="openContentPopupByDate(\'' + r.dateStr + '\', \'' + (r.cat || '') + '\')"'
+        const rowClass = 'arch-row' + (r.hidden ? ' is-hidden' : '');
+        return '<tr class="' + rowClass + '"'
           + ' style="cursor:pointer"'
           + ' onmouseover="this.style.background=\'rgba(201,168,76,.04)\'"'
           + ' onmouseout="this.style.background=\'\'">'
-          + '<td style="font-family:var(--mono);font-size:11px">' + r.date + aiBadge + '</td>'
-          + '<td style="text-align:center"><span class="badge monthly">' + (CATEGORY_LABEL_MAP[r.cat] || r.cat) + '</span></td>'
-          + '<td><strong>' + topicCell + '</strong></td>'
-          + '<td style="color:var(--muted);font-size:11px">' + kwCell + '</td>'
-          + '<td style="color:var(--muted);font-size:11px;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + headlineCell + '</td>'
-          + '<td style="text-align:center;font-family:var(--mono);font-size:11px;color:var(--muted)">' + (r.tok || 0) + '</td>'
+          // 체크박스 컬럼 (행 클릭 이벤트 차단 + 자체 핸들러)
+          + '<td style="text-align:center" onclick="event.stopPropagation()">'
+          +   '<input type="checkbox" class="arch-checkbox" id="' + ckId + '"'
+          +     ' data-date="' + r.dateStr + '" data-cat="' + (r.cat || '') + '"'
+          +     ' onclick="onArchiveRowCheck(this)"' + (isChecked ? ' checked' : '') + '>'
+          + '</td>'
+          // 나머지 컬럼들 (행 클릭 시 상세 보기)
+          + '<td onclick="openContentPopupByDate(\'' + r.dateStr + '\', \'' + (r.cat || '') + '\')"'
+          +   ' style="font-family:var(--mono);font-size:11px">' + r.date + aiBadge + hiddenBadge + '</td>'
+          + '<td onclick="openContentPopupByDate(\'' + r.dateStr + '\', \'' + (r.cat || '') + '\')"'
+          +   ' style="text-align:center"><span class="badge monthly">' + (CATEGORY_LABEL_MAP[r.cat] || r.cat) + '</span></td>'
+          + '<td onclick="openContentPopupByDate(\'' + r.dateStr + '\', \'' + (r.cat || '') + '\')">'
+          +   '<strong>' + topicCell + '</strong></td>'
+          + '<td onclick="openContentPopupByDate(\'' + r.dateStr + '\', \'' + (r.cat || '') + '\')"'
+          +   ' style="color:var(--muted);font-size:11px">' + kwCell + '</td>'
+          + '<td onclick="openContentPopupByDate(\'' + r.dateStr + '\', \'' + (r.cat || '') + '\')"'
+          +   ' style="color:var(--muted);font-size:11px;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + headlineCell + '</td>'
+          + '<td onclick="openContentPopupByDate(\'' + r.dateStr + '\', \'' + (r.cat || '') + '\')"'
+          +   ' style="text-align:center;font-family:var(--mono);font-size:11px;color:var(--muted)">' + (r.tok || 0) + '</td>'
           + '</tr>';
       }).join('');
+  // 선택 카운트 갱신
+  if (typeof updateArchiveSelectCount === 'function') updateArchiveSelectCount();
 }
 
 function resetContentFilters() {
