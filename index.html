@@ -700,7 +700,7 @@ body.light-mode .km-bubble {
 <!-- SIDEBAR -->
 <aside class="sidebar">
   <div class="sb-logo">1DAYECO<small>Admin Dashboard</small>
-    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v44</span>
+    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v45</span>
   </div>
   <nav class="sb-nav">
     <div class="sb-group">운영</div>
@@ -4672,6 +4672,11 @@ async function generateTopics() {
   }
 
   // 백엔드에서 주제 가져오기 (AI 사용, 중복 방지)
+  // ⭐ v44+: 30개씩 청크로 분할 호출 (Railway/Cloudflare 100초 타임아웃 우회)
+  //          - 30개당 약 5~10초 → 안전한 응답 시간
+  //          - 한 청크 실패해도 나머지는 계속 진행
+  //          - 정확한 진행률 (1/6, 2/6 ... 6/6) 표시 가능
+  const CHUNK_SIZE = 30;  // 한 번에 백엔드 호출하는 주제 개수
   let topics = [];
   let userAborted = false;  // 사용자 명시적 취소 여부
 
@@ -4692,56 +4697,113 @@ async function generateTopics() {
     }
     console.log(`[topic-gen] cat=${cat} count=${days} exclude=${excludeTopics.length}`);
 
-    // ── 진행 모달 표시 (AbortController 받음) ──
+    // 청크 개수 계산 (30개씩 나누기)
+    const totalChunks = Math.ceil(days / CHUNK_SIZE);
     const catLabel = (typeof CATEGORY_LABEL_MAP !== 'undefined' && CATEGORY_LABEL_MAP[cat]) || cat;
-    // 예상 소요 시간: 30개 → 5초, 180개 → 15초 정도 (대충 0.07~0.1초/개)
-    const estimatedSec = Math.max(5, Math.min(40, Math.round(days * 0.08 + 3)));
+
+    // ── 진행 모달 표시 (정확한 진행률 모드 — N개 청크 중 X개 완료) ──
     const ctrl = showProgressModal({
       title:    '🎯 주제 생성 중',
       subtitle: `AI가 ${catLabel} 카테고리 ${days}개 주제를 생성하고 있습니다<br>`
-              + `<span style="font-size:11px;opacity:.8">(약 ${estimatedSec}초 예상)</span>`,
-      mode:          'estimated',
-      estimatedSec:  estimatedSec,
+              + `<span style="font-size:11px;opacity:.8">(${CHUNK_SIZE}개씩 ${totalChunks}회 분할 호출)</span>`,
+      mode:     'progress',
+      total:    totalChunks,
     });
-    setProgressDetail(`▶ 카테고리: ${catLabel} · 기간: ${days}일 · 제외: ${excludeTopics.length}개`);
+    updateProgressModal(0, totalChunks, `시작: ${days}개 주제`);
 
-    try {
-      const res = await apiPost('/admin/topics/generate', {
-        category: cat,
-        count: days,
-        use_ai: true,                            // ★ AI 사용 (정적 풀 X)
-        exclude_topics: excludeTopics,           // ★ 기존 주제 차단
-      }, { signal: ctrl.signal });
+    // ── 청크별 호출 ──
+    let totalFetched = 0;
+    let chunkErrors  = 0;
+    // 누적 exclude 리스트: 매 청크마다 이전에 받은 주제도 추가해서 중복 회피
+    let runningExclude = [...excludeTopics];
 
-      if (res && res.success && Array.isArray(res.topics) && res.topics.length > 0) {
-        topics = res.topics.map(t => ({
-          topic: t.topic || '',
-          kw:    t.keywords || '',
-        }));
-      } else {
-        console.warn('백엔드 응답 이상:', res);
-        // 빈 응답은 에러로 모달 닫음
-        finishProgressModal({
-          title:    '주제 생성 실패',
-          subtitle: 'AI 응답이 비어있습니다. 다시 시도해 주세요',
-          error:    true,
-        });
-        return;
-      }
-    } catch (e) {
-      // 사용자 취소 (AbortError) → 이미 abortProgress가 모달 닫음
-      if (e.name === 'AbortError' || _progressState.isAborted) {
+    for (let chunkIdx = 0; chunkIdx < totalChunks; chunkIdx++) {
+      // 사용자 취소 체크
+      if (_progressState.isAborted) {
         userAborted = true;
         return;
       }
-      // 네트워크/서버 에러
-      console.warn('백엔드 호출 실패:', e);
+
+      // 이번 청크에서 생성할 개수 (마지막 청크는 나머지)
+      const remaining = days - totalFetched;
+      const chunkCount = Math.min(CHUNK_SIZE, remaining);
+
+      // 진행률 갱신
+      updateProgressModal(
+        chunkIdx,
+        totalChunks,
+        `▶ ${chunkIdx + 1}/${totalChunks} 청크 처리 중 (이번: ${chunkCount}개)`
+      );
+
+      try {
+        // exclude는 500개로 제한 (요청 페이로드 비대화 방지)
+        const excludeForChunk = runningExclude.slice(0, 500);
+        const res = await apiPost('/admin/topics/generate', {
+          category: cat,
+          count: chunkCount,
+          use_ai: true,
+          exclude_topics: excludeForChunk,
+        }, { signal: ctrl.signal });
+
+        if (res && res.success && Array.isArray(res.topics) && res.topics.length > 0) {
+          // 응답 받은 주제 누적
+          const chunkTopics = res.topics.map(t => ({
+            topic: t.topic || '',
+            kw:    t.keywords || '',
+          }));
+          topics = topics.concat(chunkTopics);
+          totalFetched += chunkTopics.length;
+
+          // 다음 청크의 exclude에 이번 결과의 topic 추가 (같은 세션 내 중복 회피)
+          chunkTopics.forEach(t => {
+            if (t.topic && runningExclude.length < 500) {
+              runningExclude.push(t.topic);
+            }
+          });
+          console.log(`[topic-gen] chunk ${chunkIdx + 1}/${totalChunks}: ${chunkTopics.length}개 받음 (누적: ${topics.length})`);
+        } else {
+          console.warn(`[topic-gen] chunk ${chunkIdx + 1}/${totalChunks} 응답 비어있음:`, res);
+          chunkErrors++;
+        }
+      } catch (e) {
+        // 사용자 취소
+        if (e.name === 'AbortError' || _progressState.isAborted) {
+          userAborted = true;
+          return;
+        }
+        // 네트워크/서버 에러 → 이번 청크는 건너뛰고 계속
+        console.warn(`[topic-gen] chunk ${chunkIdx + 1}/${totalChunks} 실패:`, e);
+        chunkErrors++;
+
+        // 모든 청크가 다 실패하고 있으면 중단 (계속 시도하면 시간 낭비)
+        if (chunkIdx === 0 && chunkErrors === 1) {
+          // 첫 청크부터 실패 → 백엔드 자체가 응답 안 함 → 즉시 종료
+          finishProgressModal({
+            title:    '주제 생성 실패',
+            subtitle: `백엔드 호출 실패: ${e.message || '서버 응답 없음'}<br>`
+                    + `잠시 후 다시 시도해 주세요`,
+            error:    true,
+          });
+          return;
+        }
+      }
+
+      // 청크 사이 짧은 텀 (rate limit 방지)
+      await new Promise(r => setTimeout(r, 200));
+    }
+
+    // 모든 청크 끝났는데 받은 주제가 너무 적으면 부분 실패로 처리
+    if (topics.length === 0) {
       finishProgressModal({
         title:    '주제 생성 실패',
-        subtitle: `${e.message || '서버 응답 없음'} — 잠시 후 다시 시도해 주세요`,
+        subtitle: `모든 청크 호출이 실패했습니다.<br>`
+                + `백엔드 또는 AI API 상태를 확인해 주세요`,
         error:    true,
       });
       return;
+    }
+    if (chunkErrors > 0) {
+      console.warn(`[topic-gen] 일부 청크 실패: ${chunkErrors}/${totalChunks}, 받은 주제: ${topics.length}/${days}`);
     }
   }
 
