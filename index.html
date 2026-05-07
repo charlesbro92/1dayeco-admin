@@ -4977,12 +4977,15 @@ async function _executeGenerate(items) {
         }
       } else {
         // 백엔드 성공 — 응답으로 아카이브 저장
+        // topic: 백엔드의 headline을 우선 사용 (AI가 생성한 제목)
+        // → syncArchiveFromBackend와 일관성 유지 (둘 다 headline 기반)
+        // → 재생성 시 새 헤드라인이 즉시 반영됨
         saveToArchive(t.date, {
           category: result.category || t.cat,
           keyword:  result.keyword || t.kw,
           headline: result.headline || t.topic,
           body:     result.body || '',
-          topic:    result.topic || t.topic,
+          topic:    result.headline || result.topic || t.topic,  // headline 우선
           tags:     result.tags || [],
           tok:      result.token_used || 0,
           source:   'generated'
@@ -5004,7 +5007,11 @@ async function _executeGenerate(items) {
   }
 
   hideGenerateProgress();
+  // DB 안정화 대기 (Supabase write→read 시차 보정) + 강제 새로고침
+  // 1차 즉시 렌더 (saveToArchive로 저장된 로컬 데이터 기준)
   loadContentArchive();
+  // 2차: 1초 후 백엔드에서 다시 fetch (DB 반영 확인)
+  setTimeout(function() { loadContentArchive(); }, 1000);
   renderUsageWidget(); // 사용량 갱신
   renderUsageKPI();    // KPI도 갱신
 
