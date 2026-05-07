@@ -1138,8 +1138,8 @@ body.light-mode .km-bubble {
             </select>
           </div>
           <div style="flex:.8;min-width:100px">
-            <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:6px;letter-spacing:.5px">기간 (일)</label>
-            <input type="number" id="topicGenDays" min="1" max="365" value="30"
+            <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:6px;letter-spacing:.5px">기간 (일) <span style="color:var(--gold);font-size:10px">권장 180</span></label>
+            <input type="number" id="topicGenDays" min="1" max="365" value="180"
               oninput="updateTopicEndDate()"
               style="width:100%;background:var(--s3);border:1px solid var(--b);color:var(--text);
                      padding:10px;border-radius:6px;font-size:13px;outline:none;font-family:var(--sans)">
@@ -4500,15 +4500,31 @@ async function generateTopics() {
     updateTopicEndDate();
   }
 
-  // 백엔드에서 주제 가져오기 (실패 시 더미 풀로 fallback)
+  // 백엔드에서 주제 가져오기 (AI 사용, 중복 방지)
   let topics = [];
   if (API_BASE) {
     try {
-      showToast('백엔드에서 주제 가져오는 중...', 'ok');
+      // ── 같은 카테고리 아카이브의 주제를 exclude로 수집
+      // ──   → 6개월(180일) 운영 기준, 과거 1.5년치 주제까지 모두 차단해 안전 마진 확보
+      const excludeTopics = [];
+      const archive = (typeof CONTENT_ARCHIVE !== 'undefined') ? CONTENT_ARCHIVE : {};
+      for (const k in archive) {
+        if (!Object.prototype.hasOwnProperty.call(archive, k)) continue;
+        if (!isArchKey(k)) continue;
+        const item = archive[k] || {};
+        if (item.cat !== cat) continue;          // 같은 카테고리만
+        const topic = (item.topic || item.headline || '').trim();
+        if (topic && excludeTopics.length < 500) {
+          excludeTopics.push(topic);
+        }
+      }
+      console.log(`[topic-gen] cat=${cat} count=${days} exclude=${excludeTopics.length}`);
+      showToast(`AI가 주제 ${days}개 생성 중... (5~15초)`, 'ok');
       const res = await apiPost('/admin/topics/generate', {
         category: cat,
         count: days,
-        use_ai: false,
+        use_ai: true,                            // ★ AI 사용 (정적 풀 X)
+        exclude_topics: excludeTopics,           // ★ 기존 주제 차단
       });
       if (res && res.success && Array.isArray(res.topics) && res.topics.length > 0) {
         topics = res.topics.map(t => ({
@@ -4517,9 +4533,11 @@ async function generateTopics() {
         }));
       } else {
         console.warn('백엔드 응답 이상:', res);
+        showToast('AI 응답 이상 — 로컬 풀로 대체', 'ng');
       }
     } catch (e) {
       console.warn('백엔드 호출 실패, 더미 풀 사용:', e);
+      showToast('AI 호출 실패 — 로컬 풀로 대체', 'ng');
     }
   }
 
