@@ -700,7 +700,7 @@ body.light-mode .km-bubble {
 <!-- SIDEBAR -->
 <aside class="sidebar">
   <div class="sb-logo">1DAYECO<small>Admin Dashboard</small>
-    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v42</span>
+    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v43</span>
   </div>
   <nav class="sb-nav">
     <div class="sb-group">운영</div>
@@ -2656,9 +2656,16 @@ async function apiFetch(path) {
   if (!r.ok) throw new Error(`HTTP ${r.status}`);
   return r.json();
 }
-async function apiPost(path, body={}) {
+async function apiPost(path, body={}, opts={}) {
   if (!API_BASE) return null;
-  const r = await fetch(API_BASE + path, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)});
+  const fetchOpts = {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify(body),
+  };
+  // AbortController signal 전달 (취소 가능한 요청용)
+  if (opts.signal) fetchOpts.signal = opts.signal;
+  const r = await fetch(API_BASE + path, fetchOpts);
   if (!r.ok) throw new Error(`HTTP ${r.status}`);
   return r.json();
 }
@@ -4666,30 +4673,43 @@ async function generateTopics() {
 
   // 백엔드에서 주제 가져오기 (AI 사용, 중복 방지)
   let topics = [];
+  let userAborted = false;  // 사용자 명시적 취소 여부
+
   if (API_BASE) {
-    try {
-      // ── 같은 카테고리 아카이브의 주제를 exclude로 수집
-      // ──   → 6개월(180일) 운영 기준, 과거 1.5년치 주제까지 모두 차단해 안전 마진 확보
-      const excludeTopics = [];
-      const archive = (typeof CONTENT_ARCHIVE !== 'undefined') ? CONTENT_ARCHIVE : {};
-      for (const k in archive) {
-        if (!Object.prototype.hasOwnProperty.call(archive, k)) continue;
-        if (!isArchKey(k)) continue;
-        const item = archive[k] || {};
-        if (item.cat !== cat) continue;          // 같은 카테고리만
-        const topic = (item.topic || item.headline || '').trim();
-        if (topic && excludeTopics.length < 500) {
-          excludeTopics.push(topic);
-        }
+    // ── 같은 카테고리 아카이브의 주제를 exclude로 수집
+    // ──   → 6개월(180일) 운영 기준, 과거 1.5년치 주제까지 모두 차단해 안전 마진 확보
+    const excludeTopics = [];
+    const archive = (typeof CONTENT_ARCHIVE !== 'undefined') ? CONTENT_ARCHIVE : {};
+    for (const k in archive) {
+      if (!Object.prototype.hasOwnProperty.call(archive, k)) continue;
+      if (!isArchKey(k)) continue;
+      const item = archive[k] || {};
+      if (item.cat !== cat) continue;          // 같은 카테고리만
+      const topic = (item.topic || item.headline || '').trim();
+      if (topic && excludeTopics.length < 500) {
+        excludeTopics.push(topic);
       }
-      console.log(`[topic-gen] cat=${cat} count=${days} exclude=${excludeTopics.length}`);
-      showToast(`AI가 주제 ${days}개 생성 중... (5~15초)`, 'ok');
+    }
+    console.log(`[topic-gen] cat=${cat} count=${days} exclude=${excludeTopics.length}`);
+
+    // ── 진행 모달 표시 (AbortController 받음) ──
+    const catLabel = (typeof CATEGORY_LABEL_MAP !== 'undefined' && CATEGORY_LABEL_MAP[cat]) || cat;
+    const ctrl = showProgressModal({
+      title:    '🎯 주제 생성 중',
+      subtitle: `AI가 ${catLabel} 카테고리 ${days}개 주제를 생성하고 있습니다<br>`
+              + `<span style="font-size:11px;opacity:.8">(약 5~30초 소요)</span>`,
+      indeterminate: true,
+    });
+    setProgressDetail(`▶ 카테고리: ${catLabel} · 기간: ${days}일 · 제외: ${excludeTopics.length}개`);
+
+    try {
       const res = await apiPost('/admin/topics/generate', {
         category: cat,
         count: days,
         use_ai: true,                            // ★ AI 사용 (정적 풀 X)
         exclude_topics: excludeTopics,           // ★ 기존 주제 차단
-      });
+      }, { signal: ctrl.signal });
+
       if (res && res.success && Array.isArray(res.topics) && res.topics.length > 0) {
         topics = res.topics.map(t => ({
           topic: t.topic || '',
@@ -4697,18 +4717,36 @@ async function generateTopics() {
         }));
       } else {
         console.warn('백엔드 응답 이상:', res);
-        showToast('AI 응답 이상 — 로컬 풀로 대체', 'ng');
+        // 빈 응답은 에러로 모달 닫음
+        finishProgressModal({
+          title:    '주제 생성 실패',
+          subtitle: 'AI 응답이 비어있습니다. 다시 시도해 주세요',
+          error:    true,
+        });
+        return;
       }
     } catch (e) {
-      console.warn('백엔드 호출 실패, 더미 풀 사용:', e);
-      showToast('AI 호출 실패 — 로컬 풀로 대체', 'ng');
+      // 사용자 취소 (AbortError) → 이미 abortProgress가 모달 닫음
+      if (e.name === 'AbortError' || _progressState.isAborted) {
+        userAborted = true;
+        return;
+      }
+      // 네트워크/서버 에러
+      console.warn('백엔드 호출 실패:', e);
+      finishProgressModal({
+        title:    '주제 생성 실패',
+        subtitle: `${e.message || '서버 응답 없음'} — 잠시 후 다시 시도해 주세요`,
+        error:    true,
+      });
+      return;
     }
   }
 
-  // Fallback: 더미 풀
+  // Fallback: 더미 풀 (API_BASE 없을 때만)
   if (topics.length === 0) {
     const pool = DUMMY_TOPICS[cat] || [];
     if (pool.length === 0) {
+      hideProgressModal();
       showToast('해당 카테고리의 주제를 가져올 수 없습니다', 'ng');
       return;
     }
@@ -4716,6 +4754,7 @@ async function generateTopics() {
       const t = pool[i % pool.length];
       topics.push({ topic: t.topic, kw: t.kw });
     }
+    // 더미는 모달 없이 토스트로
     showToast('백엔드 미연결 — 로컬 풀 사용', 'ok');
   }
 
@@ -4769,13 +4808,24 @@ async function generateTopics() {
   if (addedCount > 0 && replacedCount > 0) {
     msg = '추가 ' + addedCount + ' / 교체 ' + replacedCount + ' (' + cat + ' ' + days + '일치)';
   } else if (addedCount > 0) {
-    msg = '주제 ' + addedCount + '개 추가됨 (' + cat + ' ' + days + '일치)';
+    msg = '주제 ' + addedCount + '개 추가됨';
   } else if (replacedCount > 0) {
-    msg = '주제 ' + replacedCount + '개 교체됨 (' + cat + ' ' + days + '일치)';
+    msg = '주제 ' + replacedCount + '개 교체됨';
   } else {
     msg = '추가된 주제 없음 (이미 생성된 항목)';
   }
-  showToast(msg, 'ok');
+
+  // API 호출이 있었던 경우 → 모달 finish (2초 후 자동 닫힘)
+  // 더미 풀 사용한 경우 → 모달 없이 토스트만
+  if (API_BASE && !userAborted) {
+    const catLabel = (typeof CATEGORY_LABEL_MAP !== 'undefined' && CATEGORY_LABEL_MAP[cat]) || cat;
+    finishProgressModal({
+      title:    `✅ 주제 ${addedCount + replacedCount}개 생성 완료`,
+      subtitle: `${catLabel} ${days}일치 — ${msg}`,
+    });
+  } else if (!API_BASE) {
+    showToast(msg, 'ok');
+  }
 }
 
 function renderTopicList() {
@@ -5087,7 +5137,264 @@ async function proceedForceGenerate() {
   return _executeGenerate(ctx.selected);
 }
 
-// 진행 중 취소 플래그
+// ── 진행 모달 (주제 생성 / 콘텐츠 생성 공통) ─────────────────
+// 화면 중앙에 표시 + AbortController로 진짜 취소 + 완료 시 2초 후 자동 닫힘
+
+// 진행 상태 (현재 활성화된 작업 1개만 동시에 가능)
+let _progressState = {
+  abortCtrl:    null,    // AbortController (백엔드 fetch 취소용)
+  isAborted:    false,   // 사용자가 취소 버튼 눌렀는지
+  closeTimerId: null,    // 자동 닫힘 타이머
+  countdownTimerId: null, // 카운트다운 갱신 타이머
+};
+
+/**
+ * 진행 모달 표시
+ * @param {Object} opts
+ * @param {string} opts.title    — 모달 제목 (예: "🎯 주제 생성 중", "📝 콘텐츠 생성 중")
+ * @param {string} opts.subtitle — 부제목 (예: "AI가 180개 주제를 생성하고 있습니다")
+ * @param {boolean} opts.indeterminate — true면 진행률 바 대신 무한 회전 표시
+ * @param {number}  opts.total — 전체 항목 수 (indeterminate=false일 때)
+ * @returns {AbortController}    — 취소 시그널 (백엔드 fetch에 전달)
+ */
+function showProgressModal(opts) {
+  // 이전 모달 있으면 정리
+  hideProgressModal({ silent: true });
+
+  // 새 AbortController
+  _progressState.abortCtrl = new AbortController();
+  _progressState.isAborted = false;
+
+  const title       = opts.title       || '⏳ 처리 중';
+  const subtitle    = opts.subtitle    || '';
+  const indet       = !!opts.indeterminate;
+  const total       = opts.total       || 0;
+
+  // 모달 컨테이너
+  let overlay = document.getElementById('progressModalOverlay');
+  if (!overlay) {
+    overlay = document.createElement('div');
+    overlay.id = 'progressModalOverlay';
+    overlay.style.cssText =
+      'position:fixed;inset:0;z-index:9999;'
+      + 'background:rgba(0,0,0,.75);backdrop-filter:blur(8px);'
+      + 'display:flex;align-items:center;justify-content:center;padding:24px;'
+      + 'font-family:var(--sans);';
+    document.body.appendChild(overlay);
+  }
+
+  overlay.innerHTML = `
+    <div id="progressModalCard" style="
+      background:var(--s2);border:1px solid var(--gold);border-radius:14px;
+      padding:24px 28px;min-width:380px;max-width:480px;
+      box-shadow:0 16px 48px rgba(0,0,0,.6),0 0 0 1px rgba(201,168,76,.15);
+      ">
+      <!-- 제목 + 부제 -->
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+        <div id="progressModalTitle" style="font-size:15px;font-weight:700;color:var(--gold);letter-spacing:.5px">
+          ${title}
+        </div>
+        <div id="progressModalStatus" style="font-size:11px;color:var(--muted)"></div>
+      </div>
+      <div id="progressModalSubtitle" style="font-size:12px;color:var(--muted);line-height:1.6;margin-bottom:18px">
+        ${subtitle}
+      </div>
+
+      <!-- 진행률 바 영역 -->
+      <div id="progressBarArea">
+        ${indet
+          ? `<div style="height:4px;background:var(--s3);border-radius:3px;overflow:hidden;margin-bottom:10px;position:relative">
+               <div style="position:absolute;width:35%;height:100%;background:var(--gold);
+                 animation:indetSlide 1.4s cubic-bezier(0.4,0,0.2,1) infinite;border-radius:3px"></div>
+             </div>`
+          : `<div id="progressModalText" style="font-size:12px;color:var(--text);margin-bottom:8px;font-family:var(--mono)">
+               0 / ${total}
+             </div>
+             <div style="width:100%;height:6px;background:var(--s3);border-radius:3px;overflow:hidden">
+               <div id="progressModalFill" style="width:0%;height:100%;background:var(--gold);transition:width .3s"></div>
+             </div>`}
+      </div>
+
+      <!-- 현재 처리 중 항목 -->
+      <div id="progressModalDetail" style="font-size:11px;color:var(--muted);margin-top:10px;
+        overflow:hidden;text-overflow:ellipsis;white-space:nowrap;letter-spacing:.3px;
+        min-height:14px"></div>
+
+      <!-- 안내 문구 + 취소 버튼 -->
+      <div style="display:flex;align-items:center;justify-content:space-between;
+        margin-top:18px;padding-top:14px;border-top:1px dashed var(--b);gap:10px">
+        <div style="font-size:11px;color:var(--muted);line-height:1.5;flex:1">
+          ⚠️ 창 닫기 또는 취소 버튼 누르면 작업이 중단됩니다
+        </div>
+        <button id="progressModalCancelBtn" onclick="abortProgress()"
+          style="background:rgba(248,113,113,.1);border:1px solid rgba(248,113,113,.3);
+            color:var(--red);padding:6px 14px;border-radius:6px;font-size:11px;
+            font-weight:700;cursor:pointer;font-family:var(--sans);white-space:nowrap;
+            transition:all .15s"
+          onmouseover="this.style.background='rgba(248,113,113,.2)'"
+          onmouseout="this.style.background='rgba(248,113,113,.1)'">
+          ⏹ 취소
+        </button>
+      </div>
+    </div>
+  `;
+
+  // 키프레임 CSS 한 번만 주입
+  if (!document.getElementById('progressModalKeyframes')) {
+    const st = document.createElement('style');
+    st.id = 'progressModalKeyframes';
+    st.textContent = `
+      @keyframes indetSlide {
+        0%   { left:-35%; }
+        100% { left:100%; }
+      }
+    `;
+    document.head.appendChild(st);
+  }
+
+  // 배경 클릭으로 닫기 = 취소
+  overlay.onclick = function(e) {
+    if (e.target === overlay) abortProgress();
+  };
+
+  // ESC도 취소
+  if (!_progressState._escHandler) {
+    _progressState._escHandler = function(e) {
+      if (e.key === 'Escape' && document.getElementById('progressModalOverlay')) {
+        abortProgress();
+      }
+    };
+    document.addEventListener('keydown', _progressState._escHandler);
+  }
+
+  return _progressState.abortCtrl;
+}
+
+/**
+ * 진행률 갱신 (콘텐츠 생성처럼 N개 처리 시)
+ */
+function updateProgressModal(currentIdx, total, currentDetail) {
+  const txt    = document.getElementById('progressModalText');
+  const fill   = document.getElementById('progressModalFill');
+  const detail = document.getElementById('progressModalDetail');
+  const pct    = total > 0 ? Math.round((currentIdx / total) * 100) : 0;
+  if (txt)    txt.textContent = (currentIdx + 1) + ' / ' + total + ' (' + pct + '%)';
+  if (fill)   fill.style.width = pct + '%';
+  if (detail) detail.textContent = currentDetail ? '▶ ' + currentDetail : '';
+}
+
+/**
+ * 진행 모달의 부제·세부 영역만 갱신 (주제 생성 같은 indeterminate 작업용)
+ */
+function setProgressDetail(detailText) {
+  const detail = document.getElementById('progressModalDetail');
+  if (detail) detail.textContent = detailText || '';
+}
+
+/**
+ * 모달 닫기 (즉시)
+ */
+function hideProgressModal(opts) {
+  opts = opts || {};
+  // 타이머 정리
+  if (_progressState.closeTimerId) {
+    clearTimeout(_progressState.closeTimerId);
+    _progressState.closeTimerId = null;
+  }
+  if (_progressState.countdownTimerId) {
+    clearInterval(_progressState.countdownTimerId);
+    _progressState.countdownTimerId = null;
+  }
+  // ESC 핸들러 해제
+  if (_progressState._escHandler) {
+    document.removeEventListener('keydown', _progressState._escHandler);
+    _progressState._escHandler = null;
+  }
+  const overlay = document.getElementById('progressModalOverlay');
+  if (overlay) overlay.remove();
+  // AbortController 정리 (silent=true면 이미 진행 중일 수 있어 abort 안 함)
+  if (!opts.silent && _progressState.abortCtrl) {
+    _progressState.abortCtrl = null;
+  }
+}
+
+/**
+ * 완료 시 호출 — 2초 카운트다운 후 자동 닫힘
+ * @param {Object} opts
+ * @param {string} opts.title    — 완료 제목 (예: "✅ 주제 180개 생성 완료")
+ * @param {string} opts.subtitle — 완료 부제 (예: "주제 목록을 확인해 주세요")
+ * @param {boolean} opts.error   — 에러 상태 (빨간 강조)
+ */
+function finishProgressModal(opts) {
+  opts = opts || {};
+  const isError = !!opts.error;
+  const card    = document.getElementById('progressModalCard');
+  if (!card) return;
+
+  const accentColor = isError ? 'var(--red)' : 'var(--green)';
+  const accentBg    = isError ? 'rgba(248,113,113,.1)' : 'rgba(74,222,128,.1)';
+  const accentBd    = isError ? 'rgba(248,113,113,.3)' : 'rgba(74,222,128,.3)';
+
+  card.style.borderColor = accentColor;
+  card.innerHTML = `
+    <div style="text-align:center;padding:6px 0">
+      <div style="font-size:36px;margin-bottom:10px">${isError ? '⚠️' : '✅'}</div>
+      <div style="font-size:15px;font-weight:700;color:${accentColor};margin-bottom:6px;letter-spacing:.3px">
+        ${opts.title || (isError ? '작업 실패' : '작업 완료')}
+      </div>
+      <div style="font-size:12px;color:var(--muted);line-height:1.7;margin-bottom:18px">
+        ${opts.subtitle || ''}
+      </div>
+      <div style="display:flex;align-items:center;justify-content:center;gap:8px;
+        padding:8px 14px;background:${accentBg};border:1px solid ${accentBd};
+        border-radius:8px;font-size:11px;color:${accentColor};font-weight:600">
+        <span id="progressCountdown">2</span>초 후 자동으로 닫힙니다
+      </div>
+      <button onclick="hideProgressModal()"
+        style="margin-top:12px;background:transparent;border:1px solid var(--b);
+          color:var(--muted);padding:6px 14px;border-radius:6px;font-size:11px;
+          font-weight:600;cursor:pointer;font-family:var(--sans)">
+        지금 닫기
+      </button>
+    </div>
+  `;
+
+  // 카운트다운 갱신 (1초마다)
+  let remainSec = 2;
+  _progressState.countdownTimerId = setInterval(function() {
+    remainSec -= 1;
+    const cd = document.getElementById('progressCountdown');
+    if (cd) cd.textContent = String(Math.max(0, remainSec));
+    if (remainSec <= 0) {
+      clearInterval(_progressState.countdownTimerId);
+      _progressState.countdownTimerId = null;
+    }
+  }, 1000);
+
+  // 2초 후 자동 닫힘
+  _progressState.closeTimerId = setTimeout(function() {
+    hideProgressModal();
+  }, 2000);
+}
+
+/**
+ * 사용자가 취소 버튼/ESC/배경 클릭으로 취소
+ */
+function abortProgress() {
+  if (_progressState.isAborted) return;  // 중복 방지
+  _progressState.isAborted = true;
+  // 백엔드 fetch 취소
+  if (_progressState.abortCtrl) {
+    try { _progressState.abortCtrl.abort(); } catch(e) {}
+  }
+  // 기존 _generateAborted 플래그도 같이 세팅 (콘텐츠 생성 루프용)
+  _generateAborted = true;
+  // 모달은 즉시 닫음
+  hideProgressModal();
+  showToast('작업이 취소되었습니다', 'ng');
+}
+
+// ── 진행 중 취소 플래그 (콘텐츠 생성 for-loop용 — 기존 호환) ─
 let _generateAborted = false;
 
 function abortGenerate() {
@@ -5112,7 +5419,8 @@ async function _executeGenerate(items) {
 
   for (let i = 0; i < items.length; i++) {
     if (_generateAborted) {
-      showToast(`취소됨: ${successCount}건 생성, ${items.length - i}건 건너뜀`, 'ok');
+      // 사용자가 모달 취소 버튼 눌렀음 → 토스트는 abortProgress()가 이미 표시
+      console.log(`[generate] 취소됨: ${successCount}건 생성, ${items.length - i}건 건너뜀`);
       break;
     }
 
@@ -5122,15 +5430,16 @@ async function _executeGenerate(items) {
     try {
       let result = null;
 
-      // 백엔드 호출
+      // 백엔드 호출 (모달의 AbortController 시그널 전달)
       if (API_BASE) {
+        const signal = _progressState.abortCtrl ? _progressState.abortCtrl.signal : undefined;
         result = await apiPost('/admin/content/generate-from-topic', {
           date:     t.date,
           category: t.cat,
           topic:    t.topic,
           keywords: t.kw,
           overwrite: true,  // 충돌 검사는 이미 generateContentFromTopics에서 마쳤음
-        });
+        }, { signal: signal });
       }
 
       // 백엔드 미연결 시 더미 사용 (개발 편의)
@@ -5176,6 +5485,12 @@ async function _executeGenerate(items) {
         successCount++;
       }
     } catch (e) {
+      // 사용자 취소 (AbortError) → 루프 즉시 종료
+      if (e.name === 'AbortError' || _progressState.isAborted) {
+        console.log('[generate] AbortError - 루프 종료');
+        _generateAborted = true;
+        break;
+      }
       console.error('생성 중 예외:', e);
       t.status = 'failed';
       failCount++;
@@ -5188,7 +5503,7 @@ async function _executeGenerate(items) {
     await new Promise(r => setTimeout(r, 100));
   }
 
-  hideGenerateProgress();
+  // 처리 완료 후
   // DB 안정화 대기 (Supabase write→read 시차 보정) + 강제 새로고침
   // 1차 즉시 렌더 (saveToArchive로 저장된 로컬 데이터 기준)
   loadContentArchive();
@@ -5197,52 +5512,42 @@ async function _executeGenerate(items) {
   renderUsageWidget(); // 사용량 갱신
   renderUsageKPI();    // KPI도 갱신
 
+  // 사용자가 중간에 취소했으면 모달은 abortProgress()에서 이미 닫혔음
+  if (_progressState.isAborted) {
+    return;
+  }
+
+  // 완료 모달 표시 (2초 후 자동 닫힘)
   if (failCount > 0) {
-    showToast(`완료: 성공 ${successCount} / 실패 ${failCount}`, 'ng');
+    finishProgressModal({
+      title:    `완료: 성공 ${successCount} / 실패 ${failCount}`,
+      subtitle: '실패한 항목은 다시 시도해 주세요',
+      error:    successCount === 0,  // 전부 실패면 빨간 강조
+    });
   } else {
-    showToast(`${successCount}개 콘텐츠 생성 완료`, 'ok');
+    finishProgressModal({
+      title:    `✅ ${successCount}개 콘텐츠 생성 완료`,
+      subtitle: '아카이브에서 확인하실 수 있습니다',
+    });
   }
 }
 
-// ── 진행률 표시 ─────────────────────────────────────────────
+// ── 진행률 표시 (콘텐츠 생성 — 기존 함수는 새 모달로 위임) ──
 function showGenerateProgress(total) {
-  let bar = document.getElementById('generateProgressBar');
-  if (!bar) {
-    bar = document.createElement('div');
-    bar.id = 'generateProgressBar';
-    bar.style.cssText = 'position:fixed;bottom:24px;right:24px;z-index:9999;'
-      + 'background:var(--s2);border:1px solid var(--gold);border-radius:12px;'
-      + 'padding:16px 20px;min-width:320px;box-shadow:0 8px 24px rgba(0,0,0,.5);'
-      + 'font-family:var(--sans)';
-    bar.innerHTML =
-      '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">'
-      +   '<div style="font-size:13px;font-weight:700;color:var(--gold);letter-spacing:.5px">📝 콘텐츠 생성 중</div>'
-      +   '<button onclick="abortGenerate()" style="background:none;border:1px solid var(--b);color:var(--muted);'
-      +     'padding:3px 8px;border-radius:4px;font-size:10px;cursor:pointer">⏹ 취소</button>'
-      + '</div>'
-      + '<div id="genProgressText" style="font-size:12px;color:var(--text);margin-bottom:8px">0 / ' + total + '</div>'
-      + '<div style="width:100%;height:6px;background:var(--s3);border-radius:3px;overflow:hidden">'
-      +   '<div id="genProgressFill" style="width:0%;height:100%;background:var(--gold);transition:width .3s"></div>'
-      + '</div>'
-      + '<div id="genProgressTopic" style="font-size:10px;color:var(--muted);margin-top:8px;'
-      +   'overflow:hidden;text-overflow:ellipsis;white-space:nowrap;letter-spacing:.3px"></div>';
-    document.body.appendChild(bar);
-  }
+  showProgressModal({
+    title:    '📝 콘텐츠 생성 중',
+    subtitle: `${total}개 주제로 콘텐츠를 만들고 있습니다 (1건당 약 5~10초)`,
+    indeterminate: false,
+    total:    total,
+  });
 }
 
 function updateGenerateProgress(currentIdx, total, currentTopic) {
-  const txt   = document.getElementById('genProgressText');
-  const fill  = document.getElementById('genProgressFill');
-  const topic = document.getElementById('genProgressTopic');
-  const pct   = Math.round((currentIdx / total) * 100);
-  if (txt)   txt.textContent = (currentIdx + 1) + ' / ' + total;
-  if (fill)  fill.style.width = pct + '%';
-  if (topic) topic.textContent = '▶ ' + (currentTopic || '');
+  updateProgressModal(currentIdx, total, currentTopic);
 }
 
 function hideGenerateProgress() {
-  const bar = document.getElementById('generateProgressBar');
-  if (bar) bar.remove();
+  hideProgressModal();
 }
 
 // ════════════════════════════════════════════════════════════
