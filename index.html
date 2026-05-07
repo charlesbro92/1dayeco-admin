@@ -4780,11 +4780,31 @@ function closeContentConflict() {
 
 // === 1단계: 진입점 — 충돌 검사 ===
 async function generateContentFromTopics() {
-  const selected = GENERATED_TOPICS.filter(t => t.selected && t.status !== 'generated');
-  if (selected.length === 0) {
+  // 체크된 모든 주제 (이미 생성된 것 포함)
+  const allChecked = GENERATED_TOPICS.filter(t => t.selected);
+  if (allChecked.length === 0) {
     showToast('생성할 주제를 선택해주세요', 'ng');
     return;
   }
+  // 이미 생성된 것 + 미생성 분리
+  const alreadyGenerated = allChecked.filter(t => t.status === 'generated');
+  const notGenerated     = allChecked.filter(t => t.status !== 'generated');
+
+  // 이미 생성된 것만 선택된 경우 → 재생성 의도 확인
+  if (alreadyGenerated.length > 0 && notGenerated.length === 0) {
+    const msg = alreadyGenerated.length === 1
+      ? `이 주제는 이미 콘텐츠가 생성되어 있습니다.\n재생성하시겠습니까? (기존 콘텐츠는 덮어씌워집니다)`
+      : `선택한 ${alreadyGenerated.length}개 주제는 이미 콘텐츠가 생성되어 있습니다.\n재생성하시겠습니까? (기존 콘텐츠는 덮어씌워집니다)`;
+    if (!confirm(msg)) return;
+  }
+  // 일부만 미생성 + 일부 생성된 경우 → 미생성 것만 진행 알림
+  else if (alreadyGenerated.length > 0 && notGenerated.length > 0) {
+    const msg = `선택한 ${allChecked.length}개 중 ${alreadyGenerated.length}개는 이미 생성됨, ${notGenerated.length}개만 생성합니다.\n계속하시겠습니까?`;
+    if (!confirm(msg)) return;
+  }
+
+  // 모든 체크된 주제로 진행 (재생성 허용)
+  const selected = allChecked;
 
   // 1) 같은 날짜 덮어쓰기 검사
   const overwrites = [];
@@ -5645,13 +5665,23 @@ async function syncArchiveFromBackend() {
   try {
     const res = await apiFetch('/admin/contents');
     if (res && Array.isArray(res.data)) {
+      // created_at 오름차순으로 정렬 (오래된 것부터)
+      // → forEach로 같은 키에 덮어쓰면 가장 최근 것이 남음
+      const sorted = res.data.slice().sort(function(a, b) {
+        const ta = a.created_at || '';
+        const tb = b.created_at || '';
+        if (ta < tb) return -1;
+        if (ta > tb) return 1;
+        return 0;
+      });
       let added = 0;
-      res.data.forEach(function(row) {
+      sorted.forEach(function(row) {
         const dateStr = row.date_str || row.dateStr;
         if (!dateStr) return;
         const cat = row.category || '';
         if (!['economy','realestate','english','trivia'].includes(cat)) return;
         // 복합키로 저장: 같은 날짜라도 다른 카테고리면 별도 항목
+        // 같은 (날짜+카테고리)는 가장 최근 것으로 덮어쓰기 (정렬로 보장됨)
         CONTENT_ARCHIVE[archKey(dateStr, cat)] = {
           cat:         cat,
           kw:          row.keyword || '',
