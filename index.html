@@ -700,7 +700,7 @@ body.light-mode .km-bubble {
 <!-- SIDEBAR -->
 <aside class="sidebar">
   <div class="sb-logo">1DAYECO<small>Admin Dashboard</small>
-    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v45</span>
+    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v46</span>
   </div>
   <nav class="sb-nav">
     <div class="sb-group">운영</div>
@@ -1148,8 +1148,8 @@ body.light-mode .km-bubble {
             </select>
           </div>
           <div style="flex:.8;min-width:100px">
-            <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:6px;letter-spacing:.5px">기간 (일) <span style="color:var(--gold);font-size:10px">권장 180</span></label>
-            <input type="number" id="topicGenDays" min="1" max="365" value="180"
+            <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:6px;letter-spacing:.5px">기간 (일) <span style="color:var(--gold);font-size:10px">권장 30</span></label>
+            <input type="number" id="topicGenDays" min="1" max="365" value="30"
               oninput="updateTopicEndDate()"
               style="width:100%;background:var(--s3);border:1px solid var(--b);color:var(--text);
                      padding:10px;border-radius:6px;font-size:13px;outline:none;font-family:var(--sans)">
@@ -4701,15 +4701,32 @@ async function generateTopics() {
     const totalChunks = Math.ceil(days / CHUNK_SIZE);
     const catLabel = (typeof CATEGORY_LABEL_MAP !== 'undefined' && CATEGORY_LABEL_MAP[cat]) || cat;
 
-    // ── 진행 모달 표시 (정확한 진행률 모드 — N개 청크 중 X개 완료) ──
-    const ctrl = showProgressModal({
-      title:    '🎯 주제 생성 중',
-      subtitle: `AI가 ${catLabel} 카테고리 ${days}개 주제를 생성하고 있습니다<br>`
-              + `<span style="font-size:11px;opacity:.8">(${CHUNK_SIZE}개씩 ${totalChunks}회 분할 호출)</span>`,
-      mode:     'progress',
-      total:    totalChunks,
-    });
-    updateProgressModal(0, totalChunks, `시작: ${days}개 주제`);
+    // ── 진행 모달 표시 ──
+    // 청크 1개 (≤30일) → estimated 모드 (시간 기반 부드럽게 차오름)
+    // 청크 2개 이상     → progress 모드 (청크 단위 진행률)
+    const useEstimatedMode = (totalChunks === 1);
+    const estimatedSec = Math.max(5, Math.min(20, Math.round(days * 0.25 + 3)));
+
+    const ctrl = useEstimatedMode
+      ? showProgressModal({
+          title:    '🎯 주제 생성 중',
+          subtitle: `AI가 ${catLabel} 카테고리 ${days}개 주제를 생성하고 있습니다<br>`
+                  + `<span style="font-size:11px;opacity:.8">(약 ${estimatedSec}초 예상)</span>`,
+          mode:         'estimated',
+          estimatedSec: estimatedSec,
+        })
+      : showProgressModal({
+          title:    '🎯 주제 생성 중',
+          subtitle: `AI가 ${catLabel} 카테고리 ${days}개 주제를 생성하고 있습니다<br>`
+                  + `<span style="font-size:11px;opacity:.8">(${CHUNK_SIZE}개씩 ${totalChunks}회 분할 호출)</span>`,
+          mode:     'progress',
+          total:    totalChunks,
+        });
+    if (!useEstimatedMode) {
+      updateProgressModal(0, totalChunks, `시작: ${days}개 주제`);
+    } else {
+      setProgressDetail(`▶ ${days}개 주제 생성 중...`);
+    }
 
     // ── 청크별 호출 ──
     let totalFetched = 0;
@@ -4728,12 +4745,14 @@ async function generateTopics() {
       const remaining = days - totalFetched;
       const chunkCount = Math.min(CHUNK_SIZE, remaining);
 
-      // 진행률 갱신
-      updateProgressModal(
-        chunkIdx,
-        totalChunks,
-        `▶ ${chunkIdx + 1}/${totalChunks} 청크 처리 중 (이번: ${chunkCount}개)`
-      );
+      // 진행률 갱신 — estimated 모드는 ticker가 자동 갱신, progress 모드만 수동 갱신
+      if (!useEstimatedMode) {
+        updateProgressModal(
+          chunkIdx,
+          totalChunks,
+          `▶ ${chunkIdx + 1}/${totalChunks} 청크 처리 중 (이번: ${chunkCount}개)`
+        );
+      }
 
       try {
         // exclude는 500개로 제한 (요청 페이로드 비대화 방지)
