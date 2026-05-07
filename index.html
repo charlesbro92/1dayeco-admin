@@ -1786,6 +1786,64 @@ body.light-mode .km-bubble {
     <!-- 본문 영역 -->
     <div style="padding:16px 20px">
 
+      <!-- 신규/편집 모드용 메타 필드 (편집 모드에서만 보임) -->
+      <div id="cpEditMetaPane" style="display:none;margin-bottom:14px;padding:12px;background:rgba(201,168,76,.04);border:1px dashed rgba(201,168,76,.25);border-radius:8px">
+        <div id="cpModeLabel" style="font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--gold);font-weight:700;margin-bottom:10px">편집 모드</div>
+        <!-- 1행: 날짜 + 카테고리 -->
+        <div style="display:flex;gap:10px;margin-bottom:10px">
+          <div style="flex:1">
+            <label class="cp-label">날짜 <span class="cp-req">*</span></label>
+            <input type="date" id="cpEditDate" class="cp-input" style="color-scheme:dark">
+          </div>
+          <div style="flex:1">
+            <label class="cp-label">카테고리 <span class="cp-req">*</span></label>
+            <select id="cpEditCategory" class="cp-input">
+              <option value="economy">📊 경제</option>
+              <option value="realestate">🏠 부동산</option>
+              <option value="english">🇬🇧 영어</option>
+              <option value="trivia">🧠 상식</option>
+            </select>
+          </div>
+        </div>
+        <!-- 2행: 주제 (선택) -->
+        <div style="margin-bottom:10px">
+          <label class="cp-label">
+            주제 (topic)
+            <span style="font-size:9px;color:var(--muted);font-weight:400;margin-left:4px">— 선택 (비우면 헤드라인으로 자동 채움)</span>
+          </label>
+          <input type="text" id="cpEditTopic" class="cp-input" placeholder="예: 기준금리 인상이 가계대출에 미치는 영향" maxlength="80">
+        </div>
+        <!-- 3행: 키워드 + 태그 -->
+        <div style="display:flex;gap:10px">
+          <div style="flex:1">
+            <label class="cp-label">
+              키워드 <span style="font-size:9px;color:var(--muted);font-weight:400;margin-left:4px">— 선택</span>
+            </label>
+            <input type="text" id="cpEditKeyword" class="cp-input" placeholder="예: 기준금리" maxlength="20">
+          </div>
+          <div style="flex:1.5">
+            <label class="cp-label">
+              태그 <span style="font-size:9px;color:var(--muted);font-weight:400;margin-left:4px">— 공백으로 구분</span>
+            </label>
+            <input type="text" id="cpEditTags" class="cp-input" placeholder="예: 금리 대출 가계">
+          </div>
+        </div>
+      </div>
+      <style>
+        .cp-label {
+          display:block; font-size:10px; color:var(--muted);
+          margin-bottom:3px; letter-spacing:.3px; font-weight:600;
+        }
+        .cp-req { color:#f87171; font-weight:700; }
+        .cp-input {
+          width:100%; background:rgba(255,255,255,.05); border:1px solid var(--b);
+          color:var(--text); padding:7px 10px; border-radius:6px;
+          font-size:12px; outline:none; font-family:var(--sans);
+          transition:border-color .15s;
+        }
+        .cp-input:focus { border-color:var(--gold); }
+      </style>
+
       <!-- 제목 (읽기/편집 전환) -->
       <div id="cpHeadlineView"
         style="font-size:13px;font-weight:600;color:var(--text);
@@ -2284,117 +2342,6 @@ body.light-mode .km-bubble {
     </div>
   </div>
 </div>
-
-<!-- 콘텐츠 에디터 모달 (직접 추가/편집) -->
-<div class="overlay" id="contentEditorOverlay" onclick="if(event.target.id==='contentEditorOverlay')closeContentEditor()">
-  <div class="modal" style="max-width:680px;padding:0;max-height:92vh;display:flex;flex-direction:column">
-    <!-- 헤더 -->
-    <div style="display:flex;align-items:center;justify-content:space-between;padding:18px 22px 14px;border-bottom:1px solid var(--b);flex-shrink:0">
-      <div>
-        <div id="ceMode" style="font-size:10px;color:var(--gold);letter-spacing:1px;text-transform:uppercase;margin-bottom:3px;font-weight:700">신규 추가</div>
-        <div style="font-size:16px;font-weight:700">콘텐츠 직접 작성</div>
-      </div>
-      <button onclick="closeContentEditor()" style="background:none;border:none;color:var(--muted);font-size:18px;cursor:pointer;padding:4px" onmouseover="this.style.color='var(--text)'" onmouseout="this.style.color='var(--muted)'">✕</button>
-    </div>
-
-    <!-- 본문 (스크롤) -->
-    <div style="padding:18px 22px;overflow-y:auto;flex:1;display:flex;flex-direction:column;gap:12px">
-      <!-- 1행: 날짜 + 카테고리 -->
-      <div style="display:flex;gap:10px">
-        <div style="flex:1">
-          <label class="ce-label">날짜 <span class="ce-req">*</span></label>
-          <input type="date" id="ceDate" class="ce-input" onclick="this.showPicker && this.showPicker()" style="color-scheme:dark">
-        </div>
-        <div style="flex:1">
-          <label class="ce-label">카테고리 <span class="ce-req">*</span></label>
-          <select id="ceCategory" class="ce-input">
-            <option value="economy">📊 경제</option>
-            <option value="realestate">🏠 부동산</option>
-            <option value="english">🇬🇧 영어</option>
-            <option value="trivia">🧠 상식</option>
-          </select>
-        </div>
-      </div>
-
-      <!-- 2행: 주제 + 자동 채우기 도움말 -->
-      <div>
-        <label class="ce-label">
-          주제 (topic)
-          <span style="font-size:10px;color:var(--muted);font-weight:400;margin-left:6px">— 비워두면 헤드라인으로 자동 채움</span>
-        </label>
-        <input type="text" id="ceTopic" class="ce-input" placeholder="예: 기준금리 인상이 가계대출에 미치는 영향" maxlength="80">
-      </div>
-
-      <!-- 3행: 헤드라인 -->
-      <div>
-        <label class="ce-label">
-          헤드라인 (headline) <span class="ce-req">*</span>
-          <span style="font-size:10px;color:var(--muted);font-weight:400;margin-left:6px">— 25자 이내 권장</span>
-        </label>
-        <input type="text" id="ceHeadline" class="ce-input" placeholder="예: 0.25%p 인상, 3억 대출 75만원↑" maxlength="40" oninput="updateCeCharCount()">
-        <div id="ceHeadlineCount" style="text-align:right;font-size:10px;color:var(--muted);margin-top:2px">0 / 40자</div>
-      </div>
-
-      <!-- 4행: 키워드 -->
-      <div>
-        <label class="ce-label">
-          핵심 키워드 (keyword)
-          <span style="font-size:10px;color:var(--muted);font-weight:400;margin-left:6px">— 8자 이내 권장</span>
-        </label>
-        <input type="text" id="ceKeyword" class="ce-input" placeholder="예: 기준금리 인상" maxlength="20">
-      </div>
-
-      <!-- 5행: 태그 -->
-      <div>
-        <label class="ce-label">
-          태그 (tags)
-          <span style="font-size:10px;color:var(--muted);font-weight:400;margin-left:6px">— 공백으로 구분 (#기호 무시됨)</span>
-        </label>
-        <input type="text" id="ceTags" class="ce-input" placeholder="예: 금리 대출 가계">
-      </div>
-
-      <!-- 6행: 본문 -->
-      <div>
-        <label class="ce-label">
-          본문 (body) <span class="ce-req">*</span>
-          <span style="font-size:10px;color:var(--muted);font-weight:400;margin-left:6px">— 알림톡 한도 800자 권장 (최대 1000자)</span>
-        </label>
-        <textarea id="ceBody" class="ce-input" rows="12" oninput="updateCeCharCount()"
-          placeholder="📊 2026년 05월 08일 금요일&#10;경제 | 0.25%p 인상, 3억 대출 75만원↑&#10;&#10;[오늘의 핵심] ...&#10;&#10;📌 오늘의 포인트&#10;• 첫 번째 핵심&#10;• 두 번째 핵심&#10;• 세 번째 핵심&#10;&#10;💡 왜 중요한가?&#10;...&#10;&#10;📊 오늘의 숫자&#10;• 데이터 1&#10;• 데이터 2&#10;&#10;#태그1 #태그2 #태그3"
-          style="resize:vertical;min-height:240px;font-family:var(--mono);font-size:12px;line-height:1.7"></textarea>
-        <div id="ceBodyCount" style="text-align:right;font-size:11px;color:var(--muted);margin-top:4px">
-          <span id="ceBodyCountNum">0</span>자
-          <span id="ceBodyCountWarn" style="margin-left:8px"></span>
-        </div>
-      </div>
-    </div>
-
-    <!-- 푸터 -->
-    <div style="padding:14px 22px;border-top:1px solid var(--b);display:flex;justify-content:space-between;align-items:center;gap:10px;flex-shrink:0">
-      <div id="ceErrorMsg" style="flex:1;font-size:11px;color:#f87171"></div>
-      <button onclick="closeContentEditor()" class="arch-act-btn">취소</button>
-      <button onclick="submitContentEditor()" id="ceSaveBtn" class="arch-act-btn arch-primary">
-        <span id="ceSaveTxt">💾 저장</span>
-        <span id="ceSaveSpin" style="display:none"><span class="spinner" style="border-top-color:var(--dark);width:11px;height:11px"></span></span>
-      </button>
-    </div>
-  </div>
-</div>
-<style>
-  .ce-label {
-    display:block; font-size:11px; color:var(--muted);
-    margin-bottom:5px; letter-spacing:.3px; font-weight:600;
-  }
-  .ce-req { color:#f87171; font-weight:700; }
-  .ce-input {
-    width:100%; background:var(--s3); border:1px solid var(--b);
-    color:var(--text); padding:9px 12px; border-radius:6px;
-    font-size:13px; outline:none; font-family:var(--sans);
-    transition:border-color .15s;
-  }
-  .ce-input:focus { border-color:var(--gold); }
-  textarea.ce-input { font-family:var(--mono); }
-</style>
 
 <!-- 콘텐츠 생성 충돌 경고 모달 -->
 <div class="overlay" id="contentConflictOverlay" onclick="if(event.target.id==='contentConflictOverlay')closeContentConflict()">
@@ -6148,214 +6095,59 @@ async function archiveBulkDelete() {
   }
 }
 
-// ── 콘텐츠 에디터 (직접 추가/편집) ───────────────────────
-// _ceMode: 'create' | 'edit'
-let _ceMode = 'create';
-let _ceOriginalKey = null;  // edit 모드일 때 원본 (date_str|category)
-
+// ── 콘텐츠 에디터 (상세 팝업의 편집 모드를 활용) ─────────────
+// "추가" 버튼 클릭 시 → 빈 데이터로 상세 팝업 열고 편집 모드 강제
+// "행 더블클릭" 시 → 기존 데이터로 상세 팝업 열고 편집 모드 강제
 function openContentEditor(mode, presetData) {
-  _ceMode = (mode === 'edit') ? 'edit' : 'create';
-  _ceOriginalKey = null;
-
-  // 헤더 라벨
-  const modeEl = document.getElementById('ceMode');
-  if (modeEl) modeEl.textContent = (_ceMode === 'edit') ? '수정' : '신규 추가';
-
-  // 입력 폼 초기화 또는 채우기
-  const dateEl     = document.getElementById('ceDate');
-  const catEl      = document.getElementById('ceCategory');
-  const topicEl    = document.getElementById('ceTopic');
-  const headlineEl = document.getElementById('ceHeadline');
-  const keywordEl  = document.getElementById('ceKeyword');
-  const tagsEl     = document.getElementById('ceTags');
-  const bodyEl     = document.getElementById('ceBody');
-  const errEl      = document.getElementById('ceErrorMsg');
-  if (errEl) errEl.textContent = '';
-
-  if (presetData) {
-    // 편집 모드 (기존 값 채우기)
-    dateEl.value     = presetData.dateStr || presetData.date_str || '';
-    catEl.value      = presetData.cat || presetData.category || 'economy';
-    topicEl.value    = presetData.topic || '';
-    headlineEl.value = presetData.headline || '';
-    keywordEl.value  = presetData.kw || presetData.keyword || '';
-    const tags = presetData.tags || [];
-    tagsEl.value     = Array.isArray(tags) ? tags.join(' ') : String(tags);
-    bodyEl.value     = presetData.body || '';
-    _ceOriginalKey   = (dateEl.value && catEl.value) ? (dateEl.value + '|' + catEl.value) : null;
-    // 편집 모드는 날짜/카테고리 잠금 (PK 변경 방지 — 변경하면 새 row가 됨)
-    dateEl.setAttribute('readonly', 'readonly');
-    dateEl.style.opacity = '.6';
-    catEl.setAttribute('disabled', 'disabled');
-    catEl.style.opacity = '.6';
+  if (mode === 'edit' && presetData) {
+    openContentEditorForRow(presetData.dateStr || presetData.date_str, presetData.cat || presetData.category);
   } else {
-    // 신규 추가 - 디폴트 값
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    dateEl.value     = today.toISOString().slice(0, 10);
-    catEl.value      = 'economy';
-    topicEl.value    = '';
-    headlineEl.value = '';
-    keywordEl.value  = '';
-    tagsEl.value     = '';
-    bodyEl.value     = '';
-    dateEl.removeAttribute('readonly');
-    dateEl.style.opacity = '';
-    catEl.removeAttribute('disabled');
-    catEl.style.opacity = '';
-  }
-
-  updateCeCharCount();
-
-  // 모달 열기
-  const ov = document.getElementById('contentEditorOverlay');
-  if (ov) {
-    ov.classList.add('open');
-    setTimeout(function() {
-      // 신규 추가 시 헤드라인에 포커스
-      if (_ceMode === 'create' && headlineEl) headlineEl.focus();
-    }, 100);
+    // 신규 추가: 빈 데이터로 상세 팝업 열기
+    openContentPopupForCreate();
   }
 }
 
-function closeContentEditor() {
-  const ov = document.getElementById('contentEditorOverlay');
-  if (ov) ov.classList.remove('open');
-  _ceMode = 'create';
-  _ceOriginalKey = null;
-}
-
-function updateCeCharCount() {
-  // 헤드라인 카운트
-  const headlineEl = document.getElementById('ceHeadline');
-  const hCount = document.getElementById('ceHeadlineCount');
-  if (headlineEl && hCount) {
-    const len = headlineEl.value.length;
-    hCount.textContent = len + ' / 40자';
-    hCount.style.color = (len > 25) ? '#fbbf24' : 'var(--muted)';
-  }
-  // 본문 카운트 + 경고
-  const bodyEl = document.getElementById('ceBody');
-  const bCountNum = document.getElementById('ceBodyCountNum');
-  const bCountWarn = document.getElementById('ceBodyCountWarn');
-  if (bodyEl && bCountNum) {
-    const len = bodyEl.value.length;
-    bCountNum.textContent = len.toLocaleString();
-    if (bCountWarn) {
-      if (len > 1000)      { bCountWarn.textContent = '⚠️ 알림톡 한도 초과! (1000자 제한)'; bCountWarn.style.color = '#f87171'; }
-      else if (len > 800)  { bCountWarn.textContent = '⚠️ 권장 한도(800자) 초과';            bCountWarn.style.color = '#fbbf24'; }
-      else if (len > 0)    { bCountWarn.textContent = '✓ 안전';                              bCountWarn.style.color = 'var(--green)'; }
-      else                 { bCountWarn.textContent = ''; }
-    }
-  }
-}
-
-async function submitContentEditor() {
-  const dateEl     = document.getElementById('ceDate');
-  const catEl      = document.getElementById('ceCategory');
-  const topicEl    = document.getElementById('ceTopic');
-  const headlineEl = document.getElementById('ceHeadline');
-  const keywordEl  = document.getElementById('ceKeyword');
-  const tagsEl     = document.getElementById('ceTags');
-  const bodyEl     = document.getElementById('ceBody');
-  const errEl      = document.getElementById('ceErrorMsg');
-  const saveBtn    = document.getElementById('ceSaveBtn');
-  const saveTxt    = document.getElementById('ceSaveTxt');
-  const saveSpin   = document.getElementById('ceSaveSpin');
-
-  // 입력값 수집
-  const date_str = dateEl.value;
-  const category = catEl.value;
-  const topic    = topicEl.value.trim();
-  const headline = headlineEl.value.trim();
-  const keyword  = keywordEl.value.trim();
-  const tagsRaw  = tagsEl.value.trim();
-  const body     = bodyEl.value.trim();
-
-  // 검증
-  if (errEl) errEl.textContent = '';
-  if (!date_str)            { showCeErr('날짜를 선택해 주세요'); return; }
-  if (!category)            { showCeErr('카테고리를 선택해 주세요'); return; }
-  if (!body)                { showCeErr('본문을 입력해 주세요'); return; }
-  if (!headline && !topic)  { showCeErr('헤드라인 또는 주제 중 하나는 입력해야 합니다'); return; }
-  if (body.length > 1000)   { showCeErr('본문이 1000자를 초과했습니다 (' + body.length + '자)'); return; }
-
-  // tags 파싱 (공백 구분, # 제거)
-  const tags = tagsRaw.split(/\s+/).map(function(t) { return t.replace(/^#/, '').trim(); }).filter(Boolean);
-
-  // 저장 시도
-  saveBtn.disabled = true;
-  if (saveTxt) saveTxt.style.display = 'none';
-  if (saveSpin) saveSpin.style.display = 'inline-flex';
-
-  try {
-    const payload = {
-      date_str: date_str,
-      category: category,
-      headline: headline,
-      topic:    topic,
-      keyword:  keyword,
-      tags:     tags,
-      body:     body,
-      mode:     _ceMode,
-    };
-    const res = await apiPost('/admin/contents/upsert', payload);
-    if (res && res.success) {
-      const action = res.action === 'updated' ? '수정' : '저장';
-      showToast(`콘텐츠 ${action} 완료`, 'ok');
-      closeContentEditor();
-      // 로컬 캐시 즉시 갱신 + 백엔드 재동기화
-      const k = archKey(date_str, category);
-      CONTENT_ARCHIVE[k] = {
-        cat:         category,
-        kw:          keyword,
-        topic:       topic || headline,
-        headline:    headline || topic,
-        body:        body,
-        tags:        tags,
-        tok:         0,
-        source:      'manual',
-        generatedAt: new Date().toISOString(),
-        hidden:      false,
-      };
-      saveArchiveToStorage();
-      loadContentArchive();
-    } else if (res && res.code === 'already_exists') {
-      showCeErr('같은 날짜+카테고리 콘텐츠가 이미 있습니다. 행을 더블클릭해 수정 모드로 여세요.');
-    } else {
-      showCeErr('저장 실패: ' + (res?.error || '알 수 없는 오류'));
-    }
-  } catch (e) {
-    showCeErr('서버 오류: ' + (e.message || ''));
-  } finally {
-    saveBtn.disabled = false;
-    if (saveTxt) saveTxt.style.display = 'inline';
-    if (saveSpin) saveSpin.style.display = 'none';
-  }
-}
-
-function showCeErr(msg) {
-  const errEl = document.getElementById('ceErrorMsg');
-  if (errEl) errEl.textContent = msg;
-}
-
-// 행 더블클릭 → 편집 모드로 에디터 열기
+// 행 더블클릭 → 편집 모드로 상세 팝업 열기
 function openContentEditorForRow(dateStr, cat) {
-  const k = archKey(dateStr, cat);
-  const item = CONTENT_ARCHIVE[k];
-  if (!item) {
-    showToast('해당 콘텐츠를 찾을 수 없습니다', 'ng');
-    return;
-  }
-  openContentEditor('edit', {
-    dateStr:  dateStr,
-    cat:      cat,
-    topic:    item.topic || '',
-    headline: item.headline || '',
-    kw:       item.kw || '',
-    tags:     item.tags || [],
-    body:     item.body || '',
-  });
+  openContentPopupByDate(dateStr, cat);
+  // 팝업이 열린 후 편집 모드로 전환
+  setTimeout(function() {
+    if (typeof toggleCpEdit === 'function' && typeof cpEditMode !== 'undefined' && !cpEditMode) {
+      toggleCpEdit();
+    }
+  }, 100);
+}
+
+// 신규 추가용 — 빈 데이터로 상세 팝업 열기
+function openContentPopupForCreate() {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const todayStr = today.toISOString().slice(0, 10);
+  // 임시 빈 콘텐츠 객체 생성
+  const blank = {
+    cat:      'economy',
+    kw:       '',
+    topic:    '',
+    headline: '',
+    body:     '',
+    tags:     [],
+    tok:      0,
+    source:   'manual',
+    dateStr:  todayStr,
+    date:     today.toLocaleDateString('ko-KR'),
+    _isNew:   true,  // ← 신규 추가 플래그
+  };
+  // MOCK_CONTENT 앞에 임시 삽입 후 팝업 열기
+  MOCK_CONTENT.unshift(blank);
+  openContentPopup(0);
+  // 편집 모드 강제 + 신규 모드 표시
+  setTimeout(function() {
+    if (typeof toggleCpEdit === 'function' && !cpEditMode) {
+      toggleCpEdit();
+    }
+    // 신규 모드용 추가 필드 보이기
+    showCpCreateFields(true);
+  }, 100);
 }
 
 function _renderArchiveTable() {
@@ -6570,6 +6362,13 @@ function openContentPopup(idx) {
 function closeContentPopup() {
   document.getElementById('contentPopup').classList.remove('open');
   cpEditMode = false;
+  // 임시 신규 콘텐츠 객체 정리 (저장 안 하고 닫은 경우)
+  if (MOCK_CONTENT[0] && MOCK_CONTENT[0]._isNew) {
+    MOCK_CONTENT.shift();
+  }
+  // 메타 필드 패널 숨김
+  const metaPane = document.getElementById('cpEditMetaPane');
+  if (metaPane) metaPane.style.display = 'none';
 }
 
 let cpEditMode = false;
@@ -6578,6 +6377,7 @@ let cpEditMode = false;
 function toggleCpEdit() {
   cpEditMode = !cpEditMode;
   const editPane     = document.getElementById('cpEditPane');
+  const editMetaPane = document.getElementById('cpEditMetaPane');   // 메타 필드 패널
   const headlineView = document.getElementById('cpHeadlineView');
   const headlineInput= document.getElementById('cpHeadline');
   const toggleBtn    = document.getElementById('cpEditToggle');
@@ -6589,6 +6389,12 @@ function toggleCpEdit() {
     editPane.style.display      = 'block';
     headlineView.style.display  = 'none';
     headlineInput.style.display = 'block';
+    // 메타 필드 패널 — 신규 모드면 항상 보임, 편집 모드는 한정적으로 보임
+    if (editMetaPane) {
+      editMetaPane.style.display = 'block';
+      // 메타 필드를 현재 콘텐츠 값으로 채움
+      syncCpEditMetaFields();
+    }
     // 토글 버튼: 활성 스타일
     toggleBtn.style.background    = 'rgba(201,168,76,.12)';
     toggleBtn.style.borderColor   = 'var(--gold)';
@@ -6603,6 +6409,7 @@ function toggleCpEdit() {
     editPane.style.display      = 'none';
     headlineView.style.display  = 'block';
     headlineInput.style.display = 'none';
+    if (editMetaPane) editMetaPane.style.display = 'none';
     // 토글 버튼: 기본 스타일
     toggleBtn.style.background  = 'rgba(255,255,255,.05)';
     toggleBtn.style.borderColor = 'var(--b)';
@@ -6610,6 +6417,46 @@ function toggleCpEdit() {
     toggleIco.textContent = '✏️';
     toggleTxt.textContent = '편집';
   }
+}
+
+// 메타 필드를 현재 콘텐츠 값으로 채움 + 신규/편집 모드 표시
+function syncCpEditMetaFields() {
+  const c = MOCK_CONTENT[cpCurrentIdx];
+  if (!c) return;
+  const isNew = !!c._isNew;
+
+  const dateEl    = document.getElementById('cpEditDate');
+  const catEl     = document.getElementById('cpEditCategory');
+  const topicEl   = document.getElementById('cpEditTopic');
+  const keywordEl = document.getElementById('cpEditKeyword');
+  const tagsEl    = document.getElementById('cpEditTags');
+  const labelEl   = document.getElementById('cpModeLabel');
+
+  if (dateEl)    dateEl.value    = c.dateStr || '';
+  if (catEl)     catEl.value     = c.cat || 'economy';
+  if (topicEl)   topicEl.value   = c.topic || '';
+  if (keywordEl) keywordEl.value = c.kw || '';
+  if (tagsEl) {
+    const tags = c.tags || [];
+    tagsEl.value = Array.isArray(tags) ? tags.join(' ') : String(tags);
+  }
+  if (labelEl) labelEl.textContent = isNew ? '🆕 신규 추가' : '✏️ 편집 모드';
+
+  // 편집 모드(기존 행)는 날짜/카테고리 잠금 (PK 변경 방지)
+  if (dateEl) {
+    if (isNew) { dateEl.removeAttribute('readonly'); dateEl.style.opacity = ''; }
+    else       { dateEl.setAttribute('readonly', 'readonly'); dateEl.style.opacity = '.6'; }
+  }
+  if (catEl) {
+    if (isNew) { catEl.removeAttribute('disabled'); catEl.style.opacity = ''; }
+    else       { catEl.setAttribute('disabled', 'disabled'); catEl.style.opacity = '.6'; }
+  }
+}
+
+// 신규 모드용 추가 필드 보이기 함수 (호환성용 alias)
+function showCpCreateFields(show) {
+  // toggleCpEdit가 자동으로 처리하므로 이 함수는 호환성 유지용
+  if (show) syncCpEditMetaFields();
 }
 
 // 편집 중 입력 → 미리보기 실시간 동기화 + 저장버튼 재활성화
@@ -6642,37 +6489,124 @@ function resetSaveBtn() {
   if (txt) txt.textContent = '저장';
 }
 
-function saveContentEdit() {
+async function saveContentEdit() {
   const c = MOCK_CONTENT[cpCurrentIdx];
   if (!c) return;
-  const newHeadline = document.getElementById('cpHeadline')?.value.trim();
-  const newBody     = document.getElementById('cpEditor')?.value.trim();
-  if (newHeadline) {
-    c.headline = newHeadline;
-    const view = document.getElementById('cpHeadlineView');
-    if (view) view.textContent = newHeadline;
-  }
-  if (newBody) {
-    c.body = newBody;
-    document.getElementById('cpBody').textContent = newBody;
-  }
-  loadContentArchive();
-  showToast('콘텐츠가 저장되었습니다', 'ok');
 
-  // 저장 버튼 비활성화 (저장됨 표시)
+  // 입력값 수집 (메타 필드 + 본문/헤드라인)
+  const isNew = !!c._isNew;
+  const newHeadline = (document.getElementById('cpHeadline')?.value || '').trim();
+  const newBody     = (document.getElementById('cpEditor')?.value || '').trim();
+  const dateEl      = document.getElementById('cpEditDate');
+  const catEl       = document.getElementById('cpEditCategory');
+  const topicEl     = document.getElementById('cpEditTopic');
+  const keywordEl   = document.getElementById('cpEditKeyword');
+  const tagsEl      = document.getElementById('cpEditTags');
+
+  // 신규는 메타 필드에서 값 사용, 편집은 기존 c.* 사용 + 메타 필드(주제/키워드/태그) 갱신
+  const date_str = isNew ? (dateEl?.value || '') : (c.dateStr || '');
+  const category = isNew ? (catEl?.value || '') : (c.cat || '');
+  const topic    = (topicEl?.value || c.topic || '').trim();
+  const keyword  = (keywordEl?.value || c.kw || '').trim();
+  const tagsRaw  = (tagsEl?.value || (Array.isArray(c.tags) ? c.tags.join(' ') : '')).trim();
+
+  // 검증
+  if (!date_str) { showToast('날짜를 선택해 주세요', 'ng'); return; }
+  if (!category || !['economy','realestate','english','trivia'].includes(category)) {
+    showToast('카테고리를 선택해 주세요', 'ng'); return;
+  }
+  if (!newBody) { showToast('본문을 입력해 주세요', 'ng'); return; }
+  if (newBody.length > 1000) { showToast('본문이 1000자를 초과했습니다 (' + newBody.length + '자)', 'ng'); return; }
+  if (!newHeadline && !topic) { showToast('헤드라인 또는 주제 중 하나는 입력해야 합니다', 'ng'); return; }
+
+  // tags 파싱
+  const tags = tagsRaw.split(/\s+/).map(function(t) { return t.replace(/^#/, '').trim(); }).filter(Boolean);
+
+  // 저장 시도 (백엔드 호출)
   const btn = document.getElementById('cpSaveBtn');
   const ico = document.getElementById('cpSaveIco');
   const txt = document.getElementById('cpSaveTxt');
-  if (btn) {
-    btn.disabled = true;
-    btn.style.opacity     = '0.55';
-    btn.style.cursor      = 'default';
-    btn.style.background  = 'rgba(255,255,255,.04)';
-    btn.style.borderColor = 'var(--b)';
-    btn.style.color       = 'var(--muted)';
+  if (btn) btn.disabled = true;
+  if (txt) txt.textContent = '저장 중...';
+
+  try {
+    const res = await apiPost('/admin/contents/upsert', {
+      date_str: date_str,
+      category: category,
+      headline: newHeadline,
+      topic:    topic,
+      keyword:  keyword,
+      tags:     tags,
+      body:     newBody,
+      mode:     isNew ? 'create' : 'edit',
+    });
+    if (res && res.success) {
+      const action = res.action === 'updated' ? '수정' : '저장';
+      showToast(`콘텐츠 ${action} 완료`, 'ok');
+
+      // 로컬 객체 업데이트
+      c.dateStr  = date_str;
+      c.cat      = category;
+      c.headline = newHeadline || topic;
+      c.topic    = topic || newHeadline;
+      c.kw       = keyword;
+      c.tags     = tags;
+      c.body     = newBody;
+      delete c._isNew;
+
+      // 미리보기 갱신
+      const view = document.getElementById('cpHeadlineView');
+      if (view) view.textContent = c.headline;
+      document.getElementById('cpBody').textContent = newBody;
+      // 태그 미리보기 갱신
+      const tagsBox = document.getElementById('cpTags');
+      if (tagsBox) tagsBox.innerHTML = (tags || []).map(function(t) { return '<span class="cc-tag">' + t + '</span>'; }).join('');
+      // 키워드 갱신
+      const kwEl = document.getElementById('cpKeyword');
+      if (kwEl) kwEl.textContent = keyword;
+
+      // 로컬 캐시 갱신
+      const k = archKey(date_str, category);
+      CONTENT_ARCHIVE[k] = {
+        cat:         category,
+        kw:          keyword,
+        topic:       topic || newHeadline,
+        headline:    newHeadline || topic,
+        body:        newBody,
+        tags:        tags,
+        tok:         c.tok || 0,
+        source:      'manual',
+        generatedAt: new Date().toISOString(),
+        hidden:      false,
+      };
+      saveArchiveToStorage();
+      loadContentArchive();
+
+      // 저장 버튼 비활성화 (저장됨 표시)
+      if (btn) {
+        btn.disabled = true;
+        btn.style.opacity     = '0.55';
+        btn.style.cursor      = 'default';
+        btn.style.background  = 'rgba(255,255,255,.04)';
+        btn.style.borderColor = 'var(--b)';
+        btn.style.color       = 'var(--muted)';
+      }
+      if (ico) ico.textContent = '✓';
+      if (txt) txt.textContent = '저장됨';
+    } else if (res && res.code === 'already_exists') {
+      showToast('같은 (날짜, 카테고리) 콘텐츠가 이미 있습니다. 행을 더블클릭해 수정하세요', 'ng');
+      if (btn) btn.disabled = false;
+      if (txt) txt.textContent = '저장';
+    } else {
+      showToast('저장 실패: ' + (res?.error || '알 수 없는 오류'), 'ng');
+      if (btn) btn.disabled = false;
+      if (txt) txt.textContent = '저장';
+    }
+  } catch (e) {
+    showToast('서버 오류: ' + (e.message || ''), 'ng');
+    if (btn) btn.disabled = false;
+    if (txt) txt.textContent = '저장';
   }
-  if (ico) ico.textContent = '✓';
-  if (txt) txt.textContent = '저장됨';
 }
 
 // ── 매출 ─────────────────────────────────────────────────────
