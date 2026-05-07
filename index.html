@@ -91,6 +91,14 @@ body {
   color:var(--gold); letter-spacing:2px;
 }
 .sb-logo small { display:block; font-size:10px; color:var(--muted); font-family:var(--sans); font-weight:400; margin-top:5px; letter-spacing:1.5px; text-transform:uppercase; }
+.sb-logo .deploy-badge {
+  display:inline-block; margin-top:8px;
+  font-size:9px; color:var(--muted); opacity:.5;
+  padding:2px 6px; border:1px solid rgba(201,168,76,.2); border-radius:3px;
+  font-family:monospace; cursor:pointer; transition:opacity .2s;
+  user-select:none; letter-spacing:0; text-transform:none; font-weight:400;
+}
+.sb-logo .deploy-badge:hover { opacity:1; color:var(--gold); border-color:var(--gold); }
 .sb-nav { padding:12px 0; flex:1; overflow-y:auto; }
 .sb-group { font-size:10px; font-weight:700; letter-spacing:2px; color:var(--muted); text-transform:uppercase; padding:10px 20px 6px; }
 .sb-item {
@@ -691,7 +699,9 @@ body.light-mode .km-bubble {
 
 <!-- SIDEBAR -->
 <aside class="sidebar">
-  <div class="sb-logo">1DAYECO<small>Admin Dashboard</small></div>
+  <div class="sb-logo">1DAYECO<small>Admin Dashboard</small>
+    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v40</span>
+  </div>
   <nav class="sb-nav">
     <div class="sb-group">운영</div>
     <a class="sb-item active" onclick="showPage('overview')"><span class="ico">📊</span>개요</a>
@@ -2447,6 +2457,20 @@ let API_BASE = (function() {
   }
   return 'https://web-production-761cd.up.railway.app';
 })();
+
+// 배포 정보 표시 (사이드바 로고 옆 배지 클릭 시)
+function showDeployInfo() {
+  const badge = document.getElementById('deployBadge');
+  const v = badge ? badge.textContent : 'unknown';
+  alert(
+    '배포 정보\n' +
+    '버전: ' + v + '\n' +
+    '도메인: ' + location.hostname + '\n' +
+    'API_BASE: ' + API_BASE + '\n' +
+    '경로: ' + location.pathname + '\n' +
+    '캐시 무시 새로고침: Cmd+Shift+R (Mac) / Ctrl+F5 (Win)'
+  );
+}
 
 // ════════════════════════════════════════════════════════════
 // 공통 헬퍼 (plan 라벨, payment_status 라벨 등) ────────────
