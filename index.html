@@ -2099,7 +2099,7 @@ body.light-mode .km-bubble {
 
 <!-- 선택 발송 모달 -->
 <div class="overlay" id="bulkSendOverlay" onclick="if(event.target.id==='bulkSendOverlay')closeBulkSend()">
-  <div class="modal" style="max-width:480px;padding:0">
+  <div class="modal" style="max-width:520px;padding:0">
     <div style="display:flex;align-items:center;justify-content:space-between;padding:18px 22px 14px;border-bottom:1px solid var(--b)">
       <div>
         <div style="font-size:10px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:3px">선택 발송</div>
@@ -2110,22 +2110,65 @@ body.light-mode .km-bubble {
     <!-- 수신자 목록 -->
     <div style="padding:14px 22px 0">
       <div style="font-size:10px;color:var(--muted);letter-spacing:.5px;margin-bottom:8px">수신자 목록</div>
-      <div id="bulkRecipientList" style="display:flex;flex-wrap:wrap;gap:6px;max-height:100px;overflow-y:auto;
+      <div id="bulkRecipientList" style="display:flex;flex-wrap:wrap;gap:6px;max-height:80px;overflow-y:auto;
            background:rgba(255,255,255,.03);border:1px solid var(--b);border-radius:8px;padding:10px"></div>
     </div>
-    <!-- 발송 내용 -->
+
+    <!-- 발송 모드 선택 -->
     <div style="padding:14px 22px 0">
+      <div style="font-size:10px;color:var(--muted);letter-spacing:.5px;margin-bottom:8px">📂 발송 모드</div>
+      <div style="display:flex;flex-direction:column;gap:6px;background:rgba(255,255,255,.03);border:1px solid var(--b);border-radius:8px;padding:10px">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:12px">
+          <input type="radio" name="bulkSendMode" value="auto" checked onchange="onBulkSendModeChange()" style="cursor:pointer;accent-color:var(--gold)">
+          <span><strong>자동 매칭</strong> — 각 수신자의 구독 카테고리에 맞는 콘텐츠</span>
+        </label>
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:12px">
+          <input type="radio" name="bulkSendMode" value="override" onchange="onBulkSendModeChange()" style="cursor:pointer;accent-color:var(--gold)">
+          <span><strong>강제 카테고리</strong> — 구독 무관, 선택한 카테고리만 발송</span>
+        </label>
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:12px">
+          <input type="radio" name="bulkSendMode" value="custom" onchange="onBulkSendModeChange()" style="cursor:pointer;accent-color:var(--gold)">
+          <span><strong>커스텀 텍스트</strong> — 자유 텍스트로 안내 메시지 발송</span>
+        </label>
+      </div>
+    </div>
+
+    <!-- 강제 카테고리 선택 (override 모드에서만) -->
+    <div id="bulkOverrideCatBox" style="padding:10px 22px 0;display:none">
+      <div style="font-size:10px;color:var(--muted);letter-spacing:.5px;margin-bottom:6px">발송할 카테고리</div>
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px">
+        <button type="button" class="bulk-cat-btn" data-cat="economy"    onclick="setBulkOverrideCat('economy')"
+                style="padding:9px 4px;background:rgba(201,168,76,.06);border:1.5px solid rgba(201,168,76,.3);border-radius:8px;color:var(--gold);font-size:12px;font-weight:700;cursor:pointer;font-family:var(--sans)">📊 경제</button>
+        <button type="button" class="bulk-cat-btn" data-cat="realestate" onclick="setBulkOverrideCat('realestate')"
+                style="padding:9px 4px;background:rgba(255,255,255,.04);border:1.5px solid var(--b);border-radius:8px;color:var(--muted);font-size:12px;font-weight:600;cursor:pointer;font-family:var(--sans)">🏠 부동산</button>
+        <button type="button" class="bulk-cat-btn" data-cat="english"    onclick="setBulkOverrideCat('english')"
+                style="padding:9px 4px;background:rgba(255,255,255,.04);border:1.5px solid var(--b);border-radius:8px;color:var(--muted);font-size:12px;font-weight:600;cursor:pointer;font-family:var(--sans)">🇬🇧 영어</button>
+        <button type="button" class="bulk-cat-btn" data-cat="trivia"     onclick="setBulkOverrideCat('trivia')"
+                style="padding:9px 4px;background:rgba(255,255,255,.04);border:1.5px solid var(--b);border-radius:8px;color:var(--muted);font-size:12px;font-weight:600;cursor:pointer;font-family:var(--sans)">🧠 상식</button>
+      </div>
+      <div style="font-size:10px;color:var(--muted);margin-top:6px;line-height:1.5">
+        💡 경제만 알림톡(<strong style="color:var(--gold)">13원</strong>) 검수 완료. 나머지는 BMS_FREE(100원).
+      </div>
+    </div>
+
+    <!-- 커스텀 텍스트 입력 (custom 모드에서만) -->
+    <div id="bulkCustomTextBox" style="padding:10px 22px 0;display:none">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
-        <div style="font-size:10px;color:var(--muted);letter-spacing:.5px">발송 내용 <span style="color:var(--gold)">(오늘의 콘텐츠 기본 적용)</span></div>
+        <div style="font-size:10px;color:var(--muted);letter-spacing:.5px">발송 내용</div>
         <span style="font-size:10px;color:var(--muted)" id="bulkCharCount">0자</span>
       </div>
-      <textarea id="bulkMsgEditor" rows="6"
+      <textarea id="bulkMsgEditor" rows="5"
         oninput="document.getElementById('bulkCharCount').textContent=this.value.length+'자'"
         style="width:100%;background:rgba(255,255,255,.04);border:1.5px solid var(--b);border-radius:10px;
                padding:12px 14px;font-size:13px;color:var(--text);font-family:var(--sans);
                line-height:1.75;resize:vertical;outline:none;transition:border-color .2s"
-        onfocus="this.style.borderColor='var(--gold)'" onblur="this.style.borderColor='var(--b)'"></textarea>
+        onfocus="this.style.borderColor='var(--gold)'" onblur="this.style.borderColor='var(--b)'"
+        placeholder="안내 메시지를 입력하세요"></textarea>
+      <div style="font-size:10px;color:var(--muted);margin-top:4px">
+        ⚠️ 커스텀 텍스트는 BMS_FREE로 발송됩니다 (단가 100원/건)
+      </div>
     </div>
+
     <div style="display:flex;gap:8px;padding:14px 22px;border-top:1px solid var(--b);margin-top:14px">
       <button class="m-btn" onclick="closeBulkSend()" style="flex:1">취소</button>
       <button class="m-btn primary" id="bulkSendExecBtn" onclick="executeBulkSend()" style="flex:1">
@@ -6590,33 +6633,33 @@ async function sendToSelected() {
   // 모달 제목
   document.getElementById('bulkSendTitle').textContent = `${subs.length}명에게 발송`;
 
-  // 수신자 칩 목록
-  document.getElementById('bulkRecipientList').innerHTML = subs.map(s => `
+  // 수신자 칩 목록 — 카테고리도 함께 표시
+  document.getElementById('bulkRecipientList').innerHTML = subs.map(s => {
+    const cats = (s.categories || []).map(c => ({
+      economy:'📊',realestate:'🏠',english:'🇬🇧',trivia:'🧠'
+    }[c] || c)).join(' ');
+    return `
     <span style="display:inline-flex;align-items:center;gap:4px;background:var(--s3);
                  border:1px solid var(--b);border-radius:4px;padding:3px 8px;font-size:11px">
       <span style="color:var(--gold);font-weight:600">${s.name}</span>
-      <span style="color:var(--muted);font-size:10px">${s.phone}</span>
-    </span>`).join('');
+      <span style="color:var(--muted);font-size:10px">${cats}</span>
+    </span>`;
+  }).join('');
 
-  // 오늘 콘텐츠 로딩 (CONTENT_ARCHIVE 우선 → API → 빈값)
-  const todayKSTKey  = getKSTDateStr();
-  const todayItems   = (typeof CONTENT_ARCHIVE !== 'undefined') ? getArchiveByDate(todayKSTKey) : {};
-  const todayFirstCat = Object.keys(todayItems)[0];
-  const todayArchive = todayFirstCat ? todayItems[todayFirstCat] : null;
-  let   todayBody    = (todayArchive && todayArchive.body) ? todayArchive.body : '';
-  // CONTENT_ARCHIVE에 없으면 API에서 한 번 더 시도
-  if (!todayBody && API_BASE) {
-    try {
-      const apiContent = await apiFetch('/admin/today-content');
-      if (apiContent && apiContent.body && apiContent.body.length > 10) {
-        todayBody = apiContent.body;
-        if (typeof saveToArchive === 'function') saveToArchive(todayKSTKey, apiContent);
-      }
-    } catch(e) {}
+  // 모드 초기화 — 디폴트는 자동 매칭
+  const autoRadio = document.querySelector('input[name="bulkSendMode"][value="auto"]');
+  if (autoRadio) autoRadio.checked = true;
+  if (typeof onBulkSendModeChange === 'function') onBulkSendModeChange();
+
+  // 강제 카테고리 선택 초기값: 경제 (검수 완료된 유일한 카테고리)
+  if (typeof setBulkOverrideCat === 'function') setBulkOverrideCat('economy');
+
+  // 커스텀 텍스트 영역 비우기
+  const editor = document.getElementById('bulkMsgEditor');
+  if (editor) {
+    editor.value = '';
+    document.getElementById('bulkCharCount').textContent = '0자';
   }
-  document.getElementById('bulkMsgEditor').value       = todayBody;
-  document.getElementById('bulkCharCount').textContent = todayBody.length + '자';
-  if (!todayBody) showToast('오늘 생성된 콘텐츠가 없습니다. 직접 입력해주세요.', 'ng');
 
   document.getElementById('bulkSendOverlay').classList.add('open');
 }
@@ -6625,34 +6668,87 @@ function closeBulkSend() {
   document.getElementById('bulkSendOverlay').classList.remove('open');
 }
 
+// ─── 선택 발송 모달 모드 전환 ────────────────────────────────
+let _bulkOverrideCat = 'economy'; // 강제 카테고리 모드의 선택값
+
+function onBulkSendModeChange() {
+  const selected = document.querySelector('input[name="bulkSendMode"]:checked');
+  const mode = selected ? selected.value : 'auto';
+  document.getElementById('bulkOverrideCatBox').style.display = (mode === 'override') ? 'block' : 'none';
+  document.getElementById('bulkCustomTextBox').style.display  = (mode === 'custom')   ? 'block' : 'none';
+}
+
+function setBulkOverrideCat(cat) {
+  _bulkOverrideCat = cat;
+  document.querySelectorAll('.bulk-cat-btn').forEach(btn => {
+    const isActive = btn.dataset.cat === cat;
+    btn.style.background    = isActive ? 'rgba(201,168,76,.06)'    : 'rgba(255,255,255,.04)';
+    btn.style.borderColor   = isActive ? 'rgba(201,168,76,.3)'     : 'var(--b)';
+    btn.style.color         = isActive ? 'var(--gold)'             : 'var(--muted)';
+    btn.style.fontWeight    = isActive ? '700'                     : '600';
+  });
+}
+
 async function executeBulkSend() {
   const btn  = document.getElementById('bulkSendExecBtn');
   const txt  = document.getElementById('bulkSendTxt');
   const spin = document.getElementById('bulkSendSpin');
-  const msg  = document.getElementById('bulkMsgEditor').value.trim();
-  if (!msg) { showToast('발송할 내용을 입력해 주세요', 'ng'); return; }
 
-  btn.disabled = true; txt.style.display='none'; spin.style.display='inline';
+  // 발송 모드 확인
+  const modeEl = document.querySelector('input[name="bulkSendMode"]:checked');
+  const mode = modeEl ? modeEl.value : 'auto';
 
+  // 수신자 추출
   const checks    = document.querySelectorAll('.sub-check:checked');
   const ids       = Array.from(checks).map(c => c.dataset.id);
   const recipients= ids.map(id => STATE.subscribers.find(s=>s.id===id)).filter(Boolean);
+  if (!recipients.length) { showToast('구독자를 선택해 주세요', 'ng'); return; }
+
+  // 커스텀 모드: 텍스트 검증
+  let customMsg = '';
+  if (mode === 'custom') {
+    customMsg = document.getElementById('bulkMsgEditor').value.trim();
+    if (!customMsg) { showToast('발송할 내용을 입력해 주세요', 'ng'); return; }
+    if (!confirm(`커스텀 텍스트는 BMS_FREE로 발송됩니다 (단가 100원/건).\n${recipients.length}명에게 발송하시겠습니까?\n예상 비용: 약 ${recipients.length * 100}원`)) {
+      return;
+    }
+  }
+  // 강제 카테고리 모드: 비용 안내
+  if (mode === 'override') {
+    const expectedCost = (_bulkOverrideCat === 'economy') ? recipients.length * 13 : recipients.length * 100;
+    const channelLabel = (_bulkOverrideCat === 'economy') ? '알림톡(13원)' : 'BMS_FREE(100원)';
+    if (!confirm(`강제 카테고리: ${_bulkOverrideCat}\n채널: ${channelLabel}\n수신자: ${recipients.length}명\n예상 비용: 약 ${expectedCost}원\n\n발송하시겠습니까?`)) {
+      return;
+    }
+  }
+  // 자동 매칭 모드: 비용 안내 (각 수신자의 카테고리에 따라 다름)
+  if (mode === 'auto') {
+    let estimatedCost = 0;
+    recipients.forEach(s => {
+      const cats = s.categories || [];
+      cats.forEach(c => {
+        estimatedCost += (c === 'economy') ? 13 : 100;
+      });
+    });
+    if (!confirm(`자동 매칭 발송\n수신자: ${recipients.length}명\n예상 비용: 약 ${estimatedCost}원\n(경제: 알림톡 13원/건, 그 외: BMS_FREE 100원/건)\n\n발송하시겠습니까?`)) {
+      return;
+    }
+  }
+
+  btn.disabled = true; txt.style.display='none'; spin.style.display='inline';
 
   try {
-    if (!recipients.length) { showToast('구독자를 선택해 주세요', 'ng'); return; }
-
-    // 전화번호 배열 추출
     const phones = recipients.map(s => s.phone.replace(/-/g,''));
-    console.log('[발송] 수신자:', phones, '내용 길이:', msg.length);
-
+    let rawRes = null;
     let sentCount = 0, failCount = 0;
     let recipientResults = recipients.map(s => ({id:s.id, name:s.name, phone:s.phone, status:'pending'}));
-    let rawRes = null;
 
-    if (API_BASE) {
-      rawRes = await apiPost('/admin/send-selected', { phones, content: msg });
-      console.log('[발송] API 응답:', JSON.stringify(rawRes));
-
+    if (!API_BASE) {
+      sentCount = recipients.length;
+    } else if (mode === 'custom') {
+      // 커스텀 텍스트는 send-selected 사용 (BMS_FREE로 발송됨)
+      rawRes = await apiPost('/admin/send-selected', { phones, content: customMsg });
+      console.log('[커스텀발송] 응답:', rawRes);
       if (rawRes && rawRes.results) {
         sentCount = rawRes.sent   || 0;
         failCount = rawRes.failed || 0;
@@ -6660,34 +6756,56 @@ async function executeBulkSend() {
           const clean = s.phone.replace(/-/g,'');
           const r = rawRes.results.find(x => x.phone === clean);
           const ok = r && r.success;
-          // 실패 시 상세 오류 로그
-          if (!ok && r) console.warn('[발송실패]', s.name, s.phone, JSON.stringify(r.detail));
-          return { id:s.id, name:s.name, phone:s.phone,
-                   status: ok ? 'success' : 'failed',
-                   errorMsg: (!ok && r?.detail?.errorMessage) ? r.detail.errorMessage : '' };
+          if (!ok && r) console.warn('[커스텀발송실패]', s.name, s.phone, r.error || JSON.stringify(r.detail));
+          return { id:s.id, name:s.name, phone:s.phone, status: ok ? 'success' : 'failed',
+                   errorMsg: (!ok && r?.error) ? r.error : '' };
         });
       } else if (rawRes && rawRes.success === false) {
-        // API 자체 오류
-        console.error('[발송] API 오류:', rawRes.error);
         showToast('발송 실패: ' + (rawRes.error || '서버 오류'), 'ng');
         btn.disabled=false; txt.style.display='inline'; spin.style.display='none';
         return;
-      } else {
-        sentCount = recipients.length;
       }
     } else {
-      sentCount = recipients.length;
+      // auto 또는 override 모드 → send-daily-content 사용 (각 카테고리에 맞는 알림톡/BMS_FREE)
+      const payload = { test_phones: phones };
+      if (mode === 'override') {
+        payload.override_category = _bulkOverrideCat;
+      }
+      rawRes = await apiPost('/admin/send-daily-content', payload);
+      console.log('[일일발송] 응답:', rawRes);
+      if (rawRes && rawRes.success === false) {
+        showToast('발송 실패: ' + (rawRes.message || rawRes.error || '서버 오류'), 'ng');
+        btn.disabled=false; txt.style.display='inline'; spin.style.display='none';
+        return;
+      }
+      if (rawRes && rawRes.results) {
+        sentCount = rawRes.sent    || 0;
+        failCount = rawRes.failed  || 0;
+        const skipCount = rawRes.skipped || 0;
+        // 결과 매핑 (subscriber_id 기준)
+        recipientResults = recipients.map(s => {
+          const r = rawRes.results.find(x => x.subscriber_id === s.id);
+          if (!r) return { id:s.id, name:s.name, phone:s.phone, status:'pending', errorMsg:'no_response' };
+          if (r.skipped) return { id:s.id, name:s.name, phone:s.phone, status:'skipped', errorMsg:r.reason || 'skipped' };
+          const ok = r.success !== false;
+          return { id:s.id, name:s.name, phone:s.phone, status: ok ? 'success' : 'failed',
+                   errorMsg: r.error || '' };
+        });
+        if (skipCount > 0) {
+          console.warn('[일일발송] 스킵 ' + skipCount + '건');
+        }
+      }
     }
 
     // 실패 상세 토스트
     if (failCount > 0 && rawRes?.results) {
       const failDetails = rawRes.results
-        .filter(r => !r.success)
-        .map(r => r.detail?.errorMessage || r.detail?.errorCode || '알 수 없는 오류')
-        .filter((v,i,a) => a.indexOf(v) === i) // 중복 제거
+        .filter(r => r.success === false || r.skipped)
+        .map(r => r.error || r.reason || '오류')
+        .filter((v,i,a) => a.indexOf(v) === i)
         .join(' / ');
       console.error('[발송실패 상세]', failDetails);
-      showToast('실패 ' + failCount + '건: ' + failDetails, 'ng');
+      showToast('실패/스킵 ' + failCount + '건: ' + failDetails, 'ng');
     }
 
     // ── 발송 이력 기록 ──────────────────────────────────────
