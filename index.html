@@ -700,7 +700,7 @@ body.light-mode .km-bubble {
 <!-- SIDEBAR -->
 <aside class="sidebar">
   <div class="sb-logo">1DAYECO<small>Admin Dashboard</small>
-    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v41</span>
+    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v42</span>
   </div>
   <nav class="sb-nav">
     <div class="sb-group">운영</div>
@@ -2591,7 +2591,7 @@ function showPage(name) {
 
 function loadPage(name) {
   if (name === 'overview')     {
-    // 1. 캐시된 STATE 데이터로 KPI/최근가입자 즉시 표시 (0초)
+    // 1. 현재 STATE 데이터로 KPI/최근가입자 즉시 표시 (0초)
     loadKPIs(); loadRecentSubs(); loadContentSummary(); renderUsageKPI();
     // 2. 백그라운드에서 최신 데이터 fetch (5개 함수 병렬, await 없이)
     Promise.all([
@@ -2614,14 +2614,23 @@ function loadPage(name) {
     if (fromEl && !fromEl.value) fromEl.value = past14;
     if (toEl   && !toEl.value)   toEl.value   = todayStr;
     sendHistPage = 1; // 페이지 초기화
-    loadSendPreview();
-    loadSendHistory();
-    loadTodaySendStats();
+    // 구독자 데이터가 필요한 페이지: 백그라운드에서 신선한 데이터 보장
+    loadSubscribers({silent: true}).then(() => {
+      loadSendPreview();
+      loadSendHistory();
+      loadTodaySendStats();
+    }).catch(e => console.warn('[send] 구독자 로드 실패:', e));
     loadSendLogs();
   }
   if (name === 'content')      { loadContentArchive(); initTopicGenerator(); renderUsageWidget(); }
-  if (name === 'stats')        loadStats();
-  if (name === 'revenue')      loadRevenue();
+  if (name === 'stats')        {
+    // 통계는 구독자 기반 → 신선한 데이터 보장
+    loadSubscribers({silent: true}).then(loadStats).catch(e => { loadStats(); });
+  }
+  if (name === 'revenue')      {
+    // 매출은 구독자 plan/payment_status 기반 → 신선한 데이터 보장
+    loadSubscribers({silent: true}).then(loadRevenue).catch(e => { loadRevenue(); });
+  }
   if (name === 'payments')     loadPayments();
   if (name === 'settings')     loadSettings();
   if (name === 'scheduler')    loadSchedulerStatus();
@@ -2656,17 +2665,17 @@ async function apiPost(path, body={}) {
 
 // ── 단일 STATE 객체 (모든 화면이 동일 데이터 참조) ──────────
 // ── localStorage 구독자 영구 저장 ──────────────────────────
-function loadSubsFromStorage() {
-  try { const s = localStorage.getItem('haru1min_subs'); return s ? JSON.parse(s) : []; }
-  catch(e) { return []; }
-}
-function saveSubsToStorage() {
-  try { localStorage.setItem('haru1min_subs', JSON.stringify(STATE.subscribers)); }
-  catch(e) {}
-}
+// ⚠️ DEPRECATED: localStorage 캐시 사용 안 함 (DB가 진실의 출처)
+// 호환성 위해 함수 시그니처는 남기되 빈 함수로 동작 (캐시에 의존하던 코드가 깨지지 않게)
+function loadSubsFromStorage() { return []; }
+function saveSubsToStorage()   { /* no-op: DB가 진실의 출처 */ }
 
+// ⚠️ 이전에는 localStorage에서 옛 데이터를 읽어와 화면이 잠깐 잘못 표시되는 버그가 있었음
+// 이제 STATE는 항상 빈 상태로 시작하고, loadSubscribers() 호출로만 채워짐
 const STATE = {
-  subscribers: loadSubsFromStorage(),
+  subscribers: [],      // ⭐ 빈 배열로 시작 (캐시 안 씀)
+  _loaded:     false,   // 로드 완료 여부
+  _loadError:  null,    // 마지막 로드 에러 (있으면 UI에 재시도 버튼 표시)
   // 실제 발송 횟수 (executeSendNow 호출 시에만 증가)
   _todaySent:   0,
   _todayFailed: 0,
@@ -2692,6 +2701,12 @@ const STATE = {
 };
 // 이전 코드 호환성을 위한 별칭 (MOCK → STATE)
 const MOCK = STATE;
+
+// 페이지 첫 로드 시 옛 캐시가 잠시라도 보이지 않도록 정리 (한 번만 실행)
+try {
+  // 옛 캐시키 모두 정리 (haru1min_subs 등)
+  ['haru1min_subs', 'haru1min_revenue'].forEach(k => localStorage.removeItem(k));
+} catch(e) {}
 
 // ── 파생 통계: STATE에서 실시간 계산 ────────────────────────
 function getStats() {
@@ -3163,51 +3178,83 @@ async function loadSubscribers(opts) {
   opts = opts || {};
   const silent = !!opts.silent; // true면 로딩 표시 생략
 
-  // 1. 캐시(STATE.subscribers)로 즉시 렌더 (구독자 페이지일 때만)
-  if (!silent && document.getElementById('subTableBody')) {
+  // 1. 로딩 상태 표시 (구독자 페이지일 때, 첫 로드 또는 명시적 새로고침)
+  const tbody = document.getElementById('subTableBody');
+  if (!silent && tbody && !STATE._loaded) {
+    tbody.innerHTML = '<tr><td colspan="14"><div class="empty"><span class="empty-ico">⏳</span>데이터를 불러오는 중...</div></td></tr>';
+  } else if (!silent && tbody) {
+    // 이미 로드된 데이터 있으면 그대로 보여주면서 백그라운드 갱신
     renderSubscribersTable();
   }
 
-  // 2. 백그라운드에서 API 호출 → DB가 진실의 출처
-  // ⚠️ 이전엔 localStorage 구독자와 병합했으나, 그 결과 DB에서 삭제된 구독자가
-  //    유령처럼 남는 버그 발생. DB 응답을 STATE로 직접 사용하도록 변경.
-  if (API_BASE) {
-    try {
-      const res = await apiFetch('/admin/subscribers?limit=200');
-      if (res && res.data) {
-        // DB 데이터를 STATE에 그대로 사용 (병합 X)
-        const dbSubs = res.data
-          .filter(s => !s.hidden)
-          .map(s => ({
-          id:             s.id,
-          name:           s.name || '',
-          phone:          s.phone || '',
-          email:          s.email || null,
-          plan:           s.plan || 'free',
-          status:         s.status || 'trial',
-          send_hour:      s.send_hour || 8,
-          created_at:     s.created_at || new Date().toISOString(),
-          end_date:       s.end_date || null,
-          trial_end_date: s.trial_end_date || null,
-          notify_d1:      s.notify_d1 || false,
-          billing_key:    s.billing_key || null,
-          memo:           s.memo || null,
-          categories:     s.categories || ['economy','realestate','english','trivia'],
-          // ── 친구톡 관련 (v22+) ──
-          payment_status:        s.payment_status || 'pending',
-          kakao_channel_added:   !!s.kakao_channel_added,
-          clicked_channel_link:  !!s.clicked_channel_link,
-          last_send_channel:     s.last_send_channel || null,
-          last_sent_at:          s.last_sent_at || null,
-        }));
-        STATE.subscribers = dbSubs;
-        saveSubsToStorage();
-      }
-    } catch(e) { console.warn('구독자 API 동기화 실패:', e); }
+  // 2. API 호출 (DB가 진실의 출처)
+  if (!API_BASE) {
+    STATE._loadError = 'API_BASE가 설정되지 않았습니다';
+    if (tbody) renderSubscribersError(tbody);
+    return;
   }
 
-  // 3. 최신 데이터로 다시 렌더 (구독자 페이지일 때)
-  renderSubscribersTable();
+  try {
+    const res = await apiFetch('/admin/subscribers?limit=200');
+    if (!res || !res.data) {
+      throw new Error('API 응답 형식 오류');
+    }
+    // DB 응답 그대로 STATE에 저장 (병합/캐시 폴백 없음)
+    STATE.subscribers = res.data
+      .filter(s => !s.hidden)
+      .map(s => ({
+      id:             s.id,
+      name:           s.name || '',
+      phone:          s.phone || '',
+      email:          s.email || null,
+      plan:           s.plan || 'free',
+      status:         s.status || 'trial',
+      send_hour:      s.send_hour || 8,
+      created_at:     s.created_at || new Date().toISOString(),
+      end_date:       s.end_date || null,
+      trial_end_date: s.trial_end_date || null,
+      notify_d1:      s.notify_d1 || false,
+      billing_key:    s.billing_key || null,
+      memo:           s.memo || null,
+      categories:     s.categories || ['economy','realestate','english','trivia'],
+      // ── 친구톡 관련 (v22+) ──
+      payment_status:        s.payment_status || 'pending',
+      kakao_channel_added:   !!s.kakao_channel_added,
+      clicked_channel_link:  !!s.clicked_channel_link,
+      last_send_channel:     s.last_send_channel || null,
+      last_sent_at:          s.last_sent_at || null,
+    }));
+    STATE._loaded = true;
+    STATE._loadError = null;
+  } catch(e) {
+    console.warn('구독자 API 동기화 실패:', e);
+    STATE._loadError = e.message || '서버 응답 없음';
+    // 에러 시 STATE.subscribers는 건드리지 않음 (비어있으면 빈 채로)
+    if (tbody) {
+      renderSubscribersError(tbody);
+      return;
+    }
+  }
+
+  // 3. 최신 데이터로 다시 렌더
+  if (!silent) renderSubscribersTable();
+}
+
+// 에러 상태 렌더 (재시도 버튼 포함)
+function renderSubscribersError(tbody) {
+  const errMsg = STATE._loadError || '데이터를 불러올 수 없습니다';
+  tbody.innerHTML = `
+    <tr><td colspan="14">
+      <div class="empty">
+        <span class="empty-ico">⚠️</span>
+        <div style="font-size:13px;color:var(--text);margin-bottom:6px">데이터를 불러올 수 없습니다</div>
+        <div style="font-size:11px;color:var(--muted);margin-bottom:12px">${errMsg}</div>
+        <button onclick="loadSubscribers()"
+          style="background:var(--gold);color:var(--dark);border:none;padding:6px 14px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;font-family:var(--sans)">
+          🔄 다시 시도
+        </button>
+      </div>
+    </td></tr>`;
 }
 
 // 구독자 테이블 행 HTML 생성 (분리된 헬퍼)
