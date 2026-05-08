@@ -700,7 +700,7 @@ body.light-mode .km-bubble {
 <!-- SIDEBAR -->
 <aside class="sidebar">
   <div class="sb-logo">1DAYECO<small>Admin Dashboard</small>
-    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v49</span>
+    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v50</span>
   </div>
   <nav class="sb-nav">
     <div class="sb-group">운영</div>
@@ -1212,13 +1212,13 @@ body.light-mode .km-bubble {
     <!-- 콘텐츠 아카이브 (메인 영역) -->
     <div id="contentArchiveArea" style="flex:1 1 auto;min-height:0;display:flex;flex-direction:column">
       <div class="panel split-panel" style="flex:1 1 auto;min-height:0;display:flex;flex-direction:column;overflow:hidden">
-        <div class="panel-head" style="flex-wrap:nowrap;gap:8px;padding-top:10px;padding-bottom:10px;flex-shrink:0">
+        <div class="panel-head" style="flex-wrap:wrap;gap:8px;padding-top:10px;padding-bottom:10px;flex-shrink:0">
           <div class="panel-title">📝 콘텐츠 아카이브 <span id="archiveResultCount" style="color:var(--muted);font-weight:400;font-size:11px;margin-left:8px"></span></div>
 
-          <!-- ⭐ 한 줄 헤더: 카테고리(왼) + 검색/정렬/액션(오른쪽) -->
-          <div style="display:flex;gap:10px;align-items:center;width:100%;flex-wrap:nowrap;min-width:0">
+          <!-- ⭐ 줄 1: 카테고리(왼) + 액션 버튼들(오른쪽) -->
+          <div style="display:flex;gap:10px;align-items:center;width:100%;flex-wrap:wrap">
             <!-- 왼쪽: 카테고리 pill -->
-            <div class="cat-pill-filter" id="catPillFilter" style="display:flex;gap:4px;flex-shrink:0">
+            <div class="cat-pill-filter" id="catPillFilter" style="display:flex;gap:4px;flex-wrap:wrap">
               <button class="cat-pill active" data-cat="" onclick="selectCatFilter(this)">전체</button>
               <button class="cat-pill" data-cat="economy" onclick="selectCatFilter(this)">📊 경제</button>
               <button class="cat-pill" data-cat="realestate" onclick="selectCatFilter(this)">🏠 부동산</button>
@@ -1226,41 +1226,43 @@ body.light-mode .km-bubble {
               <button class="cat-pill" data-cat="trivia" onclick="selectCatFilter(this)">🧠 상식</button>
             </div>
 
-            <!-- 가운데: 검색바 (남은 공간 채움) -->
-            <div style="position:relative;flex:1 1 auto;min-width:120px">
+            <!-- 오른쪽: 액션 버튼들 (margin-left: auto로 밀어내기) -->
+            <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-left:auto">
+              <button onclick="openContentEditor('create')" class="arch-act-btn arch-primary" title="콘텐츠 직접 추가">➕ 추가</button>
+              <button onclick="archiveBulkHide()"   class="arch-act-btn arch-warn"   title="선택 항목 숨김 (발송 X, 복구 가능)">🙈 숨김</button>
+              <button onclick="archiveBulkUnhide()" class="arch-act-btn"             title="숨김 해제 (복구)">♻️ 복구</button>
+              <button onclick="archiveBulkDelete()" class="arch-act-btn arch-danger" title="영구 삭제 (복구 불가)">🔥 영구 삭제</button>
+            </div>
+          </div>
+
+          <!-- ⭐ 줄 2: 검색바 + 기간 + 정렬 -->
+          <div style="display:flex;gap:8px;align-items:center;width:100%;flex-wrap:wrap">
+            <!-- 검색바 (가장 큰 비중) -->
+            <div style="position:relative;flex:1 1 250px;min-width:200px">
               <span style="position:absolute;left:10px;top:50%;transform:translateY(-50%);font-size:13px;pointer-events:none;color:var(--muted)">🔍</span>
               <input type="text" id="archiveSearch" placeholder="제목·본문·키워드·태그 검색..." oninput="onArchiveSearchInput()"
                 style="width:100%;background:var(--s3);border:1px solid var(--b);color:var(--text);
                        padding:7px 28px 7px 32px;border-radius:6px;font-size:12px;outline:none;font-family:var(--sans)">
               <button id="archiveSearchClear" onclick="clearArchiveSearch()" style="position:absolute;right:6px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--muted);cursor:pointer;font-size:14px;padding:2px 6px;display:none">✕</button>
             </div>
-
-            <!-- 오른쪽: 정렬 + 기간 + 액션 버튼들 -->
-            <div style="display:flex;gap:6px;align-items:center;flex-shrink:0">
-              <!-- 기간 빠른 선택 -->
-              <select id="archivePeriod" onchange="onArchivePeriodChange()" class="dark-select"
-                style="background:var(--s3);border:1px solid var(--b);color:var(--text);padding:7px 26px 7px 10px;font-size:11px;border-radius:6px;font-family:var(--sans);outline:none;cursor:pointer">
-                <option value="all">전체 기간</option>
-                <option value="7d">최근 7일</option>
-                <option value="30d">최근 30일</option>
-                <option value="3m">최근 3개월</option>
-                <option value="ytd">올해</option>
-                <option value="custom">기간 선택...</option>
-              </select>
-              <!-- 정렬 -->
-              <select id="archiveSort" onchange="_renderArchiveTable()" class="dark-select"
-                style="background:var(--s3);border:1px solid var(--b);color:var(--text);padding:7px 26px 7px 10px;font-size:11px;border-radius:6px;font-family:var(--sans);outline:none;cursor:pointer">
-                <option value="date_asc" selected>발송일 빠른 순</option>
-                <option value="date_desc">발송일 늦은 순</option>
-                <option value="tok_desc">토큰 많은순</option>
-                <option value="tok_asc">토큰 적은순</option>
-              </select>
-              <!-- 추가 + 액션 -->
-              <button onclick="openContentEditor('create')" class="arch-act-btn arch-primary" title="콘텐츠 직접 추가">➕ 추가</button>
-              <button onclick="archiveBulkHide()"   class="arch-act-btn arch-warn"   title="선택 항목 숨김 (발송 X, 복구 가능)">🙈 숨김</button>
-              <button onclick="archiveBulkUnhide()" class="arch-act-btn"             title="숨김 해제 (복구)">♻️ 복구</button>
-              <button onclick="archiveBulkDelete()" class="arch-act-btn arch-danger" title="영구 삭제 (복구 불가)">🔥 영구 삭제</button>
-            </div>
+            <!-- 기간 -->
+            <select id="archivePeriod" onchange="onArchivePeriodChange()" class="dark-select"
+              style="background:var(--s3);border:1px solid var(--b);color:var(--text);padding:7px 26px 7px 10px;font-size:11px;border-radius:6px;font-family:var(--sans);outline:none;cursor:pointer;flex-shrink:0">
+              <option value="all">전체 기간</option>
+              <option value="7d">최근 7일</option>
+              <option value="30d">최근 30일</option>
+              <option value="3m">최근 3개월</option>
+              <option value="ytd">올해</option>
+              <option value="custom">기간 선택...</option>
+            </select>
+            <!-- 정렬 -->
+            <select id="archiveSort" onchange="_renderArchiveTable()" class="dark-select"
+              style="background:var(--s3);border:1px solid var(--b);color:var(--text);padding:7px 26px 7px 10px;font-size:11px;border-radius:6px;font-family:var(--sans);outline:none;cursor:pointer;flex-shrink:0">
+              <option value="date_asc" selected>발송일 빠른 순</option>
+              <option value="date_desc">발송일 늦은 순</option>
+              <option value="tok_desc">토큰 많은순</option>
+              <option value="tok_asc">토큰 적은순</option>
+            </select>
           </div>
 
           <!-- 직접 기간 선택 (custom) - 별도 줄 (조건부) -->
@@ -6883,7 +6885,7 @@ function _renderArchiveTable() {
           + '<td style="text-align:center" onclick="event.stopPropagation()">'
           +   '<button onclick="regenerateArchiveItem(\'' + r.dateStr + '\', \'' + (r.cat || '') + '\')"'
           +     ' class="arch-act-btn" style="padding:4px 8px;font-size:10px"'
-          +     ' title="이 콘텐츠 다시 생성 (덮어쓰기)">🔄 재생성</button>'
+          +     ' title="이 콘텐츠 다시 생성 (덮어쓰기)">재생성</button>'
           + '</td>'
           + '</tr>';
       }).join('');
@@ -6914,7 +6916,7 @@ async function regenerateArchiveItem(dateStr, cat) {
 
   // 진행 모달 (단일 항목, 약 8~15초 추정)
   const ctrl = showProgressModal({
-    title:    '🔄 콘텐츠 재생성 중',
+    title:    '콘텐츠 재생성 중',
     subtitle: `<b>${dateStr} · ${catLabel}</b><br>「${topic}」<br>`
             + `<span style="font-size:11px;opacity:.8">AI가 새로운 본문을 만들고 있습니다 (약 10초)</span>`,
     mode:         'estimated',
