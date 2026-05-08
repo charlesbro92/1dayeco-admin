@@ -700,7 +700,7 @@ body.light-mode .km-bubble {
 <!-- SIDEBAR -->
 <aside class="sidebar">
   <div class="sb-logo">1DAYECO<small>Admin Dashboard</small>
-    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v46</span>
+    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v47</span>
   </div>
   <nav class="sb-nav">
     <div class="sb-group">운영</div>
@@ -1236,8 +1236,8 @@ body.light-mode .km-bubble {
             <!-- 정렬 -->
             <select id="archiveSort" onchange="_renderArchiveTable()" class="dark-select"
               style="background:var(--s3);border:1px solid var(--b);color:var(--text);padding:7px 26px 7px 10px;font-size:11px;border-radius:6px;font-family:var(--sans);outline:none;cursor:pointer">
-              <option value="date_desc">최신순</option>
-              <option value="date_asc">오래된순</option>
+              <option value="date_asc" selected>발송일 빠른 순</option>
+              <option value="date_desc">발송일 늦은 순</option>
               <option value="tok_desc">토큰 많은순</option>
               <option value="tok_asc">토큰 적은순</option>
             </select>
@@ -6673,7 +6673,7 @@ function _renderArchiveTable() {
   const searchValRaw = (document.getElementById('archiveSearch')?.value || '').trim();
   const searchVal = searchValRaw.toLowerCase();
   const periodSel = document.getElementById('archivePeriod')?.value || 'all';
-  const sortSel   = document.getElementById('archiveSort')?.value || 'date_desc';
+  const sortSel   = document.getElementById('archiveSort')?.value || 'date_asc';
   const range = _archivePeriodToRange(periodSel);
   const dateFrom = range.from;
   const dateTo   = range.to;
