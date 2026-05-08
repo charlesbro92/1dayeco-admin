@@ -722,7 +722,7 @@ body.light-mode .filter-pill.active { color:#fff; }
 <!-- SIDEBAR -->
 <aside class="sidebar">
   <div class="sb-logo">1DAYECO<small>Admin Dashboard</small>
-    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v51</span>
+    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v52</span>
   </div>
   <nav class="sb-nav">
     <div class="sb-group">운영</div>
@@ -2644,6 +2644,7 @@ const PAYMENT_STATUS_LABELS = {
   completed:  { text: '결제완료', color: '#10b981', bg: 'rgba(16,185,129,.12)'  },
   cancelled:  { text: '취소',     color: '#f59e0b', bg: 'rgba(245,158,11,.12)'  },
   failed:     { text: '결제오류', color: '#ef4444', bg: 'rgba(239,68,68,.12)'   },
+    pending_payment: { text: '결제대기', color: '#f59e0b', bg: 'rgba(245,158,11,.12)' },
   refunded:   { text: '환불',     color: '#8b5cf6', bg: 'rgba(139,92,246,.12)'  },
 };
 
@@ -3237,7 +3238,7 @@ async function loadRecentSubs() {
       '<td><strong>' + s.name + '</strong>' + newBadge + '</td>' +
       '<td class="t-phone">' + s.phone + '</td>' +
       '<td><span class="badge ' + s.plan + '">' + planLabel(s.plan) + '</span></td>' +
-      '<td><span class="badge ' + s.status + '">' + ({active:'활성',trial:'체험',cancelled:'해지',expired:'만료'}[s.status]||s.status) + '</span></td>' +
+      '<td><span class="badge ' + s.status + '">' + ({active:'활성',trial:'체험',cancelled:'해지',expired:'만료',pending_payment:'결제대기'}[s.status]||s.status) + '</span></td>' +
       '<td style="font-family:var(--mono);font-size:11px;color:var(--muted)">' + timeStr + '</td>' +
       '<td style="font-family:var(--mono);font-size:11px">' + cd.toLocaleDateString('ko-KR') + '</td>' +
       '</tr>';
@@ -3508,7 +3509,7 @@ function renderSubscribersRows(filtered) {
       <td style="font-family:var(--mono);font-size:12px;text-align:right;color:var(--muted)">
         ${{monthly:'₩9,900',yearly:'₩79,000',free:'₩0',pkg3m:'₩14,900',pkg6m:'₩24,900',pkg1y:'₩41,900'}[s.plan]||''}
       </td>
-      <td style="text-align:center"><span class="badge ${s.status}">${{active:'활성',trial:'체험',cancelled:'해지',expired:'만료'}[s.status]||s.status}</span></td>
+      <td style="text-align:center"><span class="badge ${s.status}">${{active:'활성',trial:'체험',cancelled:'해지',expired:'만료',pending_payment:'결제대기'}[s.status]||s.status}</span></td>
       <td style="text-align:center">${paymentStatusLabel(s.payment_status)}</td>
       <td style="text-align:center">${renderKakaoChannelCell(s)}</td>
       <td style="text-align:center;white-space:nowrap">${renderSubCategories(s.categories)}</td>
