@@ -549,6 +549,28 @@ body.light-mode .km-bubble {
 .tab-btn.active { color:var(--gold); border-bottom-color:var(--gold); }
 .tab-btn:hover:not(.active) { color:var(--text); }
 
+/* 필터 pill 버튼 (결제 이력 / 발송 등) */
+.filter-pill {
+  background:rgba(255,255,255,.04); border:1px solid var(--border); color:var(--muted);
+  padding:6px 12px; font-size:12px; font-weight:600; border-radius:100px;
+  cursor:pointer; transition:all .15s; font-family:var(--sans); white-space:nowrap;
+}
+.filter-pill:hover { color:var(--text); border-color:rgba(201,168,76,.3); }
+.filter-pill.active { background:var(--gold); color:var(--dark); border-color:var(--gold); font-weight:700; }
+body.light-mode .filter-pill { background:#fff; }
+body.light-mode .filter-pill.active { color:#fff; }
+
+/* 결제 상태 배지 */
+.pay-badge {
+  display:inline-block; padding:2px 8px; border-radius:4px;
+  font-size:10px; font-weight:700; letter-spacing:.3px; white-space:nowrap;
+}
+.pay-badge-paid     { background:rgba(74,222,128,.12); color:#5eea91; }
+.pay-badge-refunded { background:rgba(248,113,113,.12); color:#f87171; }
+.pay-badge-partial  { background:rgba(251,191,36,.12); color:#fbbf24; }
+.pay-badge-failed   { background:rgba(239,68,68,.12); color:#ef4444; }
+.pay-badge-pending  { background:rgba(160,160,160,.12); color:#9ca3af; }
+
 /* ── 시간 피커 버튼 ── */
 .hp-btn {
   flex:1; padding:12px 6px; border-radius:8px; font-size:12px; font-weight:600; line-height:1.4;
@@ -700,7 +722,7 @@ body.light-mode .km-bubble {
 <!-- SIDEBAR -->
 <aside class="sidebar">
   <div class="sb-logo">1DAYECO<small>Admin Dashboard</small>
-    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v50</span>
+    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v51</span>
   </div>
   <nav class="sb-nav">
     <div class="sb-group">운영</div>
@@ -1480,29 +1502,145 @@ body.light-mode .km-bubble {
 
   <!-- ── PAGE: 매출 ── -->
   <div class="content" id="page-revenue">
-    <div class="kpi-grid" style="grid-template-columns:repeat(3,1fr)">
-      <div class="kpi"><div class="kpi-row"><div class="kpi-label"><span class="kpi-icon">💰</span>이번 달 매출</div><div class="kpi-value gold" id="revMonth">₩0</div></div></div>
-      <div class="kpi"><div class="kpi-label">이번 달 신규 결제</div><div class="kpi-value green" id="revCount">0건</div><span class="kpi-icon">💳</span></div>
-      <div class="kpi"><div class="kpi-label">누적 총 매출</div><div class="kpi-value blue" id="revTotal">₩0</div><span class="kpi-icon">📈</span></div>
+    <!-- KPI 5개 (총매출 / 순매출 / 환불 / 결제건수 / 환불건수) -->
+    <div class="kpi-grid" style="grid-template-columns:repeat(5,1fr)">
+      <div class="kpi"><div class="kpi-label">이번 달 매출</div><div class="kpi-value gold" id="revMonth">₩0</div><span class="kpi-icon">💰</span></div>
+      <div class="kpi"><div class="kpi-label">누적 총매출</div><div class="kpi-value blue" id="revTotal">₩0</div><span class="kpi-icon">📈</span></div>
+      <div class="kpi"><div class="kpi-label">누적 순매출</div><div class="kpi-value green" id="revNet">₩0</div><span class="kpi-icon">💵</span></div>
+      <div class="kpi"><div class="kpi-label">결제 건수</div><div class="kpi-value" id="revPaidCount">0건</div><span class="kpi-icon">💳</span></div>
+      <div class="kpi"><div class="kpi-label">환불 (금액 / 건수)</div><div class="kpi-value" id="revRefund" style="color:var(--error)">₩0 / 0건</div><span class="kpi-icon">↩️</span></div>
     </div>
+
+    <!-- 월별 매출 차트 -->
     <div class="panel" style="margin-top:14px">
-      <div class="panel-head"><div class="panel-title">📈 월별 매출 추이</div></div>
+      <div class="panel-head">
+        <div class="panel-title">📈 월별 매출 추이</div>
+        <span class="panel-act" onclick="loadRevenue()">🔄 새로고침</span>
+      </div>
       <div class="rev-chart" id="revChart">
         <div class="rev-bars" id="revBars">
           <div style="color:var(--muted);font-size:13px;padding:20px">매출 데이터를 불러오는 중...</div>
         </div>
       </div>
     </div>
+
+    <!-- 플랜별 매출 분포 -->
+    <div class="panel" style="margin-top:14px">
+      <div class="panel-head"><div class="panel-title">📊 플랜별 매출 분포</div></div>
+      <div class="panel-body">
+        <table>
+          <thead><tr><th>플랜</th><th style="text-align:right">건수</th><th style="text-align:right">매출</th><th style="text-align:right">환불</th><th style="text-align:right">순매출</th></tr></thead>
+          <tbody id="revPlanBreakdown">
+            <tr><td colspan="5" style="text-align:center;color:var(--muted);padding:20px">데이터 로딩 중...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
   </div>
 
   <!-- ── PAGE: 결제 이력 ── -->
   <div class="content" id="page-payments">
+    <!-- 필터 바 -->
+    <div class="panel" style="margin-bottom:14px">
+      <div class="panel-body" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+        <span style="font-size:12px;color:var(--muted)">상태 필터:</span>
+        <button class="filter-pill active" data-pay-status="" onclick="filterPayments('')">전체</button>
+        <button class="filter-pill" data-pay-status="paid" onclick="filterPayments('paid')">✅ 결제완료</button>
+        <button class="filter-pill" data-pay-status="refunded" onclick="filterPayments('refunded')">↩️ 환불</button>
+        <button class="filter-pill" data-pay-status="partial_refunded" onclick="filterPayments('partial_refunded')">↩️ 부분환불</button>
+        <button class="filter-pill" data-pay-status="failed" onclick="filterPayments('failed')">❌ 실패</button>
+        <button class="filter-pill" data-pay-status="pending" onclick="filterPayments('pending')">⏳ 대기</button>
+        <span style="flex:1"></span>
+        <span style="font-size:12px;color:var(--muted)" id="payCountLabel">0건</span>
+        <span class="panel-act" onclick="loadPayments()">🔄 새로고침</span>
+      </div>
+    </div>
+
+    <!-- 결제 이력 테이블 -->
     <div class="panel">
       <div class="panel-body">
         <table>
-          <thead><tr><th>일시</th><th>구독자</th><th>플랜</th><th>금액</th><th>상태</th><th>주문번호</th></tr></thead>
-          <tbody id="payBody"><tr><td colspan="6"><div class="empty"><span class="empty-ico">💳</span>결제 이력이 없습니다</div></td></tr></tbody>
+          <thead>
+            <tr>
+              <th>결제일시</th>
+              <th>구독자</th>
+              <th>플랜</th>
+              <th style="text-align:right">금액</th>
+              <th style="text-align:right">환불</th>
+              <th>상태</th>
+              <th>PG</th>
+              <th>주문번호</th>
+              <th style="text-align:center">작업</th>
+            </tr>
+          </thead>
+          <tbody id="payBody">
+            <tr><td colspan="9"><div class="empty"><span class="empty-ico">💳</span>결제 이력이 없습니다</div></td></tr>
+          </tbody>
         </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── 환불 처리 모달 ── -->
+  <div class="overlay" id="refundOverlay" onclick="if(event.target.id==='refundOverlay')closeRefundModal()">
+    <div class="modal" style="max-width:560px;background:var(--s2);border:1px solid var(--b);border-radius:14px;padding:0;transform:translateY(20px);transition:transform .3s">
+      <div style="padding:18px 22px;border-bottom:1px solid var(--b);display:flex;justify-content:space-between;align-items:center">
+        <div style="font-size:15px;font-weight:700">↩️ 환불 처리</div>
+        <button onclick="closeRefundModal()" style="background:none;border:none;color:var(--muted);font-size:18px;cursor:pointer;padding:4px">✕</button>
+      </div>
+      <div style="padding:22px">
+        <div id="refundLoading" style="text-align:center;padding:40px;color:var(--muted)">
+          환불액 계산 중...
+        </div>
+
+        <div id="refundContent" style="display:none">
+          <!-- 환불 미리보기 박스 -->
+          <div style="background:rgba(248,113,113,.06);border:1px solid rgba(248,113,113,.25);border-radius:10px;padding:16px;margin-bottom:16px">
+            <div style="font-size:12px;color:var(--muted);margin-bottom:8px">환불 대상</div>
+            <div id="refundSubInfo" style="font-size:14px;font-weight:700;margin-bottom:12px"></div>
+            <table style="width:100%;font-size:12px">
+              <tr><td style="padding:4px 0;color:var(--muted)">결제금액</td><td style="text-align:right;padding:4px 0" id="refundPaidAmount">₩0</td></tr>
+              <tr><td style="padding:4px 0;color:var(--muted)">총 발송일수</td><td style="text-align:right;padding:4px 0" id="refundTotalDays">0일</td></tr>
+              <tr><td style="padding:4px 0;color:var(--muted)">발송 완료</td><td style="text-align:right;padding:4px 0" id="refundSentDays">0일</td></tr>
+              <tr><td style="padding:4px 0;color:var(--muted)">잔여 일수</td><td style="text-align:right;padding:4px 0;color:var(--gold);font-weight:700" id="refundRemainingDays">0일</td></tr>
+              <tr style="border-top:1px dashed var(--border)"><td style="padding:8px 0;font-weight:700;color:var(--text)">자동 계산 환불액</td><td style="text-align:right;padding:8px 0;font-weight:900;color:#5eea91;font-size:16px" id="refundCalcAmount">₩0</td></tr>
+            </table>
+          </div>
+
+          <!-- 수동 조정 (선택) -->
+          <div style="margin-bottom:14px">
+            <label style="font-size:12px;color:var(--muted);display:block;margin-bottom:6px">실제 환불 금액 (수동 조정 가능)</label>
+            <div style="display:flex;gap:6px;align-items:center">
+              <span style="font-size:14px">₩</span>
+              <input type="number" id="refundAmountInput" min="0" max="99999999" placeholder="0"
+                style="flex:1;background:rgba(255,255,255,.05);border:1.5px solid var(--border);border-radius:6px;padding:8px 12px;font-size:14px;color:var(--text);font-family:var(--sans);outline:none">
+              <button onclick="resetRefundAmount()" style="background:rgba(255,255,255,.04);border:1px solid var(--border);color:var(--muted);padding:8px 12px;border-radius:6px;font-size:11px;cursor:pointer">자동값으로</button>
+            </div>
+            <div style="font-size:10px;color:var(--muted);margin-top:4px">※ 자동 계산값과 다른 금액 입력 시 사유를 명확히 기록해주세요</div>
+          </div>
+
+          <!-- 환불 사유 -->
+          <div style="margin-bottom:18px">
+            <label style="font-size:12px;color:var(--muted);display:block;margin-bottom:6px">환불 사유 (필수)</label>
+            <input type="text" id="refundReasonInput" placeholder="예: 고객 요청 (단순 변심)" maxlength="200"
+              style="width:100%;background:rgba(255,255,255,.05);border:1.5px solid var(--border);border-radius:6px;padding:9px 12px;font-size:13px;color:var(--text);font-family:var(--sans);outline:none">
+          </div>
+
+          <!-- 안내 박스 -->
+          <div style="background:rgba(251,191,36,.06);border:1px solid rgba(251,191,36,.2);border-radius:8px;padding:12px;font-size:11.5px;color:var(--text);line-height:1.6;margin-bottom:16px">
+            ⚠️ 환불 처리 시 즉시 발송이 중단되며, 카드사 환급은 영업일 5~7일 소요됩니다.<br>
+            전액 환불 시 구독자 상태가 'cancelled'로 변경됩니다.
+          </div>
+
+          <!-- 액션 버튼 -->
+          <div style="display:flex;gap:8px">
+            <button onclick="closeRefundModal()" style="flex:1;background:none;border:1px solid var(--border);color:var(--muted);padding:11px;border-radius:8px;font-size:13px;font-weight:600;font-family:var(--sans);cursor:pointer">취소</button>
+            <button onclick="confirmRefund()" id="refundConfirmBtn" style="flex:2;background:var(--error);color:#fff;border:none;padding:11px;border-radius:8px;font-size:13px;font-weight:700;font-family:var(--sans);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px">
+              <span id="refundConfirmTxt">환불 처리하기</span>
+              <span id="refundConfirmSpin" style="display:none"><span class="spinner" style="border-top-color:#fff"></span></span>
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -7326,127 +7464,382 @@ async function saveContentEdit() {
 
 // ── 매출 ─────────────────────────────────────────────────────
 async function loadRevenue() {
-  // 실제 구독자 데이터로 월별 매출 계산
-  // 매출 발생 시점 = 결제일 (체험 종료 후, payment_status='completed')
-  // 베타 단계: 가입 시점 기준 추정 사용 (active 상태인 구독자만)
-  const subs = (STATE.subscribers || []).filter(s => !s.hidden);
+  // 백엔드 /admin/payments + /admin/payments/stats 사용
+  // 베타 단계 폴백: payments 테이블 마이그레이션 안 됐으면 subscribers로 추정
 
-  // plan별 결제 금액 (정가)
+  let payments = [];
+  let stats = null;
+  try {
+    const [r1, r2] = await Promise.all([
+      fetch(API_BASE + '/admin/payments?limit=1000'),
+      fetch(API_BASE + '/admin/payments/stats'),
+    ]);
+    if (r1.ok) {
+      const d = await r1.json();
+      payments = d.data || [];
+    }
+    if (r2.ok) {
+      stats = await r2.json();
+    }
+  } catch (e) {
+    console.warn('[loadRevenue] /admin/payments 실패 — subscribers 폴백', e);
+  }
+
+  // KPI 계산
   const PLAN_AMOUNT = {
     monthly: 9900, pkg3m: 14900, pkg6m: 24900, pkg1y: 41900,
     yearly: 79000, free: 0,
   };
 
-  // 최근 12개월 시계열 생성 (오래된 → 최신, KST 기준)
+  // 폴백: payments 비어있으면 subscribers로 추정 (베타)
+  if (payments.length === 0) {
+    const subs = (STATE.subscribers || []).filter(s => !s.hidden);
+    payments = subs.filter(s => s.status === 'active' || s.payment_status === 'completed').map(s => ({
+      paid_at: s.trial_end_date || s.created_at,
+      created_at: s.created_at,
+      amount: PLAN_AMOUNT[s.plan] || 0,
+      refund_amount: 0,
+      status: 'paid',
+      subscriber_plan: s.plan,
+      subscriber_name: s.name,
+      _isFallback: true,
+    }));
+  }
+
+  // 월별 집계 (최근 12개월)
   const now = new Date();
   const months = [];
   for (let i = 11; i >= 0; i--) {
     const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-    const ym = d.toISOString().slice(0, 7);  // YYYY-MM
+    const ym = d.toISOString().slice(0, 7);
     const monthLabel = (d.getMonth() + 1) + '월';
-    months.push({ ym, month: monthLabel, amount: 0, count: 0 });
+    months.push({ ym, month: monthLabel, amount: 0, refund: 0, count: 0 });
   }
 
-  // 각 구독자의 결제 발생 월에 매출 합산
-  // - active 또는 payment_status=completed인 구독자만
-  // - 결제 발생 월 = trial_end_date의 월 (체험 끝나고 청구되는 시점)
-  //   trial_end_date 없으면 created_at 기준
-  subs.forEach(s => {
-    const isPaid = s.status === 'active' || s.payment_status === 'completed';
-    if (!isPaid) return;
-    const amt = PLAN_AMOUNT[s.plan];
-    if (!amt) return;
-
-    const billDate = s.trial_end_date || s.created_at;
-    if (!billDate) return;
-    const ym = billDate.slice(0, 7);  // YYYY-MM
+  payments.forEach(p => {
+    const dt = p.paid_at || p.created_at;
+    if (!dt) return;
+    const ym = dt.slice(0, 7);
     const slot = months.find(m => m.ym === ym);
     if (slot) {
-      slot.amount += amt;
-      slot.count  += 1;
+      if (p.status === 'paid' || p.status === 'partial_refunded') {
+        slot.amount += (p.amount || 0);
+        slot.count  += 1;
+      }
+      if (p.refund_amount) {
+        slot.refund += p.refund_amount;
+      }
     }
   });
 
-  const maxAmt = Math.max(...months.map(m => m.amount), 1);  // 0 division 방지
-  const total = months.reduce((s, m) => s + m.amount, 0);
-  const thisMonth = months[months.length - 1]?.amount || 0;
-  const thisMonthCount = months[months.length - 1]?.count || 0;
+  // KPI 계산
+  let totalRevenue = stats ? stats.total_revenue : payments.reduce((s, p) => s + ((p.status === 'paid' || p.status === 'partial_refunded') ? (p.amount || 0) : 0), 0);
+  let totalRefund  = stats ? stats.total_refund  : payments.reduce((s, p) => s + (p.refund_amount || 0), 0);
+  let netRevenue   = stats ? stats.net_revenue   : (totalRevenue - totalRefund);
+  let paidCount    = stats ? stats.paid_count    : payments.filter(p => p.status === 'paid').length;
+  let refundCount  = stats ? stats.refund_count  : payments.filter(p => p.status === 'refunded' || p.status === 'partial_refunded').length;
+  const thisMonth  = months[months.length - 1]?.amount || 0;
 
-  document.getElementById('revMonth').textContent  = `₩ ${Math.floor(thisMonth).toLocaleString()}`;
-  document.getElementById('revTotal').textContent  = `₩ ${Math.floor(total).toLocaleString()}`;
-  document.getElementById('revCount').textContent  = `${thisMonthCount.toLocaleString()} 건`;
+  document.getElementById('revMonth').textContent     = `₩${Math.floor(thisMonth).toLocaleString()}`;
+  document.getElementById('revTotal').textContent     = `₩${Math.floor(totalRevenue).toLocaleString()}`;
+  document.getElementById('revNet').textContent       = `₩${Math.floor(netRevenue).toLocaleString()}`;
+  document.getElementById('revPaidCount').textContent = `${paidCount.toLocaleString()}건`;
+  document.getElementById('revRefund').textContent    = `₩${Math.floor(totalRefund).toLocaleString()} / ${refundCount}건`;
 
-  // 차트 렌더 (시간 순 정렬 보장)
-  document.getElementById('revBars').innerHTML = months.map(m => {
-    const heightPct = Math.max(2, Math.round(m.amount / maxAmt * 100));
-    const tip = `${m.month}: ₩${Math.floor(m.amount).toLocaleString()} (${m.count}건)`;
-    return `
-      <div class="rev-bar-wrap" title="${tip}">
-        <div class="rev-bar" style="height:${heightPct}%"></div>
-        <div class="rev-bar-label">${m.month}</div>
-      </div>`;
-  }).join('');
+  // 차트
+  const maxAmt = Math.max(...months.map(m => m.amount), 1);
+  const barsEl = document.getElementById('revBars');
+  if (barsEl) {
+    barsEl.innerHTML = months.map(m => {
+      const heightPct = Math.max(2, Math.round(m.amount / maxAmt * 100));
+      const tip = `${m.month}: ₩${Math.floor(m.amount).toLocaleString()} (${m.count}건${m.refund > 0 ? `, 환불 ₩${Math.floor(m.refund).toLocaleString()}` : ''})`;
+      return `
+        <div class="rev-bar-wrap" title="${tip}">
+          <div class="rev-bar" style="height:${heightPct}%"></div>
+          <div class="rev-bar-label">${m.month}</div>
+        </div>`;
+    }).join('');
+  }
+
+  // 플랜별 매출 분포
+  const planMap = {};
+  payments.forEach(p => {
+    const plan = p.subscriber_plan || 'unknown';
+    if (!planMap[plan]) planMap[plan] = { count: 0, amount: 0, refund: 0 };
+    if (p.status === 'paid' || p.status === 'partial_refunded') {
+      planMap[plan].count  += 1;
+      planMap[plan].amount += (p.amount || 0);
+    }
+    planMap[plan].refund += (p.refund_amount || 0);
+  });
+  const planTbody = document.getElementById('revPlanBreakdown');
+  if (planTbody) {
+    const planLabelMap = {
+      monthly: '1개월', pkg3m: '3개월', pkg6m: '6개월', pkg1y: '1년', yearly: '1년(legacy)',
+    };
+    const rows = Object.entries(planMap).filter(([k]) => planLabelMap[k]).map(([plan, d]) => {
+      const net = d.amount - d.refund;
+      return `
+        <tr>
+          <td><span class="badge ${plan}">${planLabelMap[plan]}</span></td>
+          <td style="text-align:right;font-family:var(--mono)">${d.count}건</td>
+          <td style="text-align:right;font-family:var(--mono)">₩${Math.floor(d.amount).toLocaleString()}</td>
+          <td style="text-align:right;font-family:var(--mono);color:${d.refund > 0 ? 'var(--error)' : 'var(--muted)'}">${d.refund > 0 ? '-' : ''}₩${Math.floor(d.refund).toLocaleString()}</td>
+          <td style="text-align:right;font-family:var(--mono);font-weight:700;color:#5eea91">₩${Math.floor(net).toLocaleString()}</td>
+        </tr>`;
+    }).join('');
+    planTbody.innerHTML = rows || `<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:20px">결제 이력이 없습니다</td></tr>`;
+  }
 }
 
 // ── 결제 이력 ─────────────────────────────────────────────────
+let _allPayments    = [];
+let _payFilter      = '';
+
 async function loadPayments() {
-  // 실제 구독자 중 결제 관련 상태(완료/취소/오류/환불)가 있는 사용자 조회
-  // pending(체험 중)은 결제이력에서 제외
   const tbody = document.getElementById('payBody');
   if (!tbody) return;
 
-  let subs = [];
+  tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;color:var(--muted);padding:30px">결제 이력 로딩 중...</td></tr>';
+
+  let payments = [];
   try {
-    const r = await fetch(API_BASE + '/admin/subscribers');
-    const d = await r.json();
-    subs = (d.data || []).filter(s => {
+    const r = await fetch(API_BASE + '/admin/payments?limit=500');
+    if (r.ok) {
+      const d = await r.json();
+      payments = d.data || [];
+    }
+  } catch (e) {
+    console.warn('[loadPayments] 실패:', e);
+  }
+
+  // 폴백: payments 테이블 비어있으면 subscribers 베이스로 추정
+  if (payments.length === 0) {
+    const subs = (STATE.subscribers || []).filter(s => {
       const ps = s.payment_status;
-      // pending(체험 중)은 결제 발생 전 → 결제이력에서 제외
-      // null/undefined도 제외 (마이그레이션 전 데이터)
       return ps && ps !== 'pending';
     });
-  } catch (e) {
-    // API 실패 시 mock 폴백
-    subs = (MOCK.subscribers || []).filter(s => s.plan !== 'free').slice(0,8).map((s,i)=>({
-      name: s.name, phone: s.phone, plan: s.plan,
-      payment_status: 'completed',
-      created_at: new Date(Date.now()-i*86400*1000).toISOString(),
+    const PLAN_AMOUNT = { monthly: 9900, pkg3m: 14900, pkg6m: 24900, pkg1y: 41900, yearly: 79000 };
+    payments = subs.map(s => ({
+      id: 'fb_' + (s.id || ''),
+      paid_at: s.trial_end_date || s.created_at,
+      created_at: s.created_at,
+      subscriber_id: s.id,
+      subscriber_name: s.name,
+      subscriber_phone: s.phone,
+      subscriber_plan: s.plan,
+      amount: PLAN_AMOUNT[s.plan] || 0,
+      refund_amount: 0,
+      status: s.payment_status === 'completed' ? 'paid' : (s.payment_status || 'paid'),
+      pg_provider: '—',
+      merchant_uid: 'order_' + (s.id || '').slice(-8),
+      _isFallback: true,
     }));
   }
 
-  // plan별 금액 (정가 기준)
-  const PLAN_AMOUNTS = {
-    monthly: 9900, pkg3m: 14900, pkg6m: 24900, pkg1y: 41900,
-    yearly: 79000,  // legacy
-    free: 0,
-  };
+  _allPayments = payments;
+  renderPayments();
+}
 
-  if (subs.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:40px;color:var(--muted)">결제 이력이 없습니다.</td></tr>';
+function filterPayments(status) {
+  _payFilter = status;
+  document.querySelectorAll('[data-pay-status]').forEach(el => {
+    el.classList.toggle('active', (el.getAttribute('data-pay-status') || '') === status);
+  });
+  renderPayments();
+}
+
+function renderPayments() {
+  const tbody = document.getElementById('payBody');
+  if (!tbody) return;
+
+  const filtered = _payFilter
+    ? _allPayments.filter(p => p.status === _payFilter)
+    : _allPayments;
+
+  document.getElementById('payCountLabel').textContent = `${filtered.length}건`;
+
+  if (filtered.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="9"><div class="empty"><span class="empty-ico">💳</span>${_payFilter ? '해당 상태의 결제 이력이 없습니다' : '결제 이력이 없습니다'}</div></td></tr>`;
     return;
   }
 
   // 최신 순 정렬
-  subs.sort((a, b) => {
-    const da = a.updated_at || a.created_at || '';
-    const db = b.updated_at || b.created_at || '';
+  const sorted = [...filtered].sort((a, b) => {
+    const da = a.paid_at || a.created_at || '';
+    const db = b.paid_at || b.created_at || '';
     return db.localeCompare(da);
   });
 
-  tbody.innerHTML = subs.map(s => {
-    const amount = PLAN_AMOUNTS[s.plan] || 0;
-    const dateStr = (s.updated_at || s.created_at || '').slice(0, 19).replace('T', ' ');
-    const orderId = 'order_' + (s.id || '').slice(-8);
+  // status 라벨 매핑
+  const statusBadge = (s) => {
+    const map = {
+      paid:             { cls: 'pay-badge-paid',     txt: '✓ 결제완료' },
+      refunded:         { cls: 'pay-badge-refunded', txt: '↩ 환불완료' },
+      partial_refunded: { cls: 'pay-badge-partial',  txt: '↩ 부분환불' },
+      failed:           { cls: 'pay-badge-failed',   txt: '✗ 실패' },
+      cancelled:        { cls: 'pay-badge-failed',   txt: '✗ 취소' },
+      pending:          { cls: 'pay-badge-pending',  txt: '⏳ 대기' },
+    };
+    const m = map[s] || { cls: 'pay-badge-pending', txt: s };
+    return `<span class="pay-badge ${m.cls}">${m.txt}</span>`;
+  };
+
+  tbody.innerHTML = sorted.map(p => {
+    const dt = p.paid_at || p.created_at || '';
+    const dateStr = dt.slice(0, 19).replace('T', ' ');
+    const planTxt = planLabel ? planLabel(p.subscriber_plan) : (p.subscriber_plan || '—');
+    const orderShort = (p.merchant_uid || '').length > 16
+      ? p.merchant_uid.slice(0, 12) + '…'
+      : (p.merchant_uid || '—');
+    const refundCell = (p.refund_amount && p.refund_amount > 0)
+      ? `<span style="color:var(--error)">-₩${(p.refund_amount).toLocaleString()}</span>`
+      : '<span style="color:var(--muted)">—</span>';
+
+    // 환불 가능: paid 상태이고 _isFallback이 아님
+    const canRefund = (p.status === 'paid') && !p._isFallback && p.id;
+    const actionBtn = canRefund
+      ? `<button onclick="showRefund('${p.id}', '${p.subscriber_name || ''}')" style="background:rgba(248,113,113,.08);border:1px solid rgba(248,113,113,.3);color:#f87171;padding:5px 10px;font-size:11px;font-weight:600;border-radius:4px;cursor:pointer">환불</button>`
+      : (p._isFallback ? '<span style="color:var(--muted);font-size:10px">데이터 마이그레이션 필요</span>' : '');
+
     return `
       <tr>
         <td style="font-family:var(--mono);font-size:11px">${dateStr}</td>
-        <td><strong>${s.name || '—'}</strong></td>
-        <td><span class="badge ${s.plan}">${planLabel(s.plan)}</span></td>
-        <td style="font-family:var(--mono)">₩${amount.toLocaleString()}</td>
-        <td>${paymentStatusLabel(s.payment_status)}</td>
-        <td style="font-family:var(--mono);font-size:10px;color:var(--muted)">${orderId}</td>
+        <td><strong>${p.subscriber_name || '—'}</strong>${p.subscriber_phone ? `<br><span style="font-size:10px;color:var(--muted)">${p.subscriber_phone}</span>` : ''}</td>
+        <td><span class="badge ${p.subscriber_plan || ''}">${planTxt}</span></td>
+        <td style="text-align:right;font-family:var(--mono)">₩${(p.amount || 0).toLocaleString()}</td>
+        <td style="text-align:right;font-family:var(--mono)">${refundCell}</td>
+        <td>${statusBadge(p.status)}</td>
+        <td style="font-size:10px;color:var(--muted)">${p.pg_provider || '—'}</td>
+        <td style="font-family:var(--mono);font-size:10px;color:var(--muted)" title="${p.merchant_uid || ''}">${orderShort}</td>
+        <td style="text-align:center">${actionBtn}</td>
       </tr>`;
   }).join('');
+}
+
+// ── 환불 모달 ─────────────────────────────────────────────────
+let _currentRefundPayment = null;
+
+async function showRefund(paymentId, subscriberName) {
+  // 모달 열기
+  const overlay = document.getElementById('refundOverlay');
+  if (!overlay) return;
+  overlay.classList.add('open');
+  document.getElementById('refundLoading').style.display = 'block';
+  document.getElementById('refundContent').style.display = 'none';
+
+  // payment 조회 → subscriber_id 얻기
+  const payment = _allPayments.find(p => p.id === paymentId);
+  if (!payment) {
+    showToast('결제 정보를 찾을 수 없습니다', 'ng');
+    closeRefundModal();
+    return;
+  }
+
+  _currentRefundPayment = payment;
+
+  // 일할 환불액 계산 API
+  try {
+    const r = await fetch(API_BASE + '/api/payment/calculate-refund/' + payment.subscriber_id);
+    if (!r.ok) throw new Error('calculate failed');
+    const d = await r.json();
+    if (!d.success) throw new Error(d.message || 'calculate failed');
+
+    // 모달에 표시
+    document.getElementById('refundSubInfo').innerHTML = `
+      ${subscriberName || d.subscriber_name || '—'}
+      <span style="font-size:11px;color:var(--muted);font-weight:400;margin-left:6px">
+        (${planLabel ? planLabel(d.plan) : d.plan})
+      </span>`;
+    document.getElementById('refundPaidAmount').textContent  = `₩${(d.paid_amount || 0).toLocaleString()}`;
+    document.getElementById('refundTotalDays').textContent   = `${d.total_send_days}일`;
+    document.getElementById('refundSentDays').textContent    = `${d.sent_days}일`;
+    document.getElementById('refundRemainingDays').textContent = `${d.remaining_days}일`;
+    document.getElementById('refundCalcAmount').textContent  = `₩${(d.refund_amount || 0).toLocaleString()}`;
+    document.getElementById('refundAmountInput').value       = d.refund_amount || 0;
+    document.getElementById('refundAmountInput').dataset.suggested = d.refund_amount || 0;
+    document.getElementById('refundReasonInput').value       = '';
+
+    document.getElementById('refundLoading').style.display = 'none';
+    document.getElementById('refundContent').style.display = 'block';
+  } catch (e) {
+    showToast('환불액 계산 실패: ' + e.message, 'ng');
+    closeRefundModal();
+  }
+}
+
+function closeRefundModal() {
+  const overlay = document.getElementById('refundOverlay');
+  if (overlay) overlay.classList.remove('open');
+  _currentRefundPayment = null;
+}
+
+// ESC 키로 환불 모달 닫기 (한 번만 등록)
+if (!window._refundEscRegistered) {
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      const overlay = document.getElementById('refundOverlay');
+      if (overlay && overlay.classList.contains('open')) {
+        closeRefundModal();
+      }
+    }
+  });
+  window._refundEscRegistered = true;
+}
+
+function resetRefundAmount() {
+  const inp = document.getElementById('refundAmountInput');
+  if (inp && inp.dataset.suggested) {
+    inp.value = inp.dataset.suggested;
+  }
+}
+
+async function confirmRefund() {
+  if (!_currentRefundPayment) return;
+  const amount = parseInt(document.getElementById('refundAmountInput').value, 10);
+  const reason = document.getElementById('refundReasonInput').value.trim();
+
+  if (!amount || amount <= 0) {
+    showToast('환불 금액을 입력해주세요', 'ng');
+    return;
+  }
+  if (!reason) {
+    showToast('환불 사유를 입력해주세요', 'ng');
+    return;
+  }
+  if (!confirm(`₩${amount.toLocaleString()}을 환불 처리합니다. 계속하시겠습니까?\n\n사유: ${reason}`)) return;
+
+  // 로딩 표시
+  const btn = document.getElementById('refundConfirmBtn');
+  document.getElementById('refundConfirmTxt').style.display  = 'none';
+  document.getElementById('refundConfirmSpin').style.display = 'inline-block';
+  btn.disabled = true;
+
+  try {
+    const r = await fetch(API_BASE + '/api/payment/refund/' + _currentRefundPayment.id, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ amount, reason, requester: 'admin' }),
+    });
+    const d = await r.json();
+    if (d.success) {
+      showToast(`✓ 환불 완료: ₩${(d.refund_amount || amount).toLocaleString()}`, 'ok');
+      closeRefundModal();
+      // 결제 목록 + 매출 새로고침
+      await loadPayments();
+      await loadRevenue();
+      // 구독자 목록도 새로고침 (전액 환불 시 status=cancelled 반영)
+      if (typeof loadSubscribers === 'function') loadSubscribers({silent: true});
+    } else {
+      showToast(d.message || '환불 처리 실패', 'ng');
+    }
+  } catch (e) {
+    showToast('환불 처리 중 오류 발생: ' + e.message, 'ng');
+  } finally {
+    document.getElementById('refundConfirmTxt').style.display  = 'inline';
+    document.getElementById('refundConfirmSpin').style.display = 'none';
+    btn.disabled = false;
+  }
 }
 
 // ── 설정 ─────────────────────────────────────────────────────
