@@ -754,7 +754,7 @@ body.light-mode .filter-pill.active { color:#fff; }
 <!-- SIDEBAR -->
 <aside class="sidebar">
   <div class="sb-logo">1DAYECO<small>Admin Dashboard</small>
-    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v64</span>
+    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v65</span>
   </div>
   <nav class="sb-nav">
     <div class="sb-group">운영</div>
@@ -989,12 +989,12 @@ body.light-mode .filter-pill.active { color:#fff; }
       <div class="panel-body" id="subTableWrap">
         <table id="subTable" style="table-layout:fixed;min-width:100%">
           <thead><tr>
-            <th style="width:36px;min-width:36px;position:relative"><input type="checkbox" id="checkAll" onclick="toggleCheckAll(this)"
+            <th style="width:36px;min-width:36px;position:relative;text-align:center"><input type="checkbox" id="checkAll" onclick="toggleCheckAll(this)"
               style="accent-color:var(--gold);cursor:pointer;width:14px;height:14px"></th>
-            <th style="white-space:nowrap;width:130px;min-width:80px;position:relative" class="resizable-col">이름<span class="col-resizer"></span></th>
-            <th style="white-space:nowrap;width:120px;min-width:80px;position:relative" class="resizable-col">전화번호<span class="col-resizer"></span></th>
+            <th style="text-align:center;white-space:nowrap;width:130px;min-width:80px;position:relative" class="resizable-col">이름<span class="col-resizer"></span></th>
+            <th style="text-align:center;white-space:nowrap;width:120px;min-width:80px;position:relative" class="resizable-col">전화번호<span class="col-resizer"></span></th>
             <th style="text-align:center;white-space:nowrap;width:60px;min-width:50px;position:relative" class="resizable-col">플랜<span class="col-resizer"></span></th>
-            <th style="text-align:right;white-space:nowrap;width:75px;min-width:50px;position:relative" class="resizable-col">금액<span class="col-resizer"></span></th>
+            <th style="text-align:center;white-space:nowrap;width:75px;min-width:50px;position:relative" class="resizable-col">금액<span class="col-resizer"></span></th>
             <th style="text-align:center;white-space:nowrap;width:80px;min-width:60px;position:relative" class="resizable-col">상태<span class="col-resizer"></span></th>
             <th style="text-align:center;white-space:nowrap;width:80px;min-width:60px;position:relative" class="resizable-col">결제<span class="col-resizer"></span></th>
             <th style="text-align:center;white-space:nowrap;width:65px;min-width:50px;position:relative" class="resizable-col">카톡<span class="col-resizer"></span></th>
@@ -1002,9 +1002,9 @@ body.light-mode .filter-pill.active { color:#fff; }
             <th style="text-align:center;white-space:nowrap;width:90px;min-width:70px;position:relative" class="resizable-col">시작일<span class="col-resizer"></span></th>
             <th style="text-align:center;white-space:nowrap;width:90px;min-width:70px;position:relative" class="resizable-col">체험종료<span class="col-resizer"></span></th>
             <th style="text-align:center;white-space:nowrap;width:90px;min-width:70px;position:relative" class="resizable-col">구독종료<span class="col-resizer"></span></th>
-            <th style="width:90px;min-width:60px;white-space:nowrap;position:relative" class="resizable-col">이메일<span class="col-resizer"></span></th>
-            <th style="width:90px;min-width:60px;white-space:nowrap;position:relative" class="resizable-col">메모<span class="col-resizer"></span></th>
-            <th style="width:120px;text-align:center;white-space:nowrap;position:relative">작업</th>
+            <th style="text-align:center;white-space:nowrap;width:90px;min-width:60px;position:relative" class="resizable-col">이메일<span class="col-resizer"></span></th>
+            <th style="text-align:center;white-space:nowrap;width:90px;min-width:60px;position:relative" class="resizable-col">메모<span class="col-resizer"></span></th>
+            <th style="text-align:center;white-space:nowrap;width:120px;position:relative">작업</th>
           </tr></thead>
           <tbody id="subTableBody"><tr><td colspan="14"><div class="empty"><span class="empty-ico">👥</span>구독자가 없습니다</div></td></tr></tbody>
         </table>
@@ -1921,9 +1921,9 @@ body.light-mode .filter-pill.active { color:#fff; }
         </div>
         <!-- 가격: 월정액 -->
         <div style="border:1px solid var(--b);border-radius:8px;padding:12px;background:rgba(255,255,255,.01)">
-          <div style="font-size:11px;color:var(--gold);font-weight:700;margin-bottom:8px;letter-spacing:.3px">🔄 월 정액 (자동 결제)</div>
+          <div style="font-size:11px;color:var(--gold);font-weight:700;margin-bottom:8px;letter-spacing:.3px">🔄 월정액 (자동 결제)</div>
           <div>
-            <label style="font-size:10px;color:var(--muted);display:block;margin-bottom:3px">월 정액 가격 (원/월)</label>
+            <label style="font-size:10px;color:var(--muted);display:block;margin-bottom:3px">월정액 가격 (원/월)</label>
             <input type="number" id="catInputMonthly" min="0" step="100" placeholder="9900" style="width:100%;background:var(--s3);border:1px solid var(--b);border-radius:6px;padding:9px 12px;font-size:13px;color:var(--text);font-family:var(--mono);outline:none;text-align:right">
           </div>
         </div>
@@ -2241,7 +2241,7 @@ body.light-mode .filter-pill.active { color:#fff; }
         <div><label style="font-size:10px;color:var(--muted);letter-spacing:.5px;display:block;margin-bottom:4px">구독 플랜 *</label>
           <select id="addSubPlan" onchange="updateAddSubDates()"
             style="width:100%;background:var(--s3);border:1.5px solid var(--b);border-radius:7px;padding:9px 10px;font-size:13px;color:var(--text);font-family:var(--sans);outline:none">
-            <option value="monthly">월 정액 (30일)</option>
+            <option value="monthly">월정액 (30일)</option>
             <option value="pkg3m">3개월 일시불 (90일)</option>
             <option value="pkg6m" selected>6개월 일시불 (180일)</option>
             <option value="pkg1y">1년 일시불 (365일)</option>
@@ -2321,7 +2321,7 @@ body.light-mode .filter-pill.active { color:#fff; }
         <div>
           <label style="font-size:10px;color:var(--muted);letter-spacing:.5px;display:block;margin-bottom:4px">구독 플랜</label>
           <select id="sdInputPlan" style="width:100%;background:var(--s3);border:1.5px solid var(--b);border-radius:7px;padding:9px 12px;font-size:13px;color:var(--text);font-family:var(--sans);outline:none">
-            <option value="monthly">월 정액</option>
+            <option value="monthly">월정액</option>
             <option value="pkg3m">3개월 일시불</option>
             <option value="pkg6m">6개월 일시불</option>
             <option value="pkg1y">1년 일시불</option>
@@ -2705,7 +2705,7 @@ function showDeployInfo() {
 // 공통 헬퍼 (plan 라벨, payment_status 라벨 등) ────────────
 // ════════════════════════════════════════════════════════════
 const PLAN_LABELS = {
-  monthly: '월 정액',
+  monthly: '월정액',
   pkg3m:   '3개월',
   pkg6m:   '6개월',
   pkg1y:   '1년',
