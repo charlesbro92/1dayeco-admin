@@ -754,7 +754,7 @@ body.light-mode .filter-pill.active { color:#fff; }
 <!-- SIDEBAR -->
 <aside class="sidebar">
   <div class="sb-logo">1DAYECO<small>Admin Dashboard</small>
-    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v88</span>
+    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v89</span>
   </div>
   <nav class="sb-nav">
     <div class="sb-group">운영</div>
@@ -1922,10 +1922,18 @@ body.light-mode .filter-pill.active { color:#fff; }
             <input type="text" id="catInputName" placeholder="예: 주식, 의학" style="width:100%;background:var(--s3);border:1px solid var(--b);border-radius:6px;padding:9px 12px;font-size:13px;color:var(--text);font-family:var(--sans);outline:none">
           </div>
         </div>
-        <!-- 부제목 -->
+        <!-- 부제목 (다중) - 추가/삭제 가능 -->
         <div style="margin-top:10px">
-          <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:4px">부제목 (제목 아래 한 줄 — 카테고리 컨셉)</label>
-          <input type="text" id="catInputSubtitle" placeholder="예: 일상 회화 표현 / 심슨과 영어공부" maxlength="40" style="width:100%;background:var(--s3);border:1px solid var(--b);border-radius:6px;padding:9px 12px;font-size:13px;color:var(--text);font-family:var(--sans);outline:none">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+            <label style="font-size:11px;color:var(--muted)">부제목 — 카테고리에 귀속되는 컨텐츠 그룹</label>
+            <button type="button" onclick="addSubtopicRow()" style="background:rgba(201,168,76,.1);border:1px solid rgba(201,168,76,.3);color:var(--gold);font-size:11px;padding:4px 10px;border-radius:4px;cursor:pointer;font-weight:700">+ 추가</button>
+          </div>
+          <div id="subtopicListWrap" style="border:1px solid var(--b);border-radius:6px;padding:8px;background:rgba(255,255,255,.01);min-height:60px">
+            <div id="subtopicEmptyHint" style="text-align:center;font-size:11px;color:var(--muted);padding:14px 0">
+              + 추가 버튼을 눌러 부제목을 등록하세요. (예: 심슨과 영어공부, 비즈니스 영어)
+            </div>
+            <div id="subtopicList" style="display:flex;flex-direction:column;gap:6px"></div>
+          </div>
         </div>
         <!-- 설명 -->
         <div>
@@ -8323,6 +8331,123 @@ function populateCategorySelects() {
 }
 
 let CATEGORIES_CACHE = [];   // 캐시 (loadCategoryList에서 채워짐)
+
+// ── 부제목 관리 (카테고리 모달 내부) ───────────────
+// 모달 내부에서 임시로 들고 있는 부제목 리스트
+//   item: { id?, name, display_order, _isNew?, _toDelete? }
+let _modalSubtopics = [];
+let _modalSubtopicsDeletedIds = [];
+
+function _renderSubtopicList() {
+  const wrap = document.getElementById('subtopicList');
+  const hint = document.getElementById('subtopicEmptyHint');
+  if (!wrap) return;
+  // 삭제 표시 안 된 것만 표시
+  const visible = _modalSubtopics.filter(s => !s._toDelete);
+  if (visible.length === 0) {
+    if (hint) hint.style.display = '';
+    wrap.innerHTML = '';
+    return;
+  }
+  if (hint) hint.style.display = 'none';
+  wrap.innerHTML = visible.map((s, idx) => {
+    // 실제 인덱스 (삭제 표시 포함된 원본에서)
+    const realIdx = _modalSubtopics.indexOf(s);
+    return `
+      <div style="display:flex;gap:6px;align-items:center;background:var(--s3);border:1px solid var(--b);border-radius:6px;padding:6px 8px">
+        <span style="color:var(--muted);font-size:11px;font-family:var(--mono);width:18px;text-align:center">${idx+1}</span>
+        <input type="text" value="${(s.name || '').replace(/"/g, '&quot;')}"
+          oninput="_updateSubtopicName(${realIdx}, this.value)"
+          placeholder="부제목 이름"
+          style="flex:1;background:transparent;border:none;color:var(--text);font-size:13px;outline:none;padding:4px 0">
+        <button type="button" onclick="_removeSubtopicRow(${realIdx})"
+          title="삭제"
+          style="background:transparent;border:none;color:var(--muted);cursor:pointer;font-size:14px;padding:2px 6px;line-height:1"
+          onmouseover="this.style.color='#ff7676'" onmouseout="this.style.color='var(--muted)'">✕</button>
+      </div>`;
+  }).join('');
+}
+
+function addSubtopicRow() {
+  _modalSubtopics.push({ name: '', display_order: (_modalSubtopics.length + 1) * 10, _isNew: true });
+  _renderSubtopicList();
+  // 새로 추가한 input에 포커스
+  setTimeout(() => {
+    const wrap = document.getElementById('subtopicList');
+    const inputs = wrap.querySelectorAll('input');
+    if (inputs.length) inputs[inputs.length - 1].focus();
+  }, 30);
+}
+
+function _updateSubtopicName(idx, value) {
+  if (_modalSubtopics[idx]) {
+    _modalSubtopics[idx].name = value;
+  }
+}
+
+function _removeSubtopicRow(idx) {
+  const item = _modalSubtopics[idx];
+  if (!item) return;
+  if (item.id) {
+    // 기존 항목 → 삭제 마킹 (저장 시 서버에서 삭제)
+    item._toDelete = true;
+    _modalSubtopicsDeletedIds.push(item.id);
+  } else {
+    // 신규 항목 → 그냥 배열에서 제거
+    _modalSubtopics.splice(idx, 1);
+  }
+  _renderSubtopicList();
+}
+
+async function _loadSubtopicsForCategory(catId) {
+  // 카테고리 수정 시: 해당 카테고리의 기존 부제목 로드
+  _modalSubtopics = [];
+  _modalSubtopicsDeletedIds = [];
+  if (!catId) {
+    _renderSubtopicList();
+    return;
+  }
+  try {
+    const res = await fetch(API_BASE + '/admin/subtopics?category_id=' + encodeURIComponent(catId));
+    const data = await res.json();
+    if (data && data.success && Array.isArray(data.data)) {
+      _modalSubtopics = data.data.map(s => ({
+        id: s.id,
+        name: s.name,
+        display_order: s.display_order || 0,
+      }));
+    }
+  } catch (e) {
+    console.warn('[subtopics] 로드 실패:', e);
+  }
+  _renderSubtopicList();
+}
+
+async function _saveSubtopicsForCategory(catId) {
+  // 카테고리 저장 후: 부제목 일괄 처리
+  if (!catId) return;
+  // 빈 이름 항목은 제외
+  const items = _modalSubtopics
+    .filter(s => !s._toDelete && s.name && s.name.trim())
+    .map(s => ({
+      id: s.id,
+      name: s.name.trim(),
+      display_order: s.display_order || 999,
+    }));
+  try {
+    await fetch(API_BASE + '/admin/subtopics/batch-upsert', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        category_id: catId,
+        items: items,
+        deleted_ids: _modalSubtopicsDeletedIds,
+      })
+    });
+  } catch (e) {
+    console.warn('[subtopics] 저장 실패:', e);
+  }
+}
 let catEditMode = 'add';     // 'add' | 'edit'
 let catEditOriginalId = null;
 
@@ -8523,8 +8648,11 @@ function openCategoryAdd() {
   document.getElementById('catInputId').style.opacity = '1';
   document.getElementById('catInputEmoji').value = '📌';
   document.getElementById('catInputName').value  = '';
-  document.getElementById('catInputSubtitle').value = '';
   document.getElementById('catInputDesc').value  = '';
+  // 부제목 리스트 초기화 (신규)
+  _modalSubtopics = [];
+  _modalSubtopicsDeletedIds = [];
+  _renderSubtopicList();
   setCategoryFormPrices(null);  // 디폴트 가격으로
   document.getElementById('catInputOrder').value   = String((CATEGORIES_CACHE.length + 1) * 10);
   document.getElementById('catInputActive').checked = true;
@@ -8552,8 +8680,9 @@ function openCategoryEdit(catId) {
   document.getElementById('catInputId').style.opacity = '0.5';
   document.getElementById('catInputEmoji').value = cat.emoji || '📌';
   document.getElementById('catInputName').value  = cat.name || '';
-  document.getElementById('catInputSubtitle').value = cat.subtitle || '';
   document.getElementById('catInputDesc').value  = cat.description || '';
+  // 부제목 리스트 로드 (해당 카테고리)
+  _loadSubtopicsForCategory(cat.id);
   setCategoryFormPrices(cat);  // 현재 가격 채움
   document.getElementById('catInputOrder').value   = String(cat.display_order || 0);
   document.getElementById('catInputActive').checked = !!cat.active;
@@ -8597,7 +8726,6 @@ async function saveCategoryEdit() {
     const id      = document.getElementById('catInputId').value.trim().toLowerCase();
     const name    = document.getElementById('catInputName').value.trim();
     const emoji   = document.getElementById('catInputEmoji').value.trim() || '📌';
-    const subtitle = document.getElementById('catInputSubtitle').value.trim();
     const desc    = document.getElementById('catInputDesc').value.trim();
     const monthly = parseInt(document.getElementById('catInputMonthly').value || '0', 10);
     const order   = parseInt(document.getElementById('catInputOrder').value || '0', 10);
@@ -8637,7 +8765,7 @@ async function saveCategoryEdit() {
     }
 
     const payload = {
-      name, emoji, subtitle, description: desc,
+      name, emoji, description: desc,
       monthly_price:    monthly,
       monthly_original: monthly,  // 월정액은 정가=가격 (할인 없음)
       pkg3m_original:   pkg3mOriginal,
@@ -8673,6 +8801,9 @@ async function saveCategoryEdit() {
       showToast(result.message || '저장 실패', 'ng');
       return; // 모달 안 닫고 사용자가 다시 시도 가능
     }
+
+    // 카테고리 저장 성공 → 부제목 일괄 저장
+    await _saveSubtopicsForCategory(id);
 
     showToast(catEditMode === 'add' ? '카테고리가 추가되었습니다' : '카테고리가 수정되었습니다', 'ok');
     closeCategoryEdit();
