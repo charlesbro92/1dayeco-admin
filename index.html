@@ -754,7 +754,7 @@ body.light-mode .filter-pill.active { color:#fff; }
 <!-- SIDEBAR -->
 <aside class="sidebar">
   <div class="sb-logo">1DAYECO<small>Admin Dashboard</small>
-    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v77</span>
+    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v78</span>
   </div>
   <nav class="sb-nav">
     <div class="sb-group">운영</div>
@@ -4144,14 +4144,18 @@ async function executeSendTest() {
     const res = await apiPost('/admin/send-daily-content', {
       test_phone: cleanPhone,
     });
-    if (res && res.success !== false) {
+    if (res && res.sent > 0) {
       const ch = res.results?.[0]?.channel || 'sms';
-      const chLabel = ch === 'alimtalk' ? '알림톡' : 'SMS';
+      const chLabel = ch === 'alimtalk' ? '알림톡' : (ch === 'friendtalk' ? '친구톡' : 'SMS');
       showToast(`테스트 발송 완료 (${chLabel}) ✅`, 'ok');
       loadTodaySendStats();
       loadSendLogs();
     } else {
-      showToast('테스트 실패: ' + (res?.message || res?.error || ''), 'ng');
+      const errMsg = res?.results?.[0]?.error || res?.error || '';
+      const errLabel = errMsg === 'friendtalk_blocked_hours'
+        ? '친구톡 발송 불가 시간대 (오후 9시~오전 8시)'
+        : errMsg || '발송 실패';
+      showToast('테스트 실패: ' + errLabel, 'ng');
     }
   } catch (e) {
     showToast('테스트 오류: ' + e.message, 'ng');
