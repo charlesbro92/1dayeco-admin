@@ -754,7 +754,7 @@ body.light-mode .filter-pill.active { color:#fff; }
 <!-- SIDEBAR -->
 <aside class="sidebar">
   <div class="sb-logo">1DAYECO<small>Admin Dashboard</small>
-    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v61</span>
+    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v62</span>
   </div>
   <nav class="sb-nav">
     <div class="sb-group">운영</div>
@@ -3435,7 +3435,9 @@ function renderSubscribersTable() {
   // STATE에서 필터 + like 검색 적용
   const filtered = STATE.subscribers.filter(s => {
     let matchStatus;
-    if (window._scFilter === 'refund_error') {
+    if (window._scFilter === 'trial_all') {
+      matchStatus = ['trial','pending_charge','pending_payment'].includes(s.status);
+    } else if (window._scFilter === 'refund_error') {
       matchStatus = s.status === 'payment_failed' || s.payment_status === 'refunded';
     } else {
       matchStatus = !statusFilter || s.status === statusFilter;
@@ -3464,12 +3466,18 @@ function renderSubscribersTable() {
       const el = document.getElementById(id);
       if(el) el.textContent = val;
     };
+    // 집계 정의:
+    // 구독  = active (row 기준, 동일인도 카테고리/기간 다르면 별도 집계)
+    // 체험  = trial + pending_charge + pending_payment (카드등록 대기 포함)
+    // 만료  = expired (정상 종료)
+    // 취소  = cancelled (체험 중 셀프 취소)
+    // 환불/오류 = payment_failed (결제 실패) + payment_status=refunded (환불 처리)
     sc('sc-total',     allSubs.length);
     sc('sc-active',    allSubs.filter(s=>s.status==='active').length);
-    sc('sc-trial',     allSubs.filter(s=>s.status==='trial').length);
+    sc('sc-trial',     allSubs.filter(s=>['trial','pending_charge','pending_payment'].includes(s.status)).length);
     sc('sc-expired',   allSubs.filter(s=>s.status==='expired').length);
     sc('sc-cancelled', allSubs.filter(s=>s.status==='cancelled').length);
-    sc('sc-others',    allSubs.filter(s=>['payment_failed'].includes(s.status)||s.payment_status==='refunded').length);
+    sc('sc-others',    allSubs.filter(s=>s.status==='payment_failed'||s.payment_status==='refunded').length);
   }
 
   const tbody = document.getElementById('subTableBody');
@@ -3623,8 +3631,15 @@ function renderSubscribersRows(filtered) {
            <button onclick="restoreSub('${s.id}','${s.name}','active')"
              style="background:rgba(74,222,128,.12);border:1px solid rgba(74,222,128,.3);color:var(--green);padding:4px 8px;border-radius:4px;font-size:10px;cursor:pointer;font-family:var(--sans);font-weight:700;white-space:nowrap">활성 복구</button>
          </div>`
+      : s.status === 'active'
+      ? `<div style="display:flex;gap:4px;align-items:center;flex-wrap:nowrap">
+           <button onclick="event.stopPropagation();cancelSub('${s.id}','${s.name}')"
+             style="background:none;border:1px solid var(--b);color:var(--muted);padding:4px 10px;border-radius:4px;font-size:11px;cursor:pointer;font-family:var(--sans);white-space:nowrap">해지</button>
+           <button onclick="event.stopPropagation();confirmRefundRequest('${s.id}','${s.name}')"
+             style="background:rgba(248,113,113,.08);border:1px solid rgba(248,113,113,.3);color:#f87171;padding:4px 8px;border-radius:4px;font-size:11px;cursor:pointer;font-family:var(--sans);font-weight:700;white-space:nowrap">환불</button>
+         </div>`
       : `<div style="display:flex;gap:4px;align-items:center;flex-wrap:nowrap">
-           <button onclick="cancelSub('${s.id}','${s.name}')"
+           <button onclick="event.stopPropagation();cancelSub('${s.id}','${s.name}')"
              style="background:none;border:1px solid var(--b);color:var(--muted);padding:4px 10px;border-radius:4px;font-size:11px;cursor:pointer;font-family:var(--sans);white-space:nowrap">${s.status==='trial'?'체험취소':'해지'}</button>
          </div>`;
 
@@ -9567,17 +9582,17 @@ async function retryAllFailed(dateStr) {
 
 // ── 구독자 카드 필터 버튼 ────────────────────────────────────
 function setSubFilter(val) {
-  // subFilter select 값 변경
   const sel = document.getElementById('subFilter');
   if (sel) {
-    // refund_error는 커스텀 → expired/payment_failed 합산 처리
-    sel.value = ['active','trial','cancelled','expired'].includes(val) ? val : '';
-    // refund_error 특수 처리: 검색창으로 필터
-    if (val === 'refund_error') {
+    if (val === 'trial') {
+      // 체험 = trial + pending_charge + pending_payment
       sel.value = '';
-      // STATE에서 직접 필터링
+      window._scFilter = 'trial_all';
+    } else if (val === 'refund_error') {
+      sel.value = '';
       window._scFilter = 'refund_error';
     } else {
+      sel.value = ['active','cancelled','expired'].includes(val) ? val : '';
       window._scFilter = null;
     }
   }
@@ -9588,6 +9603,32 @@ function setSubFilter(val) {
   const btn = document.getElementById(btnId);
   if (btn) btn.classList.add('active-filter');
   loadSubscribers();
+}
+
+
+// ── 환불 요청 경고창 ──────────────────────────────────────────
+function confirmRefundRequest(subscriberId, subscriberName) {
+  const confirmed = confirm(
+    '⚠️ 환불 요청 안내\n\n' +
+    subscriberName + '님의 환불을 요청하시겠습니까?\n\n' +
+    '• 요청 즉시 컨텐츠 발송이 중지됩니다\n' +
+    '• 빠른 시일 내 고객센터에서 환불을 처리해드립니다\n' +
+    '• 일할 계산 후 잔여 금액이 환불됩니다\n\n' +
+    '계속하시겠습니까?'
+  );
+  if (!confirmed) return;
+
+  // 발송 즉시 중지: status → payment_failed 임시 처리
+  apiPost('/api/admin/refund-request', { subscriber_id: subscriberId })
+    .then(res => {
+      if (res && res.success) {
+        showToast('환불 요청 완료. 컨텐츠 발송이 중지되었습니다.', 'ok');
+        loadSubscribers();
+      } else {
+        showToast(res?.message || '환불 요청 처리 중 오류', 'ng');
+      }
+    })
+    .catch(() => showToast('서버 오류. 다시 시도해주세요.', 'ng'));
 }
 
 </script>
