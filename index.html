@@ -216,24 +216,24 @@ body {
 .kpi-grid-5 { grid-template-columns:repeat(5,1fr); }
 .kpi {
   background:var(--s2); border:1px solid var(--b); border-radius:12px;
-  padding:20px; position:relative; overflow:hidden; transition:border-color .3s;
-  display:flex; flex-direction:column; gap:8px;
+  padding:16px 18px; position:relative; transition:border-color .3s;
+  display:flex; flex-direction:column; gap:6px;
 }
 .kpi:hover { border-color:rgba(201,168,76,.3); }
-.kpi-row { display:flex; justify-content:space-between; align-items:flex-start; gap:8px; flex-wrap:wrap; }
-.kpi-label { font-size:11px; color:var(--muted); letter-spacing:.5px; text-transform:uppercase; text-align:left; display:flex; align-items:center; gap:6px; margin:0; flex-shrink:0; }
-.kpi-value { font-family:var(--mono); font-size:13px; font-weight:600; line-height:1.3; text-align:right; word-break:break-all; }
+.kpi-row { display:flex; flex-direction:column; gap:4px; }
+.kpi-label { font-size:11px; color:var(--muted); letter-spacing:.5px; text-transform:uppercase; display:flex; align-items:center; gap:6px; }
+.kpi-value { font-family:var(--mono); font-size:13px; font-weight:600; line-height:1.2; text-align:left; white-space:nowrap; }
 .kpi-value.gold { color:var(--gold); }
 .kpi-value.green { color:var(--green); }
 .kpi-value.blue { color:var(--blue); }
 .kpi-value.amber { color:var(--amber); }
 .kpi-value.purple { color:#8b5cf6; }
-.kpi-value .kpi-num { font-size:20px; font-weight:700; }
+.kpi-value .kpi-num { font-size:22px; font-weight:700; }
 .kpi-value .kpi-unit { font-size:12px; font-weight:500; color:inherit; opacity:.75; margin-left:2px; }
-.kpi-change { font-size:11px; color:var(--muted); text-align:right; margin:0; }
+.kpi-change { font-size:11px; color:var(--muted); text-align:left; margin:0; }
 .kpi-change .up { color:var(--green); }
 .kpi-change .dn { color:var(--red); }
-.kpi-icon { position:static; font-size:14px; opacity:.7; }
+.kpi-icon { font-size:14px; opacity:.7; }
 
 /* ── 2-COL LAYOUT ── */
 .two-col { display:grid; grid-template-columns:1.4fr 1fr; gap:14px; margin-bottom:14px; }
@@ -754,7 +754,7 @@ body.light-mode .filter-pill.active { color:#fff; }
 <!-- SIDEBAR -->
 <aside class="sidebar">
   <div class="sb-logo">1DAYECO<small>Admin Dashboard</small>
-    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v73</span>
+    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v74</span>
   </div>
   <nav class="sb-nav">
     <div class="sb-group">운영</div>
@@ -811,23 +811,34 @@ body.light-mode .filter-pill.active { color:#fff; }
     <div class="kpi-grid kpi-grid-5" id="kpiGrid">
       <!-- 1. 실시간 구독자 (유료+체험) -->
       <div class="kpi">
-        <div class="kpi-row"><div class="kpi-label"><span class="kpi-icon">📡</span>실시간 구독자</div><div class="kpi-value gold skel" style="width:80px;height:32px" id="kpi-total"></div></div>
-        <div class="kpi-change" id="kpi-sub-breakdown" style="display:flex;gap:6px;flex-wrap:wrap;margin-top:4px">
+        <div class="kpi-label"><span class="kpi-icon">📡</span>실시간 구독자</div>
+        <div class="kpi-value gold skel" style="width:80px;height:28px" id="kpi-total"></div>
+        <div class="kpi-change" id="kpi-sub-breakdown" style="display:flex;gap:6px;flex-wrap:wrap">
           <span style="font-size:11px;color:var(--muted)">로딩 중...</span>
         </div>
       </div>
       <!-- 2. 이번달 총 매출 -->
-      <div class="kpi"><div class="kpi-row"><div class="kpi-label"><span class="kpi-icon">💰</span>이번달 매출</div><div class="kpi-value blue skel" style="width:80px;height:32px" id="kpi-rev"></div></div><div class="kpi-change" id="kpi-rev-ch"></div></div>
+      <div class="kpi">
+        <div class="kpi-label"><span class="kpi-icon">💰</span>이번달 매출</div>
+        <div class="kpi-value blue skel" style="width:80px;height:28px" id="kpi-rev"></div>
+        <div class="kpi-change" id="kpi-rev-ch"></div>
+      </div>
       <!-- 3. 이번달 총 환불 -->
-      <div class="kpi"><div class="kpi-row"><div class="kpi-label"><span class="kpi-icon">💸</span>이번달 환불</div><div class="kpi-value purple skel" style="width:80px;height:32px" id="kpi-refund-month"></div></div><div class="kpi-change" id="kpi-refund-month-ch" style="color:var(--muted)"></div></div>
+      <div class="kpi">
+        <div class="kpi-label"><span class="kpi-icon">💸</span>이번달 환불</div>
+        <div class="kpi-value purple skel" style="width:80px;height:28px" id="kpi-refund-month"></div>
+        <div class="kpi-change" id="kpi-refund-month-ch" style="color:var(--muted)"></div>
+      </div>
       <!-- 4. 오늘 발송 -->
-      <div class="kpi"><div class="kpi-row"><div class="kpi-label"><span class="kpi-icon">📨</span>오늘 발송</div><div class="kpi-value amber skel" style="width:80px;height:32px" id="kpi-send"></div></div><div class="kpi-change" id="kpi-send-ch"></div></div>
+      <div class="kpi">
+        <div class="kpi-label"><span class="kpi-icon">📨</span>오늘 발송</div>
+        <div class="kpi-value amber skel" style="width:80px;height:28px" id="kpi-send"></div>
+        <div class="kpi-change" id="kpi-send-ch"></div>
+      </div>
       <!-- 5. AI 비용 -->
       <div class="kpi" onclick="showPage('content')" style="cursor:pointer" title="콘텐츠 페이지로 이동">
-        <div class="kpi-row">
-          <div class="kpi-label"><span class="kpi-icon">🤖</span>AI 비용</div>
-          <div class="kpi-value gold skel" style="width:80px;height:32px" id="kpi-ai-cost">₩0</div>
-        </div>
+        <div class="kpi-label"><span class="kpi-icon">🤖</span>AI 비용</div>
+        <div class="kpi-value gold skel" style="width:80px;height:28px" id="kpi-ai-cost">₩0</div>
         <div class="kpi-change" id="kpi-ai-cost-ch" style="color:var(--muted)">이번 달 0건 · 0 토큰</div>
       </div>
     </div>
