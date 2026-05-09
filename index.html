@@ -754,7 +754,7 @@ body.light-mode .filter-pill.active { color:#fff; }
 <!-- SIDEBAR -->
 <aside class="sidebar">
   <div class="sb-logo">1DAYECO<small>Admin Dashboard</small>
-    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v100</span>
+    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v101</span>
   </div>
   <nav class="sb-nav">
     <div class="sb-group">운영</div>
@@ -3534,22 +3534,18 @@ function renderSubCategoryName(categories) {
   return '<span style="font-size:11px;color:var(--text)">' + name + '</span>';
 }
 
-// 부제목 이름 표시 (subtopic_id 있으면 캐시에서 이름 lookup)
-function renderSubSubtopicName(subtopicId, catId) {
+// 부제목 이름 표시 (백엔드에서 join해서 내려주는 subtopic_name 우선 사용)
+function renderSubSubtopicName(subtopicId, catId, subtopicName) {
   if (!subtopicId) return '<span style="color:var(--muted);font-size:11px">—</span>';
-  const list = _SUBTOPIC_CACHE[catId] || [];
-  const found = list.find(s => Number(s.id) === Number(subtopicId));
-  const name = found ? found.name : '';
+  // 1순위: 백엔드 응답의 subtopic_name (즉시 사용 가능, 깜빡임 없음)
+  let name = subtopicName || '';
+  // 2순위: 캐시에서 lookup (백엔드 누락 시)
   if (!name) {
-    // 캐시 없으면 백그라운드에서 fetch (비동기로 캐시 채우기)
-    if (catId && API_BASE) {
-      _fetchSubtopics(catId, false).then(() => {
-        // 다시 렌더 (이름 채워짐)
-        if (typeof renderSubscribersTable === 'function') {
-          try { renderSubscribersTable(); } catch (_) {}
-        }
-      });
-    }
+    const list = _SUBTOPIC_CACHE[catId] || [];
+    const found = list.find(s => Number(s.id) === Number(subtopicId));
+    if (found) name = found.name;
+  }
+  if (!name) {
     return '<span style="color:var(--muted);font-size:11px">…</span>';
   }
   return '<span style="display:inline-block;background:rgba(201,168,76,.1);border:1px solid rgba(201,168,76,.3);color:var(--gold);font-size:10px;padding:2px 8px;border-radius:10px;letter-spacing:.2px">' + name.replace(/</g,'&lt;') + '</span>';
@@ -3662,6 +3658,7 @@ async function loadSubscribers(opts) {
       memo:           s.memo || null,
       categories:     s.categories || getAllCatIds(),
       subtopic_id:    s.subtopic_id || null,
+      subtopic_name:  s.subtopic_name || '',
       // ── 친구톡 관련 (v22+) ──
       payment_status:        s.payment_status || 'pending',
       kakao_channel_added:   !!s.kakao_channel_added,
@@ -3816,7 +3813,7 @@ function renderSubscribersRows(filtered) {
       <td style="text-align:center">${paymentStatusLabel(s.payment_status)}</td>
       <td style="text-align:center">${renderKakaoChannelCell(s)}</td>
       <td style="text-align:center;white-space:nowrap">${renderSubCategoryName(s.categories)}</td>
-      <td style="text-align:center;white-space:nowrap">${renderSubSubtopicName(s.subtopic_id, (Array.isArray(s.categories) ? s.categories[0] : ''))}</td>
+      <td style="text-align:center;white-space:nowrap">${renderSubSubtopicName(s.subtopic_id, (Array.isArray(s.categories) ? s.categories[0] : ''), s.subtopic_name)}</td>
       <td style="font-family:var(--mono);font-size:11px;color:var(--muted);text-align:center;white-space:nowrap">
         <div style="line-height:1.3">${startDate || '—'}${joinTimeStr ? `<br><span style="font-size:9px;opacity:.6">가입 ${joinTimeStr}</span>` : ''}</div>
       </td>
