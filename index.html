@@ -754,7 +754,7 @@ body.light-mode .filter-pill.active { color:#fff; }
 <!-- SIDEBAR -->
 <aside class="sidebar">
   <div class="sb-logo">1DAYECO<small>Admin Dashboard</small>
-    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v99</span>
+    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v100</span>
   </div>
   <nav class="sb-nav">
     <div class="sb-group">운영</div>
@@ -2394,27 +2394,24 @@ body.light-mode .filter-pill.active { color:#fff; }
           </select>
         </div>
       </div>
-      <!-- 발송시간: 8시 고정 (변경 불가) -->
-      <div>
-        <label style="font-size:10px;color:var(--muted);letter-spacing:.5px;display:block;margin-bottom:4px">발송 시간</label>
-        <div style="background:var(--s3);border:1.5px solid var(--b);border-radius:7px;padding:9px 12px;font-size:12px;color:var(--muted);font-family:var(--sans)">
-          오전 8시 고정 <span style="font-size:10px;opacity:.7">(전체 구독자 공통)</span>
-        </div>
-        <input type="hidden" id="sdInputHour" value="8">
-      </div>
-      <!-- 받아볼 관심사 (1개 선택) + 부제목 -->
+      <!-- 발송시간: 8시 고정 — UI 숨김 (당분간 변경 예정 없음) -->
+      <input type="hidden" id="sdInputHour" value="8">
+      <!-- 받아볼 관심사 (카테고리 드롭다운 1개 + 부제목 드롭다운) -->
       <div>
         <label style="font-size:10px;color:var(--muted);letter-spacing:.5px;display:block;margin-bottom:6px">받아볼 관심사 <span style="font-weight:400;color:var(--gold)">(1개 선택 필수)</span></label>
-        <div id="sdCategories" style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
-          <!-- 동적 렌더링: _renderSdCategoryChips() -->
-          <div style="grid-column:1/-1;text-align:center;padding:14px;color:var(--muted);font-size:11px">카테고리 로드 중...</div>
-        </div>
+        <select id="sdCategorySelect"
+          onchange="_onSdCategorySelectChange(this)"
+          style="width:100%;background:rgba(255,255,255,.04);border:1.5px solid var(--b);border-radius:7px;padding:9px 12px;font-size:13px;color:var(--text);font-family:var(--sans);outline:none">
+          <option value="">— 선택 —</option>
+        </select>
+        <!-- 옛 라디오 칩 영역 (호환용 — 더는 사용 안 함, hidden) -->
+        <div id="sdCategories" style="display:none"></div>
       </div>
-      <div id="sdSubtopicWrap" style="display:none">
+      <div id="sdSubtopicWrap">
         <label style="font-size:10px;color:var(--muted);letter-spacing:.5px;display:block;margin-bottom:6px">컨텐츠 그룹(부제목) <span style="font-weight:400;color:var(--gold)">(필수)</span></label>
         <select id="sdSubtopicSelect"
           style="width:100%;background:rgba(255,255,255,.04);border:1.5px solid var(--b);border-radius:7px;padding:9px 12px;font-size:13px;color:var(--text);font-family:var(--sans);outline:none">
-          <option value="">— 선택 —</option>
+          <option value="">— 카테고리를 먼저 선택해주세요 —</option>
         </select>
       </div>
       <!-- 시작일 / 종료일 -->
@@ -9581,55 +9578,54 @@ function saveSubChanges() {
 // ── 구독자 상세 팝업 ─────────────────────────────────────────
 let sdCurrentId = null;
 
-// 구독자 편집 모달: 카테고리 동적 렌더 (라디오 - 1개만 선택)
+// 구독자 편집 모달: 카테고리 드롭다운 채우기
 function _renderSdCategoryChips(selectedCat) {
-  const wrap = document.getElementById('sdCategories');
-  if (!wrap) return;
+  const sel = document.getElementById('sdCategorySelect');
+  if (!sel) return;
   const cats = (CATEGORIES_CACHE && CATEGORIES_CACHE.length)
     ? CATEGORIES_CACHE.filter(c => (c.visibility || (c.active ? 'active' : 'hidden')) === 'active')
-    : [{id:'economy',name:'경제',emoji:'📊'},{id:'realestate',name:'부동산',emoji:'🏠'},{id:'english',name:'영어',emoji:'🇬🇧'},{id:'trivia',name:'상식',emoji:'🧠'}];
+    : [{id:'economy',name:'경제'},{id:'realestate',name:'부동산'},{id:'english',name:'영어'},{id:'trivia',name:'상식'}];
   if (cats.length === 0) {
-    wrap.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:14px;color:var(--muted);font-size:11px">활성 카테고리가 없습니다</div>';
+    sel.innerHTML = '<option value="">— 활성 카테고리 없음 —</option>';
     return;
   }
-  wrap.innerHTML = cats.map(c => {
-    const isSel = c.id === selectedCat;
-    return `<label class="sd-cat-chip" data-cat="${c.id}"
-      style="display:flex;align-items:center;gap:8px;padding:8px 12px;border:1.5px solid ${isSel ? 'var(--gold)' : 'var(--b)'};border-radius:7px;cursor:pointer;font-size:12px;color:var(--text);background:${isSel ? 'rgba(201,168,76,.08)' : 'rgba(255,255,255,.02)'};transition:all .15s">
-      <input type="radio" name="sdCategoryRadio" value="${c.id}" ${isSel ? 'checked' : ''}
-        onchange="_onSdCategoryChange(this)"
-        style="accent-color:var(--gold);cursor:pointer;width:14px;height:14px;flex-shrink:0">
-      <span>${c.emoji || '📌'} ${c.name || c.id}</span>
-    </label>`;
-  }).join('');
+  sel.innerHTML = '<option value="">— 선택 —</option>'
+    + cats.map(c => {
+        const isSel = c.id === selectedCat;
+        const name = (c.name || c.id).replace(/"/g,'&quot;');
+        return `<option value="${c.id}" ${isSel ? 'selected' : ''}>${name}</option>`;
+      }).join('');
 }
 
+function _onSdCategorySelectChange(selEl) {
+  // 카테고리 변경 시 부제목 재로드 (부제목 영역은 항상 표시 유지)
+  const catId = selEl.value;
+  _renderSdSubtopicSelect(catId, null);
+}
+
+// 옛 라디오 onchange 호환 (다른 곳 호출 대비)
 function _onSdCategoryChange(radio) {
-  // 칩 시각 효과
-  document.querySelectorAll('.sd-cat-chip').forEach(label => {
-    const isSel = label.querySelector('input').checked;
-    label.style.borderColor = isSel ? 'var(--gold)' : 'var(--b)';
-    label.style.background = isSel ? 'rgba(201,168,76,.08)' : 'rgba(255,255,255,.02)';
-  });
-  // 부제목 select 갱신
   _renderSdSubtopicSelect(radio.value, null);
 }
 
-// 구독자 편집 모달: 부제목 select 동적 채움
+// 구독자 편집 모달: 부제목 select 동적 채움 (영역 항상 표시)
 async function _renderSdSubtopicSelect(catId, currentSubtopicId) {
   const wrap = document.getElementById('sdSubtopicWrap');
   const sel  = document.getElementById('sdSubtopicSelect');
   if (!wrap || !sel) return;
+  // 영역은 항상 표시
+  wrap.style.display = '';
   if (!catId) {
-    wrap.style.display = 'none';
+    sel.innerHTML = '<option value="">— 카테고리를 먼저 선택해주세요 —</option>';
+    sel.disabled = true;
     return;
   }
   sel.innerHTML = '<option value="">— 로드 중 —</option>';
-  wrap.style.display = '';
+  sel.disabled = true;
   const list = await _fetchSubtopics(catId, false);
   if (list.length === 0) {
-    sel.innerHTML = '<option value="">— 부제목 없음 —</option>';
-    wrap.style.display = 'none';  // 부제목 없으면 영역 자체 숨김
+    sel.innerHTML = '<option value="">— 등록된 부제목 없음 —</option>';
+    sel.disabled = true;
     return;
   }
   sel.innerHTML = '<option value="">— 선택 —</option>'
@@ -9637,6 +9633,7 @@ async function _renderSdSubtopicSelect(catId, currentSubtopicId) {
         const isSel = currentSubtopicId && Number(s.id) === Number(currentSubtopicId);
         return `<option value="${s.id}" ${isSel ? 'selected' : ''}>${(s.name || '').replace(/"/g,'&quot;')}</option>`;
       }).join('');
+  sel.disabled = false;
 }
 
 function openSubDetail(id) {
@@ -9836,11 +9833,11 @@ async function saveSubDetail() {
   if (btn) { btn.disabled = true; btn.textContent = '저장 중...'; }
 
   try {
-    // 카테고리 수집 (라디오 1개)
-    const radioEl = document.querySelector('input[name="sdCategoryRadio"]:checked');
-    const selectedCat = radioEl ? radioEl.value : '';
+    // 카테고리 수집 (select 1개)
+    const catSelectEl = document.getElementById('sdCategorySelect');
+    const selectedCat = catSelectEl ? (catSelectEl.value || '') : '';
     if (!selectedCat) {
-      showToast('관심사 카테고리 1개를 선택해주세요', 'ng');
+      showToast('관심사 카테고리를 선택해주세요', 'ng');
       if (btn) { btn.disabled = false; btn.textContent = '💾 저장'; }
       return;
     }
