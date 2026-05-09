@@ -722,7 +722,7 @@ body.light-mode .filter-pill.active { color:#fff; }
 <!-- SIDEBAR -->
 <aside class="sidebar">
   <div class="sb-logo">1DAYECO<small>Admin Dashboard</small>
-    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v52</span>
+    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v54</span>
   </div>
   <nav class="sb-nav">
     <div class="sb-group">운영</div>
@@ -777,8 +777,21 @@ body.light-mode .filter-pill.active { color:#fff; }
 
     <!-- KPI -->
     <div class="kpi-grid kpi-grid-5" id="kpiGrid">
-      <div class="kpi"><div class="kpi-row"><div class="kpi-label"><span class="kpi-icon">👥</span>전체 구독자</div><div class="kpi-value gold skel" style="width:80px;height:32px" id="kpi-total"></div></div><div class="kpi-change" id="kpi-total-ch"></div></div>
-      <div class="kpi"><div class="kpi-row"><div class="kpi-label"><span class="kpi-icon">💳</span>유료 구독</div><div class="kpi-value green skel" style="width:80px;height:32px" id="kpi-paid"></div></div><div class="kpi-change" id="kpi-paid-ch"></div></div>
+      <!-- 전체 구독자 (상세 분류 포함) -->
+      <div class="kpi">
+        <div class="kpi-row"><div class="kpi-label"><span class="kpi-icon">👥</span>전체 구독자</div><div class="kpi-value gold skel" style="width:80px;height:32px" id="kpi-total"></div></div>
+        <div class="kpi-change" id="kpi-total-ch"></div>
+        <div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border);display:flex;gap:6px;flex-wrap:wrap" id="kpi-sub-breakdown">
+          <span style="font-size:11px;color:var(--muted)">로딩 중...</span>
+        </div>
+      </div>
+      <!-- 유료 구독 (환불 포함) -->
+      <div class="kpi">
+        <div class="kpi-row"><div class="kpi-label"><span class="kpi-icon">💳</span>유료 구독</div><div class="kpi-value green skel" style="width:80px;height:32px" id="kpi-paid"></div></div>
+        <div class="kpi-change" id="kpi-paid-ch"></div>
+        <div style="margin-top:6px;font-size:11px;color:var(--muted)" id="kpi-paid-refund"></div>
+      </div>
+      <!-- 이번달 매출 -->
       <div class="kpi"><div class="kpi-row"><div class="kpi-label"><span class="kpi-icon">💰</span>이번 달 매출</div><div class="kpi-value blue skel" style="width:80px;height:32px" id="kpi-rev"></div></div><div class="kpi-change" id="kpi-rev-ch"></div></div>
       <div class="kpi"><div class="kpi-row"><div class="kpi-label"><span class="kpi-icon">📨</span>오늘 발송</div><div class="kpi-value amber skel" style="width:80px;height:32px" id="kpi-send"></div></div><div class="kpi-change" id="kpi-send-ch"></div></div>
       <div class="kpi" onclick="showPage('content')" style="cursor:pointer" title="콘텐츠 페이지로 이동">
@@ -2885,45 +2898,90 @@ function getStats() {
 
 // ── KPI 로드 (STATE 기반 실시간) ─────────────────────────────
 function loadKPIs() {
-  const subs    = STATE.subscribers.filter(s => !s.hidden);
-  // 활성 가입자: cancelled/expired 제외 (trial + active 모두 실제 구독자)
-  const livingSubs = subs.filter(s => s.status !== 'cancelled' && s.status !== 'expired');
+  const subs = STATE.subscribers.filter(s => !s.hidden);
+  const now  = Date.now();
 
-  const active  = subs.filter(s => s.status === 'active').length;
-  const trial   = subs.filter(s => s.status === 'trial').length;
+  // ── 구독자 상태별 분류 ─────────────────────────────────
+  const cntTotal     = subs.length;
+  const cntActive    = subs.filter(s => s.status === 'active').length;
+  const cntTrial     = subs.filter(s => s.status === 'trial').length;
+  const cntCancelled = subs.filter(s => s.status === 'cancelled').length;
+  const cntExpired   = subs.filter(s => s.status === 'expired').length;
+  const cntRefunded  = subs.filter(s => s.payment_status === 'refunded').length;
+  const cntFailed    = subs.filter(s => s.status === 'payment_failed').length;
+  const new7d        = subs.filter(s => now - new Date(s.created_at) < 7*86400*1000).length;
 
-  // 유료 플랜 카운트 (모든 유료 플랜 합산: monthly, pkg3m/6m/1y, yearly legacy)
+  // ── KPI: 전체 구독자 ───────────────────────────────────
+  setKPI('kpi-total', cntTotal.toLocaleString() + ' 명', 'gold',
+    `<span class="up">↑ ${new7d}명</span> 최근 7일`);
+
+  // 상태별 분류 배지
+  const breakdownEl = document.getElementById('kpi-sub-breakdown');
+  if (breakdownEl) {
+    const badge = (label, count, color, bg) =>
+      count > 0 ? `<span style="font-size:11px;font-weight:600;padding:2px 7px;border-radius:20px;color:${color};background:${bg}">${label} ${count}명</span>` : '';
+    breakdownEl.innerHTML = [
+      badge('유료', cntActive,    '#10b981', 'rgba(16,185,129,.12)'),
+      badge('체험', cntTrial,     '#f59e0b', 'rgba(245,158,11,.12)'),
+      badge('취소', cntCancelled, '#94a3b8', 'rgba(148,163,184,.12)'),
+      badge('만료', cntExpired,   '#94a3b8', 'rgba(148,163,184,.12)'),
+      badge('환불', cntRefunded,  '#8b5cf6', 'rgba(139,92,246,.12)'),
+      badge('결제오류', cntFailed,'#ef4444', 'rgba(239,68,68,.12)'),
+    ].filter(Boolean).join('') || '<span style="font-size:11px;color:var(--muted)">구독자 없음</span>';
+  }
+
+  // ── KPI: 유료 구독 + 환불 금액 ────────────────────────
   const PAID_PLANS = ['monthly', 'pkg3m', 'pkg6m', 'pkg1y', 'yearly'];
-  const paidLiving = livingSubs.filter(s => PAID_PLANS.includes(s.plan));
-  const monthlyCount = paidLiving.filter(s => s.plan === 'monthly').length;
-  const pkgCount     = paidLiving.filter(s => ['pkg3m','pkg6m','pkg1y'].includes(s.plan)).length;
-  const yearlyCount  = paidLiving.filter(s => s.plan === 'yearly').length;
+  const activePaid = subs.filter(s => s.status === 'active' && PAID_PLANS.includes(s.plan));
+  const monthlyCount = activePaid.filter(s => s.plan === 'monthly').length;
+  const pkgCount     = activePaid.filter(s => ['pkg3m','pkg6m','pkg1y'].includes(s.plan)).length;
 
-  // 매출 추정 (active만 — 실제 결제 발생)
-  // 월할 환산: monthly = 9900, pkg3m = 14900/3, pkg6m = 24900/6, pkg1y = 41900/12
-  const PLAN_MRR = {
-    monthly: 9900,
-    pkg3m:   Math.round(14900 / 3),
-    pkg6m:   Math.round(24900 / 6),
-    pkg1y:   Math.round(41900 / 12),
-    yearly:  Math.round(79000 / 12),
-  };
-  const rev = subs
-    .filter(s => s.status === 'active' && PLAN_MRR[s.plan])
-    .reduce((sum, s) => sum + PLAN_MRR[s.plan], 0);
+  // 환불 금액 집계 (payments 또는 subscribers.paid_amount 기준)
+  const payments = STATE.payments || [];
+  const totalRefund = payments.reduce((sum, p) => sum + (p.refund_amount || 0), 0);
 
-  const now     = Date.now();
-  const new7d   = subs.filter(s => now - new Date(s.created_at) < 7*86400*1000).length;
-  const total   = livingSubs.length;
-  const paid    = paidLiving.length;
-  const send    = STATE.today_send;
+  setKPI('kpi-paid', activePaid.length.toLocaleString() + ' 명', 'green',
+    `월정액 ${monthlyCount} · 일시불 ${pkgCount}`);
+  const refundEl = document.getElementById('kpi-paid-refund');
+  if (refundEl) {
+    refundEl.innerHTML = totalRefund > 0
+      ? `💸 환불 누계: <span style="color:#8b5cf6;font-weight:600">₩${Math.floor(totalRefund).toLocaleString()}</span>`
+      : `💸 환불 누계: <span style="color:var(--muted)">₩0</span>`;
+  }
 
-  setKPI('kpi-total', total.toLocaleString() + ' 명', 'gold',
-    '<span class="up">↑ ' + new7d + '명</span> 최근 7일' + (trial > 0 ? ` · <span style="color:#5eea91">체험 중 ${trial}명</span>` : ''));
-  // 유료 카운트: 월정액 + 일시불 묶음 (legacy yearly는 0이면 숨김)
-  const breakdown = '월정액 ' + monthlyCount + ' + 일시불 ' + pkgCount + (yearlyCount > 0 ? ` + 연간 ${yearlyCount}` : '');
-  setKPI('kpi-paid',  paid.toLocaleString() + ' 명', 'green', breakdown);
-  setKPI('kpi-rev',   '₩ ' + Math.floor(rev).toLocaleString('ko-KR'), 'blue', '이번 달 추정 (월할)');
+  // ── KPI: 이번달 매출 (payments.paid_at 기준 실결제만) ──
+  const nowDate  = new Date();
+  const monthStart = new Date(nowDate.getFullYear(), nowDate.getMonth(), 1).toISOString();
+  const monthEnd   = new Date(nowDate.getFullYear(), nowDate.getMonth() + 1, 0, 23, 59, 59).toISOString();
+
+  // payments 테이블 우선, 없으면 subscribers 폴백 (payment_status='completed'만)
+  let thisMonthRev = 0;
+  if (payments.length > 0) {
+    thisMonthRev = payments
+      .filter(p => p.status === 'paid' && p.paid_at && p.paid_at >= monthStart && p.paid_at <= monthEnd)
+      .reduce((sum, p) => sum + (p.amount || 0), 0);
+  } else {
+    // 폴백: payment_status='completed' + trial_end_date가 이번달인 구독자
+    thisMonthRev = subs
+      .filter(s => s.payment_status === 'completed'
+        && s.trial_end_date && s.trial_end_date >= monthStart && s.trial_end_date <= monthEnd)
+      .reduce((sum, s) => sum + (s.paid_amount || 0), 0);
+  }
+
+  // 취소&환불 PG 수수료 포함 집계 (PG 수수료 약 3.3% 가정)
+  const PG_FEE_RATE = 0.033;
+  const cancelledWithPayment = subs.filter(s =>
+    (s.status === 'cancelled' || s.payment_status === 'refunded') && s.paid_amount > 0
+  );
+  const totalCancelAmt   = cancelledWithPayment.reduce((sum, s) => sum + (s.paid_amount || 0), 0);
+  const totalPGFee       = Math.round(totalCancelAmt * PG_FEE_RATE);
+  const totalCancelTotal = totalCancelAmt + totalPGFee;
+
+  setKPI('kpi-rev', '₩ ' + Math.floor(thisMonthRev).toLocaleString('ko-KR'), 'blue',
+    `실결제 기준 · 취소/환불+수수료 ₩${totalCancelTotal.toLocaleString()}`);
+
+  // ── KPI: 오늘 발송 ─────────────────────────────────────
+  const send = STATE.today_send;
   setKPI('kpi-send', send.sent + ' 건', 'amber',
     '( 완료 ' + send.sent + ' · 실패 <span style="color:' + (send.failed>0?'var(--red)':'var(--muted)') + '">' + send.failed + ' )</span>');
 }
@@ -7498,13 +7556,14 @@ async function loadRevenue() {
     yearly: 79000, free: 0,
   };
 
-  // 폴백: payments 비어있으면 subscribers로 추정 (베타)
+  // 폴백: payments 비어있으면 subscribers로 추정
+  // [v54] payment_status='completed'(실결제)만 집계 — billing_registered(카드등록) 제외
   if (payments.length === 0) {
     const subs = (STATE.subscribers || []).filter(s => !s.hidden);
-    payments = subs.filter(s => s.status === 'active' || s.payment_status === 'completed').map(s => ({
+    payments = subs.filter(s => s.payment_status === 'completed').map(s => ({
       paid_at: s.trial_end_date || s.created_at,
       created_at: s.created_at,
-      amount: PLAN_AMOUNT[s.plan] || 0,
+      amount: s.paid_amount || PLAN_AMOUNT[s.plan] || 0,
       refund_amount: 0,
       status: 'paid',
       subscriber_plan: s.plan,
