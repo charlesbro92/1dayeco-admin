@@ -754,7 +754,7 @@ body.light-mode .filter-pill.active { color:#fff; }
 <!-- SIDEBAR -->
 <aside class="sidebar">
   <div class="sb-logo">1DAYECO<small>Admin Dashboard</small>
-    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v66</span>
+    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v67</span>
   </div>
   <nav class="sb-nav">
     <div class="sb-group">운영</div>
@@ -2387,13 +2387,39 @@ body.light-mode .filter-pill.active { color:#fff; }
           style="width:100%;background:rgba(255,255,255,.04);border:1.5px solid var(--b);border-radius:7px;padding:9px 12px;font-size:13px;color:var(--text);font-family:var(--sans);outline:none;transition:border-color .2s"
           onfocus="this.style.borderColor='var(--gold)'" onblur="this.style.borderColor='var(--b)'">
       </div>
-      <!-- 메모 (선택) -->
+      <!-- 관리자 메모 (선택) -->
       <div>
         <label style="font-size:10px;color:var(--muted);letter-spacing:.5px;display:block;margin-bottom:4px">관리자 메모 <span style="font-weight:400">(선택)</span></label>
         <textarea id="sdInputMemo" rows="2"
           style="width:100%;background:rgba(255,255,255,.04);border:1.5px solid var(--b);border-radius:7px;padding:9px 12px;font-size:13px;color:var(--text);font-family:var(--sans);outline:none;resize:none;line-height:1.6;transition:border-color .2s"
           onfocus="this.style.borderColor='var(--gold)'" onblur="this.style.borderColor='var(--b)'"
           placeholder="미입력 시 저장 안됨"></textarea>
+      </div>
+
+      <!-- 환불 정보 섹션 (refund_requested 상태일 때만 표시) -->
+      <div id="sdRefundSection" style="display:none;background:rgba(248,113,113,.05);border:1px solid rgba(248,113,113,.2);border-radius:10px;padding:14px">
+        <div style="font-size:11px;font-weight:700;color:#f87171;letter-spacing:.5px;margin-bottom:10px">↩️ 환불 정보</div>
+        <div id="sdRefundCalc" style="font-size:12px;color:var(--muted);margin-bottom:12px">환불액 계산 중...</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">
+          <div>
+            <div style="font-size:10px;color:var(--muted);margin-bottom:3px">환불 계좌</div>
+            <div id="sdRefundAccount" style="font-size:12px;font-weight:600;color:var(--text)">—</div>
+          </div>
+          <div>
+            <div style="font-size:10px;color:var(--muted);margin-bottom:3px">예금주</div>
+            <div id="sdRefundAccountName" style="font-size:12px;font-weight:600;color:var(--text)">—</div>
+          </div>
+        </div>
+        <div style="display:flex;gap:6px">
+          <button onclick="setRefundStatus('refund_pending')" id="sdBtnRefundPending"
+            style="flex:1;padding:8px;border-radius:6px;font-size:11px;font-weight:700;font-family:var(--sans);cursor:pointer;border:1px solid rgba(251,191,36,.3);background:rgba(251,191,36,.08);color:#fbbf24">
+            ⏳ 환불대기
+          </button>
+          <button onclick="setRefundStatus('refunded')" id="sdBtnRefunded"
+            style="flex:1;padding:8px;border-radius:6px;font-size:11px;font-weight:700;font-family:var(--sans);cursor:pointer;border:1px solid rgba(74,222,128,.3);background:rgba(74,222,128,.08);color:#5eea91">
+            ✓ 환불완료
+          </button>
+        </div>
       </div>
 
       <!-- 친구톡 / 발송 상태 (read-only 정보) -->
@@ -2688,21 +2714,12 @@ let API_BASE = (function() {
 })();
 
 // 배포 정보 표시 (사이드바 로고 옆 배지 클릭 시)
-async function showDeployInfo() {
+function showDeployInfo() {
   const badge = document.getElementById('deployBadge');
   const v = badge ? badge.textContent : 'unknown';
-  let apiVer = '확인 중...';
-  try {
-    const r = await fetch(API_BASE + '/version', { signal: AbortSignal.timeout(3000) });
-    const d = await r.json();
-    apiVer = d.version || 'unknown';
-  } catch(e) {
-    apiVer = 'API 응답 없음';
-  }
   alert(
     '배포 정보\n' +
-    '어드민: ' + v + '\n' +
-    'API:    ' + apiVer + '\n' +
+    '버전: ' + v + '\n' +
     '도메인: ' + location.hostname + '\n' +
     'API_BASE: ' + API_BASE + '\n' +
     '경로: ' + location.pathname + '\n' +
@@ -3644,7 +3661,8 @@ function renderSubscribersRows(filtered) {
          </div>`
       : s.status === 'refund_requested'
       ? `<div style="display:flex;gap:4px;align-items:center">
-           <span style="font-size:11px;color:#f87171;font-weight:700;padding:4px 8px;background:rgba(248,113,113,.08);border:1px solid rgba(248,113,113,.3);border-radius:4px;white-space:nowrap">환불요청중</span>
+           <button onclick="event.stopPropagation();openSubDetail('${s.id}')"
+             style="font-size:11px;color:#f87171;font-weight:700;padding:4px 8px;background:rgba(248,113,113,.08);border:1px solid rgba(248,113,113,.3);border-radius:4px;white-space:nowrap;cursor:pointer;font-family:var(--sans)">↩️ 환불요청중</button>
          </div>`
       : s.status === 'active'
       ? `<div style="display:flex;gap:4px;align-items:center;flex-wrap:nowrap">
@@ -7864,6 +7882,7 @@ function renderPayments() {
       paid:             { cls: 'pay-badge-paid',     txt: '✓ 결제완료' },
       refunded:         { cls: 'pay-badge-refunded', txt: '↩ 환불완료' },
       partial_refunded: { cls: 'pay-badge-partial',  txt: '↩ 부분환불' },
+      refund_pending:   { cls: 'pay-badge-partial',  txt: '⏳ 환불대기' },
       failed:           { cls: 'pay-badge-failed',   txt: '✗ 실패' },
       cancelled:        { cls: 'pay-badge-failed',   txt: '✗ 취소' },
       pending:          { cls: 'pay-badge-pending',  txt: '⏳ 대기' },
@@ -8939,6 +8958,50 @@ function openSubDetail(id) {
   }
 
   document.getElementById('subDetailOverlay').classList.add('open');
+
+  // 환불 정보 섹션 (refund_requested 상태일 때만)
+  const refundSection = document.getElementById('sdRefundSection');
+  if (refundSection) {
+    if (sub.status === 'refund_requested') {
+      refundSection.style.display = 'block';
+
+      // memo에서 계좌 정보 파싱
+      const memo = sub.memo || '';
+      const acctMatch = memo.match(/환불계좌:\s*([^\|]+)\s*(\d{8,})\s*\(([^)]+)\)/);
+      const acctEl    = document.getElementById('sdRefundAccount');
+      const acctNmEl  = document.getElementById('sdRefundAccountName');
+      if (acctMatch) {
+        if (acctEl)   acctEl.textContent   = (acctMatch[1] || '').trim() + ' ' + (acctMatch[2] || '').trim();
+        if (acctNmEl) acctNmEl.textContent = (acctMatch[3] || '').trim();
+      } else {
+        if (acctEl)   acctEl.textContent   = '미입력';
+        if (acctNmEl) acctNmEl.textContent = '—';
+      }
+
+      // 환불액 계산 API 호출
+      const calcEl = document.getElementById('sdRefundCalc');
+      if (calcEl) calcEl.textContent = '환불액 계산 중...';
+      fetch(API_BASE + '/api/payment/calculate-refund/' + id)
+        .then(r => r.json())
+        .then(d => {
+          if (calcEl) {
+            if (d.success) {
+              const isFullRefund = d.refund_amount >= d.paid_amount;
+              calcEl.innerHTML =
+                `결제금액 <strong>₩${(d.paid_amount||0).toLocaleString('ko-KR')}</strong> | ` +
+                `발송 ${d.sent_days||0}일 / 총 ${d.total_send_days||0}일<br>` +
+                `예상 환불액: <strong style="color:#5eea91;font-size:14px">₩${(d.refund_amount||0).toLocaleString('ko-KR')}</strong>` +
+                (isFullRefund ? ' <span style="font-size:10px;background:rgba(16,185,129,.15);color:#10B981;border:1px solid rgba(16,185,129,.3);padding:1px 6px;border-radius:10px;font-weight:700">전액환불</span>' : '');
+            } else {
+              calcEl.textContent = '결제 내역 없음 (테스트 계정)';
+            }
+          }
+        })
+        .catch(() => { if (calcEl) calcEl.textContent = '계산 실패'; });
+    } else {
+      refundSection.style.display = 'none';
+    }
+  }
 }
 
 // 체크박스 체크 시 칩 시각 효과 갱신
@@ -8961,6 +9024,42 @@ document.addEventListener('change', function(e) {
     _refreshSdCatChipStyles();
   }
 });
+
+// ── 환불 상태 변경 (환불대기 / 환불완료) ─────────────────────
+async function setRefundStatus(newPaymentStatus) {
+  if (!sdCurrentId) return;
+  const label = newPaymentStatus === 'refunded' ? '환불완료' : '환불대기';
+  if (!confirm(`${label} 처리하시겠습니까?\n환불완료 시 구독 상태가 'cancelled'로 변경됩니다.`)) return;
+
+  try {
+    const kst = new Date().toLocaleString('ko-KR', { timeZone:'Asia/Seoul',
+      year:'numeric', month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit', hour12:false });
+    const updatePayload = { payment_status: newPaymentStatus };
+    if (newPaymentStatus === 'refunded') {
+      updatePayload.status = 'cancelled';
+    }
+
+    // memo에 처리 기록 추가
+    const sub = STATE.subscribers.find(s => s.id === sdCurrentId);
+    if (sub) {
+      const existingMemo = (sub.memo || '').trim();
+      const note = `[${kst}] ${label} 처리 완료 (어드민)`;
+      updatePayload.memo = existingMemo ? `${existingMemo}\n${note}` : note;
+    }
+
+    const r = await fetch(API_BASE + '/admin/subscribers/' + sdCurrentId, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(updatePayload),
+    });
+    if (!r.ok) throw new Error('업데이트 실패');
+    showToast(`${label} 처리 완료`, 'ok');
+    closeSubDetail();
+    loadSubscribers({ silent: true });
+  } catch(e) {
+    showToast('처리 중 오류: ' + e.message, 'ng');
+  }
+}
 
 function closeSubDetail() {
   document.getElementById('subDetailOverlay').classList.remove('open');
