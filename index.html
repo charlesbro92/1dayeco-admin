@@ -754,7 +754,7 @@ body.light-mode .filter-pill.active { color:#fff; }
 <!-- SIDEBAR -->
 <aside class="sidebar">
   <div class="sb-logo">1DAYECO<small>Admin Dashboard</small>
-    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v98</span>
+    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v99</span>
   </div>
   <nav class="sb-nav">
     <div class="sb-group">운영</div>
@@ -1004,20 +1004,20 @@ body.light-mode .filter-pill.active { color:#fff; }
               style="accent-color:var(--gold);cursor:pointer;width:14px;height:14px"></th>
             <th style="text-align:center;white-space:nowrap;width:130px;min-width:80px;position:relative" class="resizable-col">이름<span class="col-resizer"></span></th>
             <th style="text-align:center;white-space:nowrap;width:120px;min-width:80px;position:relative" class="resizable-col">전화번호<span class="col-resizer"></span></th>
-            <th style="text-align:center;white-space:nowrap;width:60px;min-width:50px;position:relative" class="resizable-col">플랜<span class="col-resizer"></span></th>
-            <th style="text-align:center;white-space:nowrap;width:75px;min-width:50px;position:relative" class="resizable-col">금액<span class="col-resizer"></span></th>
-            <th style="text-align:center;white-space:nowrap;width:80px;min-width:60px;position:relative" class="resizable-col">상태<span class="col-resizer"></span></th>
-            <th style="text-align:center;white-space:nowrap;width:80px;min-width:60px;position:relative" class="resizable-col">결제<span class="col-resizer"></span></th>
-            <th style="text-align:center;white-space:nowrap;width:65px;min-width:50px;position:relative" class="resizable-col">카톡<span class="col-resizer"></span></th>
-            <th style="text-align:center;white-space:nowrap;width:60px;min-width:50px;position:relative" class="resizable-col">관심사<span class="col-resizer"></span></th>
+            <th style="text-align:center;white-space:nowrap;width:75px;min-width:60px;position:relative" class="resizable-col">금액<span class="col-resizer"></span></th>
+            <th style="text-align:center;white-space:nowrap;width:75px;min-width:60px;position:relative" class="resizable-col">플랜<span class="col-resizer"></span></th>
+            <th style="text-align:center;white-space:nowrap;width:75px;min-width:60px;position:relative" class="resizable-col">상태<span class="col-resizer"></span></th>
+            <th style="text-align:center;white-space:nowrap;width:75px;min-width:60px;position:relative" class="resizable-col">결제<span class="col-resizer"></span></th>
+            <th style="text-align:center;white-space:nowrap;width:75px;min-width:60px;position:relative" class="resizable-col">카톡<span class="col-resizer"></span></th>
+            <th style="text-align:center;white-space:nowrap;width:75px;min-width:60px;position:relative" class="resizable-col">카테고리<span class="col-resizer"></span></th>
+            <th style="text-align:center;white-space:nowrap;width:110px;min-width:80px;position:relative" class="resizable-col">부제목<span class="col-resizer"></span></th>
             <th style="text-align:center;white-space:nowrap;width:90px;min-width:70px;position:relative" class="resizable-col">시작일<span class="col-resizer"></span></th>
             <th style="text-align:center;white-space:nowrap;width:90px;min-width:70px;position:relative" class="resizable-col">체험종료<span class="col-resizer"></span></th>
-            <th style="text-align:center;white-space:nowrap;width:90px;min-width:70px;position:relative" class="resizable-col">구독종료<span class="col-resizer"></span></th>
-            <th style="text-align:center;white-space:nowrap;width:90px;min-width:60px;position:relative" class="resizable-col">이메일<span class="col-resizer"></span></th>
+            <th style="text-align:center;white-space:nowrap;width:90px;min-width:70px;position:relative" class="resizable-col">종료일<span class="col-resizer"></span></th>
             <th style="text-align:center;white-space:nowrap;width:90px;min-width:60px;position:relative" class="resizable-col">메모<span class="col-resizer"></span></th>
             <th style="text-align:center;white-space:nowrap;width:120px;position:relative">작업</th>
           </tr></thead>
-          <tbody id="subTableBody"><tr><td colspan="14"><div class="empty"><span class="empty-ico">👥</span>구독자가 없습니다</div></td></tr></tbody>
+          <tbody id="subTableBody"><tr><td colspan="15"><div class="empty"><span class="empty-ico">👥</span>구독자가 없습니다</div></td></tr></tbody>
         </table>
       </div>
     </div>
@@ -3516,6 +3516,48 @@ function renderSubCategories(categories) {
   }).join('');
 }
 
+// 카테고리 1개를 텍스트로 표시 (이모지 없이 이름만)
+function renderSubCategoryName(categories) {
+  let arr = categories;
+  if (typeof arr === 'string') {
+    arr = arr.split(',').map(s => s.trim()).filter(Boolean);
+  }
+  if (!Array.isArray(arr) || arr.length === 0) {
+    return '<span style="color:var(--muted);font-size:10px">—</span>';
+  }
+  // 카테고리 ID → 이름 매핑 (CATEGORIES_CACHE 우선)
+  const catId = arr[0];
+  let name = catId;
+  if (CATEGORIES_CACHE && CATEGORIES_CACHE.length) {
+    const found = CATEGORIES_CACHE.find(c => c.id === catId);
+    if (found) name = found.name || catId;
+  } else {
+    name = getCatShortName(catId) || catId;
+  }
+  return '<span style="font-size:11px;color:var(--text)">' + name + '</span>';
+}
+
+// 부제목 이름 표시 (subtopic_id 있으면 캐시에서 이름 lookup)
+function renderSubSubtopicName(subtopicId, catId) {
+  if (!subtopicId) return '<span style="color:var(--muted);font-size:11px">—</span>';
+  const list = _SUBTOPIC_CACHE[catId] || [];
+  const found = list.find(s => Number(s.id) === Number(subtopicId));
+  const name = found ? found.name : '';
+  if (!name) {
+    // 캐시 없으면 백그라운드에서 fetch (비동기로 캐시 채우기)
+    if (catId && API_BASE) {
+      _fetchSubtopics(catId, false).then(() => {
+        // 다시 렌더 (이름 채워짐)
+        if (typeof renderSubscribersTable === 'function') {
+          try { renderSubscribersTable(); } catch (_) {}
+        }
+      });
+    }
+    return '<span style="color:var(--muted);font-size:11px">…</span>';
+  }
+  return '<span style="display:inline-block;background:rgba(201,168,76,.1);border:1px solid rgba(201,168,76,.3);color:var(--gold);font-size:10px;padding:2px 8px;border-radius:10px;letter-spacing:.2px">' + name.replace(/</g,'&lt;') + '</span>';
+}
+
 // 구독자 테이블 렌더링 (STATE.subscribers 기반)
 function renderSubscribersTable() {
   const searchVal    = (document.getElementById('subSearch')?.value || '').trim().toLowerCase();
@@ -3573,7 +3615,7 @@ function renderSubscribersTable() {
   const tbody = document.getElementById('subTableBody');
   if (!tbody) return; // 다른 페이지에 있으면 스킵
   if (!filtered.length) {
-    tbody.innerHTML = `<tr><td colspan="14"><div class="empty"><span class="empty-ico">👥</span>${searchVal?'검색 결과가 없습니다':'구독자가 없습니다'}</div></td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="15"><div class="empty"><span class="empty-ico">👥</span>${searchVal?'검색 결과가 없습니다':'구독자가 없습니다'}</div></td></tr>`;
     return;
   }
   tbody.innerHTML = renderSubscribersRows(filtered);
@@ -3586,7 +3628,7 @@ async function loadSubscribers(opts) {
   // 1. 로딩 상태 표시 (구독자 페이지일 때, 첫 로드 또는 명시적 새로고침)
   const tbody = document.getElementById('subTableBody');
   if (!silent && tbody && !STATE._loaded) {
-    tbody.innerHTML = '<tr><td colspan="14"><div class="empty"><span class="empty-ico">⏳</span>데이터를 불러오는 중...</div></td></tr>';
+    tbody.innerHTML = '<tr><td colspan="15"><div class="empty"><span class="empty-ico">⏳</span>데이터를 불러오는 중...</div></td></tr>';
   } else if (!silent && tbody) {
     // 이미 로드된 데이터 있으면 그대로 보여주면서 백그라운드 갱신
     renderSubscribersTable();
@@ -3622,6 +3664,7 @@ async function loadSubscribers(opts) {
       billing_key:    s.billing_key || null,
       memo:           s.memo || null,
       categories:     s.categories || getAllCatIds(),
+      subtopic_id:    s.subtopic_id || null,
       // ── 친구톡 관련 (v22+) ──
       payment_status:        s.payment_status || 'pending',
       kakao_channel_added:   !!s.kakao_channel_added,
@@ -3649,7 +3692,7 @@ async function loadSubscribers(opts) {
 function renderSubscribersError(tbody) {
   const errMsg = STATE._loadError || '데이터를 불러올 수 없습니다';
   tbody.innerHTML = `
-    <tr><td colspan="14">
+    <tr><td colspan="15">
       <div class="empty">
         <span class="empty-ico">⚠️</span>
         <div style="font-size:13px;color:var(--text);margin-bottom:6px">데이터를 불러올 수 없습니다</div>
@@ -3755,13 +3798,13 @@ function renderSubscribersRows(filtered) {
           style="accent-color:var(--gold);cursor:pointer;width:14px;height:14px"
           onchange="onSubCheck()">
       </td>
-      <td style="width:130px;max-width:130px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"><strong>${s.name}</strong>${newBadge}${notifyD1Badge}</td>
-      <td class="t-phone" style="font-size:12px;width:120px;white-space:nowrap">${s.phone}</td>
+      <td style="text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"><strong>${s.name}</strong>${newBadge}${notifyD1Badge}</td>
+      <td class="t-phone" style="font-size:12px;text-align:center;white-space:nowrap">${s.phone}</td>
+      <td style="font-family:var(--mono);font-size:12px;text-align:center;color:var(--muted);white-space:nowrap">
+        ${{monthly:'₩9,900',yearly:'₩79,000',free:'₩0',pkg3m:'₩14,900',pkg6m:'₩24,900',pkg1y:'₩41,900'}[s.plan]||''}
+      </td>
       <td style="text-align:center">
         <span class="badge ${s.plan}">${planLabel(s.plan)}</span>
-      </td>
-      <td style="font-family:var(--mono);font-size:12px;text-align:right;color:var(--muted)">
-        ${{monthly:'₩9,900',yearly:'₩79,000',free:'₩0',pkg3m:'₩14,900',pkg6m:'₩24,900',pkg1y:'₩41,900'}[s.plan]||''}
       </td>
       <td style="text-align:center"><span class="badge ${s.status}">${{
   active:'유료',
@@ -3772,13 +3815,11 @@ function renderSubscribersRows(filtered) {
   pending_charge:'결제대기',
   payment_failed:'결제오류',
   refund_requested:'환불요청',
-  pending_charge:'결제대기',
-  payment_failed:'결제오류',
-  refund_requested:'환불요청'
 }[s.status]||s.status}</span></td>
       <td style="text-align:center">${paymentStatusLabel(s.payment_status)}</td>
       <td style="text-align:center">${renderKakaoChannelCell(s)}</td>
-      <td style="text-align:center;white-space:nowrap">${renderSubCategories(s.categories)}</td>
+      <td style="text-align:center;white-space:nowrap">${renderSubCategoryName(s.categories)}</td>
+      <td style="text-align:center;white-space:nowrap">${renderSubSubtopicName(s.subtopic_id, (Array.isArray(s.categories) ? s.categories[0] : ''))}</td>
       <td style="font-family:var(--mono);font-size:11px;color:var(--muted);text-align:center;white-space:nowrap">
         <div style="line-height:1.3">${startDate || '—'}${joinTimeStr ? `<br><span style="font-size:9px;opacity:.6">가입 ${joinTimeStr}</span>` : ''}</div>
       </td>
@@ -3786,15 +3827,13 @@ function renderSubscribersRows(filtered) {
         ${s.trial_end_date ? new Date(s.trial_end_date).toLocaleDateString('ko-KR',{year:'numeric',month:'2-digit',day:'2-digit'}) : '—'}
       </td>
       <td style="font-family:var(--mono);font-size:11px;color:${endColor};text-align:center;white-space:nowrap">${endDateStr}</td>
-      <td style="font-size:11px;color:var(--muted);max-width:90px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${emailStr}</td>
-      <td onclick="event.stopPropagation()" style="width:90px;max-width:90px">
-        <div style="display:flex;align-items:center;gap:4px">
+      <td onclick="event.stopPropagation()" style="text-align:center">
+        <div style="display:flex;align-items:center;gap:4px;justify-content:center">
           <span id="memoText_${s.id}"
             style="font-size:11px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:80px;display:inline-block"
             title="${s.memo||''}">${s.memo||''}</span>
-
         </div>
-        <div id="memoEdit_${s.id}" style="display:none;gap:4px;align-items:center">
+        <div id="memoEdit_${s.id}" style="display:none;gap:4px;align-items:center;justify-content:center">
           <input id="memoInput_${s.id}" type="text" value="${s.memo||''}"
             placeholder="메모 입력..."
             onkeydown="if(event.key==='Enter')saveMemo('${s.id}');if(event.key==='Escape')cancelMemoEdit('${s.id}')"
