@@ -754,7 +754,7 @@ body.light-mode .filter-pill.active { color:#fff; }
 <!-- SIDEBAR -->
 <aside class="sidebar">
   <div class="sb-logo">1DAYECO<small>Admin Dashboard</small>
-    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v89</span>
+    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v90</span>
   </div>
   <nav class="sb-nav">
     <div class="sb-group">운영</div>
@@ -1252,12 +1252,21 @@ body.light-mode .filter-pill.active { color:#fff; }
           <div style="flex:1.2;min-width:140px">
             <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:6px;letter-spacing:.5px">카테고리</label>
             <select id="topicGenCategory" class="dark-select"
+              onchange="onTopicGenCategoryChange()"
               style="width:100%;background:var(--s3);border:1px solid var(--b);color:var(--text);
                      padding:10px;border-radius:6px;font-size:13px;outline:none;font-family:var(--sans)">
               <option value="economy">📊 경제</option>
               <option value="realestate">🏠 부동산</option>
               <option value="english">🇬🇧 영어</option>
               <option value="trivia">🧠 상식</option>
+            </select>
+          </div>
+          <div style="flex:1.2;min-width:140px">
+            <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:6px;letter-spacing:.5px">부제목 <span style="color:var(--gold);font-size:10px">필수</span></label>
+            <select id="topicGenSubtopic" class="dark-select"
+              style="width:100%;background:var(--s3);border:1px solid var(--b);color:var(--text);
+                     padding:10px;border-radius:6px;font-size:13px;outline:none;font-family:var(--sans)">
+              <option value="">— 카테고리 선택 후 —</option>
             </select>
           </div>
           <div style="flex:.8;min-width:100px">
@@ -1341,6 +1350,14 @@ body.light-mode .filter-pill.active { color:#fff; }
               <button onclick="archiveBulkHide()"   class="arch-act-btn arch-warn"   title="선택 항목 숨김 (발송 X, 복구 가능)">🙈 숨김</button>
               <button onclick="archiveBulkUnhide()" class="arch-act-btn"             title="숨김 해제 (복구)">♻️ 복구</button>
               <button onclick="archiveBulkDelete()" class="arch-act-btn arch-danger" title="영구 삭제 (복구 불가)">🔥 영구 삭제</button>
+            </div>
+          </div>
+
+          <!-- ⭐ 줄 1-b: 부제목 pill (카테고리 선택 후에만 표시) -->
+          <div id="subtopicPillFilterWrap" style="display:none;width:100%;align-items:center;gap:6px;flex-wrap:wrap;padding:4px 0 2px">
+            <span style="font-size:11px;color:var(--muted);letter-spacing:.5px;margin-right:4px">부제목</span>
+            <div class="cat-pill-filter" id="subtopicPillFilter" style="display:flex;gap:4px;flex-wrap:wrap;flex:1">
+              <button class="cat-pill active" data-subtopic="" onclick="selectSubtopicFilter(this)">전체</button>
             </div>
           </div>
 
@@ -5143,10 +5160,17 @@ function updateTopicEndDate() {
 
 async function generateTopics() {
   const cat   = document.getElementById('topicGenCategory').value;
+  const subtopicEl = document.getElementById('topicGenSubtopic');
+  const subtopicId = subtopicEl ? subtopicEl.value : '';
+  const subtopicName = subtopicEl ? (subtopicEl.options[subtopicEl.selectedIndex]?.textContent || '') : '';
   const days  = parseInt(document.getElementById('topicGenDays').value);
   let startStr = document.getElementById('topicGenStart').value;
 
-  // 검증
+  // 검증: 부제목 필수
+  if (!subtopicId) {
+    showToast('부제목을 선택해주세요', 'ng');
+    return;
+  }
   if (!days || days < 1) {
     showToast('기간을 1일 이상으로 입력해주세요', 'ng');
     return;
@@ -5347,13 +5371,15 @@ async function generateTopics() {
 
     // 같은 (날짜+카테고리) 항목이 이미 있는지 검사
     const existIdx = GENERATED_TOPICS.findIndex(function(x) {
-      return x.date === dateStr && x.cat === cat;
+      return x.date === dateStr && x.cat === cat && (x.subtopic_id || null) === (subtopicId || null);
     });
 
     const newTopic = {
       id: 't_' + Date.now() + '_' + i,
       date: dateStr,
       cat: cat,
+      subtopic_id: subtopicId ? Number(subtopicId) : null,
+      subtopic_name: subtopicName || '',
       topic: t.topic,
       kw: t.kw,
       status: 'pending',
@@ -5430,7 +5456,9 @@ function renderTopicList() {
     return '<tr>'
       + '<td><input type="checkbox" data-tid="' + t.id + '" ' + checked + ' onchange="onTopicCheck(this)"></td>'
       + '<td style="font-family:var(--mono);font-size:11px">' + t.date + '</td>'
-      + '<td style="text-align:center"><span class="badge monthly">' + (CATEGORY_LABEL_MAP[t.cat] || t.cat) + '</span></td>'
+      + '<td style="text-align:center"><span class="badge monthly">' + (CATEGORY_LABEL_MAP[t.cat] || t.cat) + '</span>'
+      + (t.subtopic_name ? '<div style="font-size:9px;color:var(--gold);margin-top:3px;letter-spacing:.3px">' + (t.subtopic_name || '').replace(/</g,'&lt;') + '</div>' : '')
+      + '</td>'
       + '<td><strong>' + t.topic + '</strong></td>'
       + '<td style="color:var(--muted);font-size:11px">' + t.kw + '</td>'
       + '<td style="text-align:center">' + statusBadge + '</td>'
@@ -5511,6 +5539,8 @@ function toggleTopicWorkPanel(forceOpen) {
 }
 
 // 카테고리 pill 필터
+let _archiveSubtopicFilter = '';  // 빈 문자열 = 전체
+
 function selectCatFilter(btnEl) {
   const cat = btnEl.dataset.cat || '';
   // 모든 pill에서 active 제거
@@ -5521,8 +5551,53 @@ function selectCatFilter(btnEl) {
   // 호환성을 위한 hidden select에도 값 반영
   const hidden = document.getElementById('contentCatFilter');
   if (hidden) hidden.value = cat;
+
+  // 카테고리 변경 → 부제목 필터 리셋
+  _archiveSubtopicFilter = '';
+  // 부제목 pill 영역 갱신
+  _renderArchiveSubtopicPills(cat);
+
   // 아카이브 다시 로드
   loadContentArchive();
+}
+
+function selectSubtopicFilter(btnEl) {
+  const sid = btnEl.dataset.subtopic || '';
+  document.querySelectorAll('#subtopicPillFilter .cat-pill').forEach(function(b) {
+    b.classList.remove('active');
+  });
+  btnEl.classList.add('active');
+  _archiveSubtopicFilter = sid;
+  // 아카이브만 다시 그리기 (백엔드 재호출 불필요 — 클라이언트 필터)
+  if (typeof renderArchive === 'function') {
+    renderArchive();
+  }
+}
+
+// 부제목 pill 동적 생성 (카테고리 단일 선택일 때만 표시)
+async function _renderArchiveSubtopicPills(catId) {
+  const wrap = document.getElementById('subtopicPillFilterWrap');
+  const pills = document.getElementById('subtopicPillFilter');
+  if (!wrap || !pills) return;
+
+  if (!catId) {
+    // 전체 카테고리 선택 → 부제목 필터 숨김
+    wrap.style.display = 'none';
+    pills.innerHTML = '<button class="cat-pill active" data-subtopic="" onclick="selectSubtopicFilter(this)">전체</button>';
+    return;
+  }
+  // 부제목 로드
+  const list = await _fetchSubtopics(catId, false);
+  if (list.length === 0) {
+    wrap.style.display = 'none';
+    return;
+  }
+  wrap.style.display = 'flex';
+  let html = '<button class="cat-pill active" data-subtopic="" onclick="selectSubtopicFilter(this)">전체</button>';
+  list.forEach(s => {
+    html += `<button class="cat-pill" data-subtopic="${s.id}" onclick="selectSubtopicFilter(this)">${(s.name || '').replace(/"/g,'&quot;')}</button>`;
+  });
+  pills.innerHTML = html;
 }
 
 function onTopicCheck(el) {
@@ -6102,6 +6177,7 @@ async function _executeGenerate(items) {
           result = await apiPost('/admin/content/generate-from-topic', {
             date:     t.date,
             category: t.cat,
+            subtopic_id: t.subtopic_id || null,
             topic:    t.topic,
             keywords: t.kw,
             overwrite: true,
@@ -6851,6 +6927,45 @@ const CAT_LABEL = {
 };
 
 // 백엔드에서 받은 아카이브를 로컬에 동기화
+async function _hydrateSubtopicNamesInArchive() {
+  // CONTENT_ARCHIVE의 모든 항목 중 subtopic_id 있는데 이름 없는 것들 찾아서 채우기
+  const catsToLoad = new Set();
+  for (const k in CONTENT_ARCHIVE) {
+    if (!Object.prototype.hasOwnProperty.call(CONTENT_ARCHIVE, k)) continue;
+    if (!isArchKey(k)) continue;
+    const item = CONTENT_ARCHIVE[k];
+    if (item && item.subtopic_id && !item.subtopic_name) {
+      catsToLoad.add(item.cat);
+    }
+  }
+  // 카테고리별로 부제목 일괄 로드
+  for (const cat of catsToLoad) {
+    await _fetchSubtopics(cat, false);
+  }
+  // 매핑 후 저장
+  let updated = 0;
+  for (const k in CONTENT_ARCHIVE) {
+    if (!Object.prototype.hasOwnProperty.call(CONTENT_ARCHIVE, k)) continue;
+    if (!isArchKey(k)) continue;
+    const item = CONTENT_ARCHIVE[k];
+    if (item && item.subtopic_id && !item.subtopic_name) {
+      const list = _SUBTOPIC_CACHE[item.cat] || [];
+      const found = list.find(s => Number(s.id) === Number(item.subtopic_id));
+      if (found) {
+        item.subtopic_name = found.name || '';
+        updated++;
+      }
+    }
+  }
+  if (updated > 0) {
+    saveArchiveToStorage();
+    // 현재 표시 중이라면 다시 그리기
+    if (typeof renderArchive === 'function') {
+      try { renderArchive(); } catch (_) {}
+    }
+  }
+}
+
 async function syncArchiveFromBackend() {
   if (!API_BASE) return;
   try {
@@ -6881,6 +6996,8 @@ async function syncArchiveFromBackend() {
         // 같은 (날짜+카테고리)는 가장 최근 것으로 덮어쓰기 (정렬로 보장됨)
         CONTENT_ARCHIVE[k] = {
           cat:         cat,
+          subtopic_id: row.subtopic_id || null,
+          subtopic_name: row.subtopic_name || '',  // 조인 안 해서 백엔드에서 안 올 수도 있음 (아래에서 보강)
           kw:          row.keyword || '',
           topic:       row.headline || '',
           headline:    row.headline || '',
@@ -6889,7 +7006,7 @@ async function syncArchiveFromBackend() {
           tok:         row.token_used || 0,
           source:      'generated',
           generatedAt: row.created_at || '',
-          hidden:      !!row.hidden,           // v3: hidden 필드 보존
+          hidden:      !!row.hidden,
         };
         added++;
       });
@@ -6903,6 +7020,9 @@ async function syncArchiveFromBackend() {
       }
       saveArchiveToStorage();
       console.log('백엔드 아카이브 동기화: ' + added + '건' + (_archiveShowHidden ? ' (숨김 포함)' : ''));
+
+      // subtopic_id → 이름 매핑 (백그라운드, 카테고리별로 캐시)
+      _hydrateSubtopicNamesInArchive();
     }
   } catch (e) {
     console.warn('아카이브 동기화 실패:', e);
@@ -7241,6 +7361,10 @@ function _renderArchiveTable() {
   // === 필터링 ===
   let rows = getArchiveList();
   if (catFilter) rows = rows.filter(r => (r.cat || '').toLowerCase() === catFilter);
+  // 부제목 필터 (카테고리 단일 선택일 때만 적용됨 — _archiveSubtopicFilter)
+  if (catFilter && _archiveSubtopicFilter) {
+    rows = rows.filter(r => Number(r.subtopic_id || 0) === Number(_archiveSubtopicFilter));
+  }
   if (dateFrom)  rows = rows.filter(r => r.dateStr >= dateFrom);
   if (dateTo)    rows = rows.filter(r => r.dateStr <= dateTo);
   if (searchVal) {
@@ -7325,7 +7449,9 @@ function _renderArchiveTable() {
           + '<td onclick="openContentPopupByDate(\'' + r.dateStr + '\', \'' + (r.cat || '') + '\')"'
           +   ' style="font-family:var(--mono);font-size:11px">' + r.date + aiBadge + hiddenBadge + '</td>'
           + '<td onclick="openContentPopupByDate(\'' + r.dateStr + '\', \'' + (r.cat || '') + '\')"'
-          +   ' style="text-align:center"><span class="badge monthly">' + (CATEGORY_LABEL_MAP[r.cat] || r.cat) + '</span></td>'
+          +   ' style="text-align:center"><span class="badge monthly">' + (CATEGORY_LABEL_MAP[r.cat] || r.cat) + '</span>'
+          + (r.subtopic_name ? '<div style="font-size:9px;color:var(--gold);margin-top:3px;letter-spacing:.3px">' + (r.subtopic_name || '').replace(/</g,'&lt;') + '</div>' : '')
+          + '</td>'
           + '<td onclick="openContentPopupByDate(\'' + r.dateStr + '\', \'' + (r.cat || '') + '\')">'
           +   '<strong>' + topicCell + '</strong></td>'
           + '<td onclick="openContentPopupByDate(\'' + r.dateStr + '\', \'' + (r.cat || '') + '\')"'
@@ -8293,6 +8419,8 @@ function populateCategorySelects() {
     const prev = topicSel.value;
     topicSel.innerHTML = buildOptions(cats);
     if (prev) topicSel.value = prev;
+    // 부제목도 함께 갱신
+    onTopicGenCategoryChange();
   }
 
   // 콘텐츠 편집 카테고리
@@ -8335,6 +8463,47 @@ let CATEGORIES_CACHE = [];   // 캐시 (loadCategoryList에서 채워짐)
 // ── 부제목 관리 (카테고리 모달 내부) ───────────────
 // 모달 내부에서 임시로 들고 있는 부제목 리스트
 //   item: { id?, name, display_order, _isNew?, _toDelete? }
+// ── 부제목 캐시 (카테고리별로 메모리 캐시) ──
+const _SUBTOPIC_CACHE = {};
+
+async function _fetchSubtopics(catId, force) {
+  if (!catId) return [];
+  if (!force && _SUBTOPIC_CACHE[catId]) return _SUBTOPIC_CACHE[catId];
+  try {
+    const res = await fetch(API_BASE + '/admin/subtopics?category_id=' + encodeURIComponent(catId));
+    const data = await res.json();
+    if (data && data.success && Array.isArray(data.data)) {
+      _SUBTOPIC_CACHE[catId] = data.data;
+      return data.data;
+    }
+  } catch (e) {
+    console.warn('[subtopics fetch] 실패:', e);
+  }
+  _SUBTOPIC_CACHE[catId] = [];
+  return [];
+}
+
+// 주제 생성 폼: 카테고리 변경 시 해당 카테고리의 부제목 로드
+async function onTopicGenCategoryChange() {
+  const cat = document.getElementById('topicGenCategory').value;
+  const subtopicEl = document.getElementById('topicGenSubtopic');
+  if (!subtopicEl) return;
+  subtopicEl.innerHTML = '<option value="">— 로드 중 —</option>';
+  const list = await _fetchSubtopics(cat, true);
+  if (list.length === 0) {
+    subtopicEl.innerHTML = '<option value="">— 부제목 없음 (카테고리 관리에서 추가) —</option>';
+    return;
+  }
+  subtopicEl.innerHTML = '<option value="">— 선택 —</option>'
+    + list.map(s => `<option value="${s.id}">${(s.name || '').replace(/"/g,'&quot;')}</option>`).join('');
+}
+
+// 페이지 로드 후 카테고리 select 채워지면 부제목도 자동 로드
+async function _initTopicGenSubtopic() {
+  // 카테고리 select 초기값 기준으로 부제목 로드
+  await onTopicGenCategoryChange();
+}
+
 let _modalSubtopics = [];
 let _modalSubtopicsDeletedIds = [];
 
