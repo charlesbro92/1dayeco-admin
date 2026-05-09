@@ -754,7 +754,7 @@ body.light-mode .filter-pill.active { color:#fff; }
 <!-- SIDEBAR -->
 <aside class="sidebar">
   <div class="sb-logo">1DAYECO<small>Admin Dashboard</small>
-    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v69</span>
+    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v71</span>
   </div>
   <nav class="sb-nav">
     <div class="sb-group">운영</div>
@@ -2849,14 +2849,12 @@ function showPage(name) {
 
 function loadPage(name) {
   if (name === 'overview')     {
-    // 1. 현재 STATE 데이터로 KPI/최근가입자 즉시 표시 (0초)
     loadKPIs(); loadRecentSubs(); loadContentSummary(); renderUsageKPI();
-    // 2. 백그라운드에서 최신 데이터 fetch (5개 함수 병렬, await 없이)
     Promise.all([
-      loadSubscribers({silent: true}),  // 구독자 새로고침
-      loadSendStatus(),                  // 발송 현황
+      loadSubscribers({silent: true}),
+      loadSendStatus(),
+      loadPayments(),  // KPI 환불/매출 집계용 — 1회만 호출
     ]).then(() => {
-      // fetch 완료 후 KPI/최근가입자 다시 그리기 (최신 데이터 반영)
       loadKPIs();
       loadRecentSubs();
     }).catch(e => console.warn('[overview] 백그라운드 갱신 실패:', e));
@@ -3021,20 +3019,24 @@ function loadKPIs() {
 
   // ── KPI: 이번달 환불 ────────────────────────────────────
   const payments = STATE.payments || [];
-  // payments 미로드 시 백그라운드 로드 후 KPI 재갱신
-  if (payments.length === 0 && !STATE._paymentsLoading) {
-    STATE._paymentsLoading = true;
-    loadPayments().then(() => { STATE._paymentsLoading = false; loadKPIs(); });
-  }
   const nowDate2  = new Date();
   const mStart = new Date(nowDate2.getFullYear(), nowDate2.getMonth(), 1).toISOString();
   const mEnd   = new Date(nowDate2.getFullYear(), nowDate2.getMonth()+1, 0, 23,59,59).toISOString();
 
   const thisMonthRefund = payments
-    .filter(p => p.refund_amount > 0 && p.updated_at && p.updated_at >= mStart && p.updated_at <= mEnd)
+    .filter(p => {
+      if ((p.refund_amount || 0) <= 0) return false;
+      // refunded_at 우선, 없으면 updated_at 폴백
+      const ts = p.refunded_at || p.updated_at || '';
+      return ts >= mStart && ts <= mEnd;
+    })
     .reduce((sum, p) => sum + (p.refund_amount || 0), 0);
   const totalRefund = payments.reduce((sum, p) => sum + (p.refund_amount || 0), 0);
-  const refundCount = payments.filter(p => p.refund_amount > 0 && p.updated_at >= mStart).length;
+  const refundCount = payments.filter(p => {
+    if ((p.refund_amount || 0) <= 0) return false;
+    const ts = p.refunded_at || p.updated_at || '';
+    return ts >= mStart && ts <= mEnd;
+  }).length;
 
   setKPI('kpi-refund-month',
     '₩ ' + Math.floor(thisMonthRefund).toLocaleString('ko-KR'),
@@ -3051,7 +3053,11 @@ function loadKPIs() {
   let thisMonthRev = 0;
   if (payments.length > 0) {
     thisMonthRev = payments
-      .filter(p => p.status === 'paid' && p.paid_at && p.paid_at >= monthStart && p.paid_at <= monthEnd)
+      .filter(p => {
+        if (p.status !== 'paid') return false;
+        const ts = p.paid_at || p.created_at || '';
+        return ts >= monthStart && ts <= monthEnd;
+      })
       .reduce((sum, p) => sum + (p.amount || 0), 0);
   } else {
     // 폴백: payment_status='completed' + trial_end_date가 이번달인 구독자
