@@ -754,7 +754,7 @@ body.light-mode .filter-pill.active { color:#fff; }
 <!-- SIDEBAR -->
 <aside class="sidebar">
   <div class="sb-logo">1DAYECO<small>Admin Dashboard</small>
-    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v82</span>
+    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v83</span>
   </div>
   <nav class="sb-nav">
     <div class="sb-group">운영</div>
@@ -6326,25 +6326,17 @@ const ARCHIVE_KEY = '1dayeco_archive';
 
 // ── 키 헬퍼 ──────────────────────────────────────────────────
 function archKey(dateStr, category) {
-  return dateStr + '|' + category;   // | 구분자 (카테고리에 _가 포함될 수 있으므로)
+  return dateStr + '_' + category;  // "2026-05-09_kr_stock"
 }
 function archKeyParts(key) {
-  // "2026-05-04|kr_stock" → { dateStr: "2026-05-04", category: "kr_stock" }
-  const idx = key.indexOf('|');
-  if (idx === -1) {
-    // 구버전 _ 구분자 호환 (첫 번째 _ 이후가 카테고리인 경우)
-    const uIdx = key.indexOf('_');
-    if (uIdx === -1) return { dateStr: key, category: 'economy' };
-    return { dateStr: key.slice(0, uIdx), category: key.slice(uIdx + 1) };
-  }
-  return { dateStr: key.slice(0, idx), category: key.slice(idx + 1) };
+  // 날짜는 항상 YYYY-MM-DD (10자), 그 뒤 _ 이후가 카테고리
+  // "2026-05-09_kr_stock" → dateStr="2026-05-09", category="kr_stock"
+  if (key.length < 12) return { dateStr: key, category: 'economy' };
+  return { dateStr: key.slice(0, 10), category: key.slice(11) };
 }
 function isArchKey(key) {
-  // | 구분자 신규 형식
-  if (/^\d{4}-\d{2}-\d{2}\|[a-z_]+$/.test(key)) return true;
-  // _ 구분자 구버전 형식 호환 (날짜 부분은 항상 YYYY-MM-DD)
-  if (/^\d{4}-\d{2}-\d{2}_[a-z]+$/.test(key)) return true;
-  return false;
+  // YYYY-MM-DD_카테고리 형식 (카테고리에 _ 포함 가능)
+  return /^\d{4}-\d{2}-\d{2}_[a-z][a-z0-9_]*$/.test(key);
 }
 
 // 같은 날짜의 모든 카테고리 항목 조회
