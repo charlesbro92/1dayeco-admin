@@ -754,7 +754,7 @@ body.light-mode .filter-pill.active { color:#fff; }
 <!-- SIDEBAR -->
 <aside class="sidebar">
   <div class="sb-logo">1DAYECO<small>Admin Dashboard</small>
-    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v81</span>
+    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v82</span>
   </div>
   <nav class="sb-nav">
     <div class="sb-group">운영</div>
@@ -8282,6 +8282,8 @@ function populateCategorySelects() {
     archSel.innerHTML = buildOptions(cats, true);
     if (prev) archSel.value = prev;
   }
+  // 아카이브 카테고리 pill 동적 생성
+  const pillFilter = document.getElementById('catPillFilter');
   if (pillFilter) {
     const currentActive = pillFilter.querySelector('.cat-pill.active')?.dataset.cat || '';
     pillFilter.innerHTML = '<button class="cat-pill active" data-cat="" onclick="selectCatFilter(this)">전체</button>';
