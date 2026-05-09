@@ -227,6 +227,7 @@ body {
 .kpi-value.green { color:var(--green); }
 .kpi-value.blue { color:var(--blue); }
 .kpi-value.amber { color:var(--amber); }
+.kpi-value.purple { color:#8b5cf6; }
 .kpi-value .kpi-num { font-size:24px; font-weight:700; }
 .kpi-value .kpi-unit { font-size:13px; font-weight:500; color:inherit; opacity:.75; margin-left:3px; }
 .kpi-change { font-size:11px; color:var(--muted); text-align:right; margin:0; }
@@ -740,7 +741,7 @@ body.light-mode .filter-pill.active { color:#fff; }
 <!-- SIDEBAR -->
 <aside class="sidebar">
   <div class="sb-logo">1DAYECO<small>Admin Dashboard</small>
-    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v59</span>
+    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v60</span>
   </div>
   <nav class="sb-nav">
     <div class="sb-group">운영</div>
@@ -798,8 +799,7 @@ body.light-mode .filter-pill.active { color:#fff; }
       <!-- 1. 실시간 구독자 (유료+체험) -->
       <div class="kpi">
         <div class="kpi-row"><div class="kpi-label"><span class="kpi-icon">📡</span>실시간 구독자</div><div class="kpi-value gold skel" style="width:80px;height:32px" id="kpi-total"></div></div>
-        <div class="kpi-change" id="kpi-total-ch"></div>
-        <div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border);display:flex;gap:6px;flex-wrap:wrap" id="kpi-sub-breakdown">
+        <div class="kpi-change" id="kpi-sub-breakdown" style="display:flex;gap:6px;flex-wrap:wrap;margin-top:4px">
           <span style="font-size:11px;color:var(--muted)">로딩 중...</span>
         </div>
       </div>
@@ -813,9 +813,9 @@ body.light-mode .filter-pill.active { color:#fff; }
       <div class="kpi" onclick="showPage('content')" style="cursor:pointer" title="콘텐츠 페이지로 이동">
         <div class="kpi-row">
           <div class="kpi-label"><span class="kpi-icon">🤖</span>AI 비용</div>
-          <div class="kpi-value gold" style="font-size:24px" id="kpi-ai-cost">₩0</div>
+          <div class="kpi-value gold skel" style="width:80px;height:32px" id="kpi-ai-cost">₩0</div>
         </div>
-        <div class="kpi-change" id="kpi-ai-meta" style="color:var(--muted)">이번 달 0건 · 0 토큰</div>
+        <div class="kpi-change" id="kpi-ai-cost-ch" style="color:var(--muted)">이번 달 0건 · 0 토큰</div>
       </div>
     </div>
 
@@ -2984,14 +2984,11 @@ function loadKPIs() {
   const totalRefund = payments.reduce((sum, p) => sum + (p.refund_amount || 0), 0);
   const refundCount = payments.filter(p => p.refund_amount > 0 && p.updated_at >= mStart).length;
 
-  const refundEl = document.getElementById('kpi-refund-month');
-  if (refundEl) {
-    refundEl.className = 'kpi-value';
-    refundEl.style.color = '#8b5cf6';
-    refundEl.textContent = '₩' + Math.floor(thisMonthRefund).toLocaleString();
-  }
-  const refundChEl = document.getElementById('kpi-refund-month-ch');
-  if (refundChEl) refundChEl.textContent = `이번달 ${refundCount}건 · 누계 ₩${Math.floor(totalRefund).toLocaleString()}`;
+  setKPI('kpi-refund-month',
+    '₩ ' + Math.floor(thisMonthRefund).toLocaleString('ko-KR'),
+    'purple',
+    `이번달 ${refundCount}건 · 누계 ₩${Math.floor(totalRefund).toLocaleString()}`
+  );
 
   // ── KPI: 이번달 매출 (payments.paid_at 기준 실결제만) ──
   const nowDate  = new Date();
@@ -6272,13 +6269,9 @@ const CAT_LABELS_MAP = {
 // 개요 페이지 KPI 카드 (5번째)
 function renderUsageKPI() {
   const u = computeUsageThisMonth();
-  const valEl = document.getElementById('kpi-ai-cost');
-  const metaEl = document.getElementById('kpi-ai-meta');
-  if (valEl)  valEl.textContent = fmtKRW(u.krw);
-  if (metaEl) {
-    const tokK = (u.tokens / 1000).toFixed(1);
-    metaEl.textContent = '이번 달 ' + u.count + '건 · ' + tokK + 'K 토큰';
-  }
+  const tokK = (u.tokens / 1000).toFixed(1);
+  const meta = '이번 달 ' + u.count + '건 · ' + tokK + 'K 토큰';
+  setKPI('kpi-ai-cost', '₩ ' + Math.floor(u.krw).toLocaleString('ko-KR'), 'gold', meta);
 }
 
 // 콘텐츠 페이지 위젯
