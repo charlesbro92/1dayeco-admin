@@ -754,7 +754,7 @@ body.light-mode .filter-pill.active { color:#fff; }
 <!-- SIDEBAR -->
 <aside class="sidebar">
   <div class="sb-logo">1DAYECO<small>Admin Dashboard</small>
-    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v75</span>
+    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v76</span>
   </div>
   <nav class="sb-nav">
     <div class="sb-group">운영</div>
@@ -3092,15 +3092,10 @@ function loadKPIs() {
 
   setKPI('kpi-net-rev', '₩ ' + Math.floor(netRev).toLocaleString('ko-KR'), 'green',
     `매출 - 환불`);
-
-  // ── KPI: 오늘 발송 ─────────────────────────────────────
-  const send = STATE.today_send;
-  setKPI('kpi-send', send.sent + ' 건', 'amber',
-    '( 완료 ' + send.sent + ' · 실패 <span style="color:' + (send.failed>0?'var(--red)':'var(--muted)') + '">' + send.failed + ' )</span>');
 }
 function setKPI(id, val, cls, ch) {
   const el = document.getElementById(id);
-  el.className = `kpi-value ${cls}`;
+  if (!el) return;  // element 없으면 무시
   const str = String(val).trim();
   // ₩ 기호 분리 (있으면)
   const hasCurrency = str.startsWith('₩');
