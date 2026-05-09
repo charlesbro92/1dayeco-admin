@@ -692,6 +692,24 @@ body.light-mode .filter-pill.active { color:#fff; }
   .kpi-grid, .kpi-grid-5 { grid-template-columns:repeat(2,1fr); }
   .two-col { grid-template-columns:1fr; }
 }
+
+/* ── 컬럼 리사이즈 ── */
+.col-resizer {
+  position: absolute;
+  right: 0; top: 0; bottom: 0;
+  width: 5px;
+  cursor: col-resize;
+  user-select: none;
+  background: transparent;
+  z-index: 1;
+}
+.col-resizer:hover,
+.col-resizer.dragging {
+  background: var(--gold);
+  opacity: 0.5;
+}
+#subTable th { overflow: hidden; }
+#subTableWrap { overflow-x: auto; }
 </style>
 </head>
 <body>
@@ -722,7 +740,7 @@ body.light-mode .filter-pill.active { color:#fff; }
 <!-- SIDEBAR -->
 <aside class="sidebar">
   <div class="sb-logo">1DAYECO<small>Admin Dashboard</small>
-    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v55</span>
+    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v56</span>
   </div>
   <nav class="sb-nav">
     <div class="sb-group">운영</div>
@@ -777,9 +795,9 @@ body.light-mode .filter-pill.active { color:#fff; }
 
     <!-- KPI -->
     <div class="kpi-grid kpi-grid-5" id="kpiGrid">
-      <!-- 전체 구독자 (상세 분류 포함) -->
+      <!-- 실시간 구독자 (유료+체험) -->
       <div class="kpi">
-        <div class="kpi-row"><div class="kpi-label"><span class="kpi-icon">👥</span>전체 구독자</div><div class="kpi-value gold skel" style="width:80px;height:32px" id="kpi-total"></div></div>
+        <div class="kpi-row"><div class="kpi-label"><span class="kpi-icon">📡</span>실시간 구독자</div><div class="kpi-value gold skel" style="width:80px;height:32px" id="kpi-total"></div></div>
         <div class="kpi-change" id="kpi-total-ch"></div>
         <div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border);display:flex;gap:6px;flex-wrap:wrap" id="kpi-sub-breakdown">
           <span style="font-size:11px;color:var(--muted)">로딩 중...</span>
@@ -921,24 +939,24 @@ body.light-mode .filter-pill.active { color:#fff; }
 
     <div class="panel">
       <div class="panel-body" id="subTableWrap">
-        <table style="table-layout:fixed">
+        <table id="subTable" style="table-layout:fixed;min-width:100%">
           <thead><tr>
-            <th style="width:36px"><input type="checkbox" id="checkAll" onclick="toggleCheckAll(this)"
+            <th style="width:36px;min-width:36px;position:relative"><input type="checkbox" id="checkAll" onclick="toggleCheckAll(this)"
               style="accent-color:var(--gold);cursor:pointer;width:14px;height:14px"></th>
-            <th style="white-space:nowrap;width:130px">이름</th>
-            <th style="white-space:nowrap;width:120px">전화번호</th>
-            <th style="text-align:center;white-space:nowrap;width:60px">플랜</th>
-            <th style="text-align:right;white-space:nowrap;width:75px">금액</th>
-            <th style="text-align:center;white-space:nowrap;width:60px">상태</th>
-            <th style="text-align:center;white-space:nowrap;width:60px">결제</th>
-            <th style="text-align:center;white-space:nowrap;width:65px">카톡</th>
-            <th style="text-align:center;white-space:nowrap;width:60px">관심사</th>
-            <th style="text-align:center;white-space:nowrap;width:90px">시작일</th>
-            <th style="text-align:center;white-space:nowrap;width:90px">체험종료</th>
-            <th style="text-align:center;white-space:nowrap;width:90px">구독종료</th>
-            <th style="width:90px;white-space:nowrap">이메일</th>
-            <th style="width:90px;white-space:nowrap">메모</th>
-            <th style="width:120px;text-align:center;white-space:nowrap">작업</th>
+            <th style="white-space:nowrap;width:130px;min-width:80px;position:relative" class="resizable-col">이름<span class="col-resizer"></span></th>
+            <th style="white-space:nowrap;width:120px;min-width:80px;position:relative" class="resizable-col">전화번호<span class="col-resizer"></span></th>
+            <th style="text-align:center;white-space:nowrap;width:60px;min-width:50px;position:relative" class="resizable-col">플랜<span class="col-resizer"></span></th>
+            <th style="text-align:right;white-space:nowrap;width:75px;min-width:50px;position:relative" class="resizable-col">금액<span class="col-resizer"></span></th>
+            <th style="text-align:center;white-space:nowrap;width:80px;min-width:60px;position:relative" class="resizable-col">상태<span class="col-resizer"></span></th>
+            <th style="text-align:center;white-space:nowrap;width:80px;min-width:60px;position:relative" class="resizable-col">결제<span class="col-resizer"></span></th>
+            <th style="text-align:center;white-space:nowrap;width:65px;min-width:50px;position:relative" class="resizable-col">카톡<span class="col-resizer"></span></th>
+            <th style="text-align:center;white-space:nowrap;width:60px;min-width:50px;position:relative" class="resizable-col">관심사<span class="col-resizer"></span></th>
+            <th style="text-align:center;white-space:nowrap;width:90px;min-width:70px;position:relative" class="resizable-col">시작일<span class="col-resizer"></span></th>
+            <th style="text-align:center;white-space:nowrap;width:90px;min-width:70px;position:relative" class="resizable-col">체험종료<span class="col-resizer"></span></th>
+            <th style="text-align:center;white-space:nowrap;width:90px;min-width:70px;position:relative" class="resizable-col">구독종료<span class="col-resizer"></span></th>
+            <th style="width:90px;min-width:60px;white-space:nowrap;position:relative" class="resizable-col">이메일<span class="col-resizer"></span></th>
+            <th style="width:90px;min-width:60px;white-space:nowrap;position:relative" class="resizable-col">메모<span class="col-resizer"></span></th>
+            <th style="width:120px;text-align:center;white-space:nowrap;position:relative">작업</th>
           </tr></thead>
           <tbody id="subTableBody"><tr><td colspan="14"><div class="empty"><span class="empty-ico">👥</span>구독자가 없습니다</div></td></tr></tbody>
         </table>
@@ -2911,22 +2929,19 @@ function loadKPIs() {
   const cntFailed    = subs.filter(s => s.status === 'payment_failed').length;
   const new7d        = subs.filter(s => now - new Date(s.created_at) < 7*86400*1000).length;
 
-  // ── KPI: 전체 구독자 ───────────────────────────────────
-  setKPI('kpi-total', cntTotal.toLocaleString() + ' 명', 'gold',
+  // ── KPI: 실시간 구독자 (유료+체험) ─────────────────────
+  const cntLive = cntActive + cntTrial;
+  setKPI('kpi-total', cntLive.toLocaleString() + ' 명', 'gold',
     `<span class="up">↑ ${new7d}명</span> 최근 7일`);
 
-  // 상태별 분류 배지
+  // 상태별 분류 배지 (유료+체험만)
   const breakdownEl = document.getElementById('kpi-sub-breakdown');
   if (breakdownEl) {
     const badge = (label, count, color, bg) =>
       count > 0 ? `<span style="font-size:11px;font-weight:600;padding:2px 7px;border-radius:20px;color:${color};background:${bg}">${label} ${count}명</span>` : '';
     breakdownEl.innerHTML = [
-      badge('유료', cntActive,    '#10b981', 'rgba(16,185,129,.12)'),
-      badge('체험', cntTrial,     '#f59e0b', 'rgba(245,158,11,.12)'),
-      badge('취소', cntCancelled, '#94a3b8', 'rgba(148,163,184,.12)'),
-      badge('만료', cntExpired,   '#94a3b8', 'rgba(148,163,184,.12)'),
-      badge('환불', cntRefunded,  '#8b5cf6', 'rgba(139,92,246,.12)'),
-      badge('결제오류', cntFailed,'#ef4444', 'rgba(239,68,68,.12)'),
+      badge('✅ 유료', cntActive, '#10b981', 'rgba(16,185,129,.12)'),
+      badge('🟡 체험', cntTrial,  '#f59e0b', 'rgba(245,158,11,.12)'),
     ].filter(Boolean).join('') || '<span style="font-size:11px;color:var(--muted)">구독자 없음</span>';
   }
 
@@ -3381,7 +3396,18 @@ function renderSubscribersTable() {
   });
 
   const countEl = document.getElementById('subCount');
-  if (countEl) countEl.textContent = `총 ${filtered.length}명`;
+  if (countEl) {
+    const allSubs = STATE.subscribers.filter(s => !s.hidden);
+    const liveCnt = allSubs.filter(s => ['active','trial'].includes(s.status)).length;
+    countEl.innerHTML = `
+      <span style="color:var(--gold);font-weight:700">총 ${allSubs.length}명</span>
+      <span style="color:var(--muted);margin:0 6px">|</span>
+      <span style="color:#10b981">실시간 ${liveCnt}명</span>
+      <span style="color:var(--muted);margin:0 4px">(유료 ${allSubs.filter(s=>s.status==='active').length} · 체험 ${allSubs.filter(s=>s.status==='trial').length})</span>
+      <span style="color:var(--muted);margin:0 6px">|</span>
+      <span style="color:var(--muted)">표시 ${filtered.length}명</span>
+    `;
+  }
 
   const tbody = document.getElementById('subTableBody');
   if (!tbody) return; // 다른 페이지에 있으면 스킵
@@ -9452,6 +9478,38 @@ async function retryAllFailed(dateStr) {
     loadSendStatus(); loadKPIs(); loadSendHistory();
   } catch(e) { showToast('재발송 오류: ' + e.message, 'ng'); }
 }
+
+
+// ── 컬럼 리사이즈 ──────────────────────────────────────────
+(function initColResize() {
+  let startX, startW, th;
+
+  function onMouseMove(e) {
+    if (!th) return;
+    const w = Math.max(parseInt(th.style.minWidth) || 50, startW + (e.clientX - startX));
+    th.style.width = w + 'px';
+  }
+
+  function onMouseUp() {
+    if (th) {
+      th.querySelector('.col-resizer')?.classList.remove('dragging');
+      th = null;
+    }
+    document.removeEventListener('mousemove', onMouseMove);
+    document.removeEventListener('mouseup', onMouseUp);
+  }
+
+  document.addEventListener('mousedown', function(e) {
+    if (!e.target.classList.contains('col-resizer')) return;
+    e.preventDefault();
+    th = e.target.closest('th');
+    startX = e.clientX;
+    startW = th.offsetWidth;
+    e.target.classList.add('dragging');
+    document.addEventListener('mousemove', onMouseMove);
+    document.addEventListener('mouseup', onMouseUp);
+  });
+})();
 
 </script>
 </body>
