@@ -754,7 +754,7 @@ body.light-mode .filter-pill.active { color:#fff; }
 <!-- SIDEBAR -->
 <aside class="sidebar">
   <div class="sb-logo">1DAYECO<small>Admin Dashboard</small>
-    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v65</span>
+    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v66</span>
   </div>
   <nav class="sb-nav">
     <div class="sb-group">운영</div>
@@ -2688,12 +2688,21 @@ let API_BASE = (function() {
 })();
 
 // 배포 정보 표시 (사이드바 로고 옆 배지 클릭 시)
-function showDeployInfo() {
+async function showDeployInfo() {
   const badge = document.getElementById('deployBadge');
   const v = badge ? badge.textContent : 'unknown';
+  let apiVer = '확인 중...';
+  try {
+    const r = await fetch(API_BASE + '/version', { signal: AbortSignal.timeout(3000) });
+    const d = await r.json();
+    apiVer = d.version || 'unknown';
+  } catch(e) {
+    apiVer = 'API 응답 없음';
+  }
   alert(
     '배포 정보\n' +
-    '버전: ' + v + '\n' +
+    '어드민: ' + v + '\n' +
+    'API:    ' + apiVer + '\n' +
     '도메인: ' + location.hostname + '\n' +
     'API_BASE: ' + API_BASE + '\n' +
     '경로: ' + location.pathname + '\n' +
