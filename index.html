@@ -220,16 +220,16 @@ body {
   display:flex; flex-direction:column; gap:8px;
 }
 .kpi:hover { border-color:rgba(201,168,76,.3); }
-.kpi-row { display:flex; justify-content:space-between; align-items:center; gap:12px; }
-.kpi-label { font-size:11px; color:var(--muted); letter-spacing:.5px; text-transform:uppercase; text-align:left; display:flex; align-items:center; gap:6px; margin:0; }
-.kpi-value { font-family:var(--mono); font-size:14px; font-weight:600; line-height:1.3; text-align:right; overflow:hidden; text-overflow:ellipsis; }
+.kpi-row { display:flex; justify-content:space-between; align-items:flex-start; gap:8px; flex-wrap:wrap; }
+.kpi-label { font-size:11px; color:var(--muted); letter-spacing:.5px; text-transform:uppercase; text-align:left; display:flex; align-items:center; gap:6px; margin:0; flex-shrink:0; }
+.kpi-value { font-family:var(--mono); font-size:13px; font-weight:600; line-height:1.3; text-align:right; word-break:break-all; }
 .kpi-value.gold { color:var(--gold); }
 .kpi-value.green { color:var(--green); }
 .kpi-value.blue { color:var(--blue); }
 .kpi-value.amber { color:var(--amber); }
 .kpi-value.purple { color:#8b5cf6; }
-.kpi-value .kpi-num { font-size:24px; font-weight:700; }
-.kpi-value .kpi-unit { font-size:13px; font-weight:500; color:inherit; opacity:.75; margin-left:3px; }
+.kpi-value .kpi-num { font-size:20px; font-weight:700; }
+.kpi-value .kpi-unit { font-size:12px; font-weight:500; color:inherit; opacity:.75; margin-left:2px; }
 .kpi-change { font-size:11px; color:var(--muted); text-align:right; margin:0; }
 .kpi-change .up { color:var(--green); }
 .kpi-change .dn { color:var(--red); }
@@ -754,7 +754,7 @@ body.light-mode .filter-pill.active { color:#fff; }
 <!-- SIDEBAR -->
 <aside class="sidebar">
   <div class="sb-logo">1DAYECO<small>Admin Dashboard</small>
-    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v72</span>
+    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v73</span>
   </div>
   <nav class="sb-nav">
     <div class="sb-group">운영</div>
