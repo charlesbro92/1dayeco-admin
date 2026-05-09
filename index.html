@@ -754,7 +754,7 @@ body.light-mode .filter-pill.active { color:#fff; }
 <!-- SIDEBAR -->
 <aside class="sidebar">
   <div class="sb-logo">1DAYECO<small>Admin Dashboard</small>
-    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v92</span>
+    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v93</span>
   </div>
   <nav class="sb-nav">
     <div class="sb-group">운영</div>
@@ -6446,18 +6446,33 @@ const MOCK_CONTENT = [];
 const ARCHIVE_KEY = '1dayeco_archive';
 
 // ── 키 헬퍼 ──────────────────────────────────────────────────
-function archKey(dateStr, category) {
-  return dateStr + '_' + category;  // "2026-05-09_kr_stock"
+function archKey(dateStr, category, subtopicId) {
+  // 옛 형식: "2026-05-09_kr_stock"
+  // 신 형식: "2026-05-09_vietnamese#sub14"  (subtopic_id 있으면 # 뒤에 붙임)
+  // # 문자는 카테고리/날짜에 절대 안 나오는 문자라 분리에 안전
+  if (subtopicId !== null && subtopicId !== undefined && subtopicId !== '' && subtopicId !== 0) {
+    return dateStr + '_' + category + '#sub' + Number(subtopicId);
+  }
+  return dateStr + '_' + category;
 }
 function archKeyParts(key) {
-  // 날짜는 항상 YYYY-MM-DD (10자), 그 뒤 _ 이후가 카테고리
-  // "2026-05-09_kr_stock" → dateStr="2026-05-09", category="kr_stock"
-  if (key.length < 12) return { dateStr: key, category: 'economy' };
-  return { dateStr: key.slice(0, 10), category: key.slice(11) };
+  // 날짜는 항상 YYYY-MM-DD (10자), 그 뒤 _ 이후가 카테고리, # 뒤가 subtopic_id
+  if (key.length < 12) return { dateStr: key, category: 'economy', subtopicId: null };
+  const dateStr = key.slice(0, 10);
+  const rest    = key.slice(11);
+  const hashIdx = rest.indexOf('#sub');
+  if (hashIdx >= 0) {
+    return {
+      dateStr: dateStr,
+      category: rest.slice(0, hashIdx),
+      subtopicId: Number(rest.slice(hashIdx + 4)) || null,
+    };
+  }
+  return { dateStr: dateStr, category: rest, subtopicId: null };
 }
 function isArchKey(key) {
-  // YYYY-MM-DD_카테고리 형식 (카테고리에 _ 포함 가능)
-  return /^\d{4}-\d{2}-\d{2}_[a-z][a-z0-9_]*$/.test(key);
+  // YYYY-MM-DD_카테고리(#subN)? 형식
+  return /^\d{4}-\d{2}-\d{2}_[a-z][a-z0-9_]*(#sub\d+)?$/.test(key);
 }
 
 // 같은 날짜의 모든 카테고리 항목 조회
@@ -6864,9 +6879,12 @@ function loadStats() {
 
 function saveToArchive(dateStr, data) {
   const category = data.category || data.cat || 'economy';
-  const key = archKey(dateStr, category);
+  const subtopicId = data.subtopic_id || null;
+  const key = archKey(dateStr, category, subtopicId);
   CONTENT_ARCHIVE[key] = {
     cat:         category,
+    subtopic_id: subtopicId,
+    subtopic_name: data.subtopic_name || '',
     kw:          data.keyword    || data.kw   || '',
     topic:       data.topic      || data.headline || '',
     headline:    data.headline   || data.topic    || '',
@@ -7000,14 +7018,13 @@ async function syncArchiveFromBackend() {
         if (!dateStr) return;
         const cat = row.category || '';
         if (!cat) return;  // 카테고리 없는 행만 제외, 신규 카테고리 모두 허용
-        const k = archKey(dateStr, cat);
+        const k = archKey(dateStr, cat, row.subtopic_id);
         fetched.add(k);
-        // 복합키로 저장: 같은 날짜라도 다른 카테고리면 별도 항목
-        // 같은 (날짜+카테고리)는 가장 최근 것으로 덮어쓰기 (정렬로 보장됨)
+        // 복합키로 저장: 같은 (날짜+카테고리+부제목) 단위로 별도 항목
         CONTENT_ARCHIVE[k] = {
           cat:         cat,
           subtopic_id: row.subtopic_id || null,
-          subtopic_name: row.subtopic_name || '',  // 조인 안 해서 백엔드에서 안 올 수도 있음 (아래에서 보강)
+          subtopic_name: row.subtopic_name || '',
           kw:          row.keyword || '',
           topic:       row.headline || '',
           headline:    row.headline || '',
