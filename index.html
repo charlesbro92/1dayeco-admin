@@ -754,7 +754,7 @@ body.light-mode .filter-pill.active { color:#fff; }
 <!-- SIDEBAR -->
 <aside class="sidebar">
   <div class="sb-logo">1DAYECO<small>Admin Dashboard</small>
-    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v62</span>
+    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v63</span>
   </div>
   <nav class="sb-nav">
     <div class="sb-group">운영</div>
@@ -3438,7 +3438,7 @@ function renderSubscribersTable() {
     if (window._scFilter === 'trial_all') {
       matchStatus = ['trial','pending_charge','pending_payment'].includes(s.status);
     } else if (window._scFilter === 'refund_error') {
-      matchStatus = s.status === 'payment_failed' || s.payment_status === 'refunded';
+      matchStatus = ['payment_failed','refund_requested'].includes(s.status) || s.payment_status === 'refunded';
     } else {
       matchStatus = !statusFilter || s.status === statusFilter;
     }
@@ -3477,7 +3477,7 @@ function renderSubscribersTable() {
     sc('sc-trial',     allSubs.filter(s=>['trial','pending_charge','pending_payment'].includes(s.status)).length);
     sc('sc-expired',   allSubs.filter(s=>s.status==='expired').length);
     sc('sc-cancelled', allSubs.filter(s=>s.status==='cancelled').length);
-    sc('sc-others',    allSubs.filter(s=>s.status==='payment_failed'||s.payment_status==='refunded').length);
+    sc('sc-others',    allSubs.filter(s=>['payment_failed','refund_requested'].includes(s.status)||s.payment_status==='refunded').length);
   }
 
   const tbody = document.getElementById('subTableBody');
@@ -3631,6 +3631,10 @@ function renderSubscribersRows(filtered) {
            <button onclick="restoreSub('${s.id}','${s.name}','active')"
              style="background:rgba(74,222,128,.12);border:1px solid rgba(74,222,128,.3);color:var(--green);padding:4px 8px;border-radius:4px;font-size:10px;cursor:pointer;font-family:var(--sans);font-weight:700;white-space:nowrap">활성 복구</button>
          </div>`
+      : s.status === 'refund_requested'
+      ? `<div style="display:flex;gap:4px;align-items:center">
+           <span style="font-size:11px;color:#f87171;font-weight:700;padding:4px 8px;background:rgba(248,113,113,.08);border:1px solid rgba(248,113,113,.3);border-radius:4px;white-space:nowrap">환불요청중</span>
+         </div>`
       : s.status === 'active'
       ? `<div style="display:flex;gap:4px;align-items:center;flex-wrap:nowrap">
            <button onclick="event.stopPropagation();cancelSub('${s.id}','${s.name}')"
@@ -3675,7 +3679,8 @@ function renderSubscribersRows(filtered) {
   expired:'만료',
   pending_payment:'카드등록중',
   pending_charge:'결제대기',
-  payment_failed:'결제오류'
+  payment_failed:'결제오류',
+  refund_requested:'환불요청'
 }[s.status]||s.status}</span></td>
       <td style="text-align:center">${paymentStatusLabel(s.payment_status)}</td>
       <td style="text-align:center">${renderKakaoChannelCell(s)}</td>
