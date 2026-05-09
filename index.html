@@ -754,7 +754,7 @@ body.light-mode .filter-pill.active { color:#fff; }
 <!-- SIDEBAR -->
 <aside class="sidebar">
   <div class="sb-logo">1DAYECO<small>Admin Dashboard</small>
-    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v97</span>
+    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v98</span>
   </div>
   <nav class="sb-nav">
     <div class="sb-group">운영</div>
@@ -2402,27 +2402,20 @@ body.light-mode .filter-pill.active { color:#fff; }
         </div>
         <input type="hidden" id="sdInputHour" value="8">
       </div>
-      <!-- 받아볼 관심사 (4 카테고리) -->
+      <!-- 받아볼 관심사 (1개 선택) + 부제목 -->
       <div>
-        <label style="font-size:10px;color:var(--muted);letter-spacing:.5px;display:block;margin-bottom:6px">받아볼 관심사 <span style="font-weight:400;color:var(--muted)">(1개 이상)</span></label>
+        <label style="font-size:10px;color:var(--muted);letter-spacing:.5px;display:block;margin-bottom:6px">받아볼 관심사 <span style="font-weight:400;color:var(--gold)">(1개 선택 필수)</span></label>
         <div id="sdCategories" style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
-          <label class="sd-cat-chip" data-cat="economy" style="display:flex;align-items:center;gap:8px;padding:8px 12px;border:1.5px solid var(--b);border-radius:7px;cursor:pointer;font-size:12px;color:var(--text);background:rgba(255,255,255,.02);transition:all .15s">
-            <input type="checkbox" id="sdCatEconomy" style="accent-color:var(--gold);cursor:pointer;width:14px;height:14px;flex-shrink:0">
-            <span>📊 경제</span>
-          </label>
-          <label class="sd-cat-chip" data-cat="realestate" style="display:flex;align-items:center;gap:8px;padding:8px 12px;border:1.5px solid var(--b);border-radius:7px;cursor:pointer;font-size:12px;color:var(--text);background:rgba(255,255,255,.02);transition:all .15s">
-            <input type="checkbox" id="sdCatRealestate" style="accent-color:var(--gold);cursor:pointer;width:14px;height:14px;flex-shrink:0">
-            <span>🏠 부동산</span>
-          </label>
-          <label class="sd-cat-chip" data-cat="english" style="display:flex;align-items:center;gap:8px;padding:8px 12px;border:1.5px solid var(--b);border-radius:7px;cursor:pointer;font-size:12px;color:var(--text);background:rgba(255,255,255,.02);transition:all .15s">
-            <input type="checkbox" id="sdCatEnglish" style="accent-color:var(--gold);cursor:pointer;width:14px;height:14px;flex-shrink:0">
-            <span>🇬🇧 영어</span>
-          </label>
-          <label class="sd-cat-chip" data-cat="trivia" style="display:flex;align-items:center;gap:8px;padding:8px 12px;border:1.5px solid var(--b);border-radius:7px;cursor:pointer;font-size:12px;color:var(--text);background:rgba(255,255,255,.02);transition:all .15s">
-            <input type="checkbox" id="sdCatTrivia" style="accent-color:var(--gold);cursor:pointer;width:14px;height:14px;flex-shrink:0">
-            <span>🧠 상식</span>
-          </label>
+          <!-- 동적 렌더링: _renderSdCategoryChips() -->
+          <div style="grid-column:1/-1;text-align:center;padding:14px;color:var(--muted);font-size:11px">카테고리 로드 중...</div>
         </div>
+      </div>
+      <div id="sdSubtopicWrap" style="display:none">
+        <label style="font-size:10px;color:var(--muted);letter-spacing:.5px;display:block;margin-bottom:6px">컨텐츠 그룹(부제목) <span style="font-weight:400;color:var(--gold)">(필수)</span></label>
+        <select id="sdSubtopicSelect"
+          style="width:100%;background:rgba(255,255,255,.04);border:1.5px solid var(--b);border-radius:7px;padding:9px 12px;font-size:13px;color:var(--text);font-family:var(--sans);outline:none">
+          <option value="">— 선택 —</option>
+        </select>
       </div>
       <!-- 시작일 / 종료일 -->
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
@@ -9549,6 +9542,64 @@ function saveSubChanges() {
 // ── 구독자 상세 팝업 ─────────────────────────────────────────
 let sdCurrentId = null;
 
+// 구독자 편집 모달: 카테고리 동적 렌더 (라디오 - 1개만 선택)
+function _renderSdCategoryChips(selectedCat) {
+  const wrap = document.getElementById('sdCategories');
+  if (!wrap) return;
+  const cats = (CATEGORIES_CACHE && CATEGORIES_CACHE.length)
+    ? CATEGORIES_CACHE.filter(c => (c.visibility || (c.active ? 'active' : 'hidden')) === 'active')
+    : [{id:'economy',name:'경제',emoji:'📊'},{id:'realestate',name:'부동산',emoji:'🏠'},{id:'english',name:'영어',emoji:'🇬🇧'},{id:'trivia',name:'상식',emoji:'🧠'}];
+  if (cats.length === 0) {
+    wrap.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:14px;color:var(--muted);font-size:11px">활성 카테고리가 없습니다</div>';
+    return;
+  }
+  wrap.innerHTML = cats.map(c => {
+    const isSel = c.id === selectedCat;
+    return `<label class="sd-cat-chip" data-cat="${c.id}"
+      style="display:flex;align-items:center;gap:8px;padding:8px 12px;border:1.5px solid ${isSel ? 'var(--gold)' : 'var(--b)'};border-radius:7px;cursor:pointer;font-size:12px;color:var(--text);background:${isSel ? 'rgba(201,168,76,.08)' : 'rgba(255,255,255,.02)'};transition:all .15s">
+      <input type="radio" name="sdCategoryRadio" value="${c.id}" ${isSel ? 'checked' : ''}
+        onchange="_onSdCategoryChange(this)"
+        style="accent-color:var(--gold);cursor:pointer;width:14px;height:14px;flex-shrink:0">
+      <span>${c.emoji || '📌'} ${c.name || c.id}</span>
+    </label>`;
+  }).join('');
+}
+
+function _onSdCategoryChange(radio) {
+  // 칩 시각 효과
+  document.querySelectorAll('.sd-cat-chip').forEach(label => {
+    const isSel = label.querySelector('input').checked;
+    label.style.borderColor = isSel ? 'var(--gold)' : 'var(--b)';
+    label.style.background = isSel ? 'rgba(201,168,76,.08)' : 'rgba(255,255,255,.02)';
+  });
+  // 부제목 select 갱신
+  _renderSdSubtopicSelect(radio.value, null);
+}
+
+// 구독자 편집 모달: 부제목 select 동적 채움
+async function _renderSdSubtopicSelect(catId, currentSubtopicId) {
+  const wrap = document.getElementById('sdSubtopicWrap');
+  const sel  = document.getElementById('sdSubtopicSelect');
+  if (!wrap || !sel) return;
+  if (!catId) {
+    wrap.style.display = 'none';
+    return;
+  }
+  sel.innerHTML = '<option value="">— 로드 중 —</option>';
+  wrap.style.display = '';
+  const list = await _fetchSubtopics(catId, false);
+  if (list.length === 0) {
+    sel.innerHTML = '<option value="">— 부제목 없음 —</option>';
+    wrap.style.display = 'none';  // 부제목 없으면 영역 자체 숨김
+    return;
+  }
+  sel.innerHTML = '<option value="">— 선택 —</option>'
+    + list.map(s => {
+        const isSel = currentSubtopicId && Number(s.id) === Number(currentSubtopicId);
+        return `<option value="${s.id}" ${isSel ? 'selected' : ''}>${(s.name || '').replace(/"/g,'&quot;')}</option>`;
+      }).join('');
+}
+
 function openSubDetail(id) {
   const sub = STATE.subscribers.find(s => s.id === id);
   if (!sub) return;
@@ -9570,20 +9621,17 @@ function openSubDetail(id) {
   document.getElementById('sdInputStartDate').value = sdCd.toISOString().slice(0,10);
   document.getElementById('sdInputEndDate').value   = sub.end_date ? new Date(sub.end_date).toISOString().slice(0,10) : '';
 
-  // 카테고리 체크박스 채우기 (없으면 4개 모두 디폴트)
+  // 카테고리 영역 동적 렌더 (라디오 1개 선택)
   let cats = sub.categories;
   if (typeof cats === 'string') {
     cats = cats.split(',').map(s => s.trim()).filter(Boolean);
   }
-  if (!Array.isArray(cats) || cats.length === 0) {
-    cats = ['economy','realestate','english','trivia'];
-  }
-  document.getElementById('sdCatEconomy').checked    = cats.includes('economy');
-  document.getElementById('sdCatRealestate').checked = cats.includes('realestate');
-  document.getElementById('sdCatEnglish').checked    = cats.includes('english');
-  document.getElementById('sdCatTrivia').checked     = cats.includes('trivia');
-  // 체크된 칩 시각 효과
-  _refreshSdCatChipStyles();
+  if (!Array.isArray(cats)) cats = [];
+  const selectedCat = cats[0] || '';  // 첫 번째 카테고리만 사용
+  _renderSdCategoryChips(selectedCat);
+
+  // 부제목 select (선택된 카테고리에 부제목 있으면 노출, 현재 sub.subtopic_id 자동 선택)
+  _renderSdSubtopicSelect(selectedCat, sub.subtopic_id || null);
 
   // 발송 상태 정보 채우기 (read-only)
   const kakaoEl = document.getElementById('sdKakaoChannel');
@@ -9749,23 +9797,33 @@ async function saveSubDetail() {
   if (btn) { btn.disabled = true; btn.textContent = '저장 중...'; }
 
   try {
-    // 카테고리 수집
-    const newCats = [];
-    if (document.getElementById('sdCatEconomy').checked)    newCats.push('economy');
-    if (document.getElementById('sdCatRealestate').checked) newCats.push('realestate');
-    if (document.getElementById('sdCatEnglish').checked)    newCats.push('english');
-    if (document.getElementById('sdCatTrivia').checked)     newCats.push('trivia');
-    // 모두 해제했으면 디폴트(4개)로 자동 채움
-    if (newCats.length === 0) {
-      showToast('관심사 1개 이상 선택해주세요. 자동으로 4개 모두 선택됩니다.', 'ok');
-      newCats.push('economy','realestate','english','trivia');
+    // 카테고리 수집 (라디오 1개)
+    const radioEl = document.querySelector('input[name="sdCategoryRadio"]:checked');
+    const selectedCat = radioEl ? radioEl.value : '';
+    if (!selectedCat) {
+      showToast('관심사 카테고리 1개를 선택해주세요', 'ng');
+      if (btn) { btn.disabled = false; btn.textContent = '💾 저장'; }
+      return;
     }
+    const newCats = [selectedCat];
+
+    // 부제목 검증: 해당 카테고리에 부제목 존재하면 선택 필수
+    const subList = _SUBTOPIC_CACHE[selectedCat] || [];
+    const subSelectEl = document.getElementById('sdSubtopicSelect');
+    const newSubtopicId = subSelectEl ? (subSelectEl.value || '') : '';
+    if (subList.length > 0 && !newSubtopicId) {
+      showToast('컨텐츠 그룹(부제목)을 선택해주세요', 'ng');
+      if (btn) { btn.disabled = false; btn.textContent = '💾 저장'; }
+      return;
+    }
+    const newSubtopicIdInt = newSubtopicId ? Number(newSubtopicId) : null;
 
     // ── 백업 (실패 시 롤백용) ────────────────────────────
     const backup = {
       name: sub.name, phone: sub.phone, plan: sub.plan,
       status: sub.status, send_hour: sub.send_hour,
       email: sub.email, memo: sub.memo, categories: sub.categories,
+      subtopic_id: sub.subtopic_id || null,
       created_at: sub.created_at, end_date: sub.end_date,
     };
 
@@ -9778,6 +9836,7 @@ async function saveSubDetail() {
     sub.email    = document.getElementById('sdInputEmail').value.trim() || null;
     sub.memo     = document.getElementById('sdInputMemo').value.trim()  || null;
     sub.categories = newCats;
+    sub.subtopic_id = newSubtopicIdInt;
     const sdStart = document.getElementById('sdInputStartDate').value;
     const sdEnd   = document.getElementById('sdInputEndDate').value;
     if (sdStart) sub.created_at = sdStart + 'T00:00:00+09:00';
@@ -9794,7 +9853,7 @@ async function saveSubDetail() {
             status: sub.status, send_hour: sub.send_hour,
             email: sub.email, memo: sub.memo,
             categories: newCats,
-            // 시작일/종료일도 포함 (사용자가 수정 가능)
+            subtopic_id: newSubtopicIdInt,
             created_at: sub.created_at,
             end_date: sub.end_date,
           })
