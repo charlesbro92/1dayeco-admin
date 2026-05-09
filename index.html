@@ -754,7 +754,7 @@ body.light-mode .filter-pill.active { color:#fff; }
 <!-- SIDEBAR -->
 <aside class="sidebar">
   <div class="sb-logo">1DAYECO<small>Admin Dashboard</small>
-    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v94</span>
+    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v95</span>
   </div>
   <nav class="sb-nav">
     <div class="sb-group">운영</div>
@@ -1319,6 +1319,7 @@ body.light-mode .filter-pill.active { color:#fff; }
                   <th style="width:42px;background:var(--s1);position:sticky;top:0;z-index:2"><input type="checkbox" id="topicSelectAll" onchange="toggleAllTopics()"></th>
                   <th style="background:var(--s1);position:sticky;top:0;z-index:2">날짜</th>
                   <th style="background:var(--s1);position:sticky;top:0;z-index:2;text-align:center">카테고리</th>
+                  <th style="background:var(--s1);position:sticky;top:0;z-index:2;text-align:center">부제목</th>
                   <th style="background:var(--s1);position:sticky;top:0;z-index:2">주제</th>
                   <th style="background:var(--s1);position:sticky;top:0;z-index:2">키워드</th>
                   <th style="background:var(--s1);position:sticky;top:0;z-index:2;text-align:center">상태</th>
@@ -1441,6 +1442,7 @@ body.light-mode .filter-pill.active { color:#fff; }
                 </th>
                 <th style="background:var(--s1);position:sticky;top:0;z-index:2">날짜</th>
                 <th style="background:var(--s1);position:sticky;top:0;z-index:2;text-align:center">카테고리</th>
+                <th style="background:var(--s1);position:sticky;top:0;z-index:2;text-align:center">부제목</th>
                 <th style="background:var(--s1);position:sticky;top:0;z-index:2">주제</th>
                 <th style="background:var(--s1);position:sticky;top:0;z-index:2">키워드</th>
                 <th style="background:var(--s1);position:sticky;top:0;z-index:2">미리보기</th>
@@ -1448,7 +1450,7 @@ body.light-mode .filter-pill.active { color:#fff; }
                 <th style="background:var(--s1);position:sticky;top:0;z-index:2;text-align:center;width:80px">액션</th>
               </tr>
             </thead>
-            <tbody id="contentBody"><tr><td colspan="8"><div class="empty"><span class="empty-ico">📝</span>생성된 콘텐츠가 없습니다</div></td></tr></tbody>
+            <tbody id="contentBody"><tr><td colspan="9"><div class="empty"><span class="empty-ico">📝</span>생성된 콘텐츠가 없습니다</div></td></tr></tbody>
           </table>
           <!-- hidden input for backward compatibility (모든 카테고리 ID 받을 수 있음) -->
           <input type="hidden" id="contentCatFilter" value="">
@@ -5463,12 +5465,14 @@ function renderTopicList() {
     const statusBadge = t.status === 'generated'
       ? '<span style="background:rgba(74,222,128,.12);color:var(--green);font-size:10px;padding:3px 8px;border-radius:4px;border:1px solid rgba(74,222,128,.25)">✓ 생성됨</span>'
       : '<span style="color:var(--muted);font-size:10px">대기</span>';
+    const subtopicCell = t.subtopic_name
+      ? '<span style="display:inline-block;background:rgba(201,168,76,.1);border:1px solid rgba(201,168,76,.3);color:var(--gold);font-size:10px;padding:2px 8px;border-radius:10px;letter-spacing:.2px">' + (t.subtopic_name || '').replace(/</g,'&lt;') + '</span>'
+      : '<span style="color:var(--muted);font-size:11px">—</span>';
     return '<tr>'
       + '<td><input type="checkbox" data-tid="' + t.id + '" ' + checked + ' onchange="onTopicCheck(this)"></td>'
       + '<td style="font-family:var(--mono);font-size:11px">' + t.date + '</td>'
-      + '<td style="text-align:center"><span class="badge monthly">' + (CATEGORY_LABEL_MAP[t.cat] || t.cat) + '</span>'
-      + (t.subtopic_name ? '<div style="font-size:9px;color:var(--gold);margin-top:3px;letter-spacing:.3px">' + (t.subtopic_name || '').replace(/</g,'&lt;') + '</div>' : '')
-      + '</td>'
+      + '<td style="text-align:center"><span class="badge monthly">' + (CATEGORY_LABEL_MAP[t.cat] || t.cat) + '</span></td>'
+      + '<td style="text-align:center">' + subtopicCell + '</td>'
       + '<td><strong>' + t.topic + '</strong></td>'
       + '<td style="color:var(--muted);font-size:11px">' + t.kw + '</td>'
       + '<td style="text-align:center">' + statusBadge + '</td>'
@@ -7439,9 +7443,9 @@ function _renderArchiveTable() {
   const emptyMsg = hasFilter ? '검색 결과가 없습니다' : '생성된 콘텐츠가 없습니다';
   const emptyIco = hasFilter ? '🔍' : '📝';
 
-  // === 렌더 (체크박스 컬럼 추가, 숨김 표시) ===
+  // === 렌더 (체크박스 + 카테고리/부제목 분리 컬럼) ===
   document.getElementById('contentBody').innerHTML = rows.length === 0
-    ? '<tr><td colspan="7"><div class="empty"><span class="empty-ico">' + emptyIco + '</span>' + emptyMsg + '</div></td></tr>'
+    ? '<tr><td colspan="9"><div class="empty"><span class="empty-ico">' + emptyIco + '</span>' + emptyMsg + '</div></td></tr>'
     : rows.map(function(r) {
         var aiBadge = r.source === 'generated'
           ? ' <span style="background:rgba(74,222,128,.12);border:1px solid rgba(74,222,128,.25);color:var(--green);font-size:9px;padding:1px 4px;border-radius:3px">AI</span>'
@@ -7452,13 +7456,17 @@ function _renderArchiveTable() {
         // 체크박스 키 (date+category)
         const ckId = 'ck-' + r.dateStr + '-' + (r.cat || '');
         const isChecked = ARCHIVE_SELECTED.has(r.dateStr + '|' + (r.cat || ''));
-        // 검색어 하이라이트 (날짜 외 텍스트 컬럼들)
+        // 검색어 하이라이트
         const topicCell    = searchVal ? _highlightText(r.topic || r.kw || '', searchValRaw)
                                        : (r.topic || r.kw || '');
         const kwCell       = searchVal ? _highlightText(r.kw || '', searchValRaw)
                                        : (r.kw || '');
         const headlineCell = searchVal ? _highlightText(r.headline || '', searchValRaw)
                                        : (r.headline || '');
+        // 부제목 셀: 이름이 있으면 작은 칩, 없으면 회색 대시
+        const subtopicCell = r.subtopic_name
+          ? '<span style="display:inline-block;background:rgba(201,168,76,.1);border:1px solid rgba(201,168,76,.3);color:var(--gold);font-size:10px;padding:2px 8px;border-radius:10px;letter-spacing:.2px">' + (r.subtopic_name || '').replace(/</g,'&lt;') + '</span>'
+          : '<span style="color:var(--muted);font-size:11px">—</span>';
         const rowClass = 'arch-row' + (r.hidden ? ' is-hidden' : '');
         return '<tr class="' + rowClass + '"'
           + ' style="cursor:pointer"'
@@ -7472,22 +7480,28 @@ function _renderArchiveTable() {
           +     ' data-date="' + r.dateStr + '" data-cat="' + (r.cat || '') + '"'
           +     ' onclick="onArchiveRowCheck(this)"' + (isChecked ? ' checked' : '') + '>'
           + '</td>'
-          // 나머지 컬럼들 (행 클릭 시 상세 보기)
+          // 날짜
           + '<td onclick="openContentPopupByDate(\'' + r.dateStr + '\', \'' + (r.cat || '') + '\')"'
           +   ' style="font-family:var(--mono);font-size:11px">' + r.date + aiBadge + hiddenBadge + '</td>'
+          // 카테고리 (배지만, 부제목 텍스트 제거됨)
           + '<td onclick="openContentPopupByDate(\'' + r.dateStr + '\', \'' + (r.cat || '') + '\')"'
-          +   ' style="text-align:center"><span class="badge monthly">' + (CATEGORY_LABEL_MAP[r.cat] || r.cat) + '</span>'
-          + (r.subtopic_name ? '<div style="font-size:9px;color:var(--gold);margin-top:3px;letter-spacing:.3px">' + (r.subtopic_name || '').replace(/</g,'&lt;') + '</div>' : '')
-          + '</td>'
+          +   ' style="text-align:center"><span class="badge monthly">' + (CATEGORY_LABEL_MAP[r.cat] || r.cat) + '</span></td>'
+          // 부제목 (별도 컬럼)
+          + '<td onclick="openContentPopupByDate(\'' + r.dateStr + '\', \'' + (r.cat || '') + '\')"'
+          +   ' style="text-align:center">' + subtopicCell + '</td>'
+          // 주제
           + '<td onclick="openContentPopupByDate(\'' + r.dateStr + '\', \'' + (r.cat || '') + '\')">'
           +   '<strong>' + topicCell + '</strong></td>'
+          // 키워드
           + '<td onclick="openContentPopupByDate(\'' + r.dateStr + '\', \'' + (r.cat || '') + '\')"'
           +   ' style="color:var(--muted);font-size:11px">' + kwCell + '</td>'
+          // 미리보기
           + '<td onclick="openContentPopupByDate(\'' + r.dateStr + '\', \'' + (r.cat || '') + '\')"'
           +   ' style="color:var(--muted);font-size:11px;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + headlineCell + '</td>'
+          // 토큰
           + '<td onclick="openContentPopupByDate(\'' + r.dateStr + '\', \'' + (r.cat || '') + '\')"'
           +   ' style="text-align:center;font-family:var(--mono);font-size:11px;color:var(--muted)">' + (r.tok || 0) + '</td>'
-          // ⭐ v49: 액션 컬럼 - 재생성 버튼
+          // 액션
           + '<td style="text-align:center" onclick="event.stopPropagation()">'
           +   '<button onclick="regenerateArchiveItem(\'' + r.dateStr + '\', \'' + (r.cat || '') + '\')"'
           +     ' class="arch-act-btn" style="padding:4px 8px;font-size:10px"'
