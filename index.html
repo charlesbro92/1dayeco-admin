@@ -754,7 +754,7 @@ body.light-mode .filter-pill.active { color:#fff; }
 <!-- SIDEBAR -->
 <aside class="sidebar">
   <div class="sb-logo">1DAYECO<small>Admin Dashboard</small>
-    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v91</span>
+    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v92</span>
   </div>
   <nav class="sb-nav">
     <div class="sb-group">운영</div>
@@ -5287,6 +5287,8 @@ async function generateTopics() {
           count: chunkCount,
           use_ai: true,
           exclude_topics: excludeForChunk,
+          subtopic_id: subtopicId ? Number(subtopicId) : null,
+          subtopic_name: subtopicName || '',
         }, { signal: ctrl.signal });
 
         if (res && res.success && Array.isArray(res.topics) && res.topics.length > 0) {
@@ -8647,7 +8649,12 @@ async function _deleteSubtopic(subtopicId, name) {
     const res = await fetch(API_BASE + '/admin/subtopics/' + subtopicId, { method: 'DELETE' });
     const data = await res.json().catch(() => ({}));
     if (!res.ok || data.success === false) {
-      showToast(data.error || '삭제 실패', 'ng');
+      // in_use 에러 → 별도 알림창으로 명확히 표시
+      if (data.error === 'in_use' && data.message) {
+        alert(data.message);
+      } else {
+        showToast(data.message || data.error || '삭제 실패', 'ng');
+      }
       return;
     }
     _modalSubtopics = _modalSubtopics.filter(s => s.id !== subtopicId);
