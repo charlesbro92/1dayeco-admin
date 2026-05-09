@@ -740,7 +740,7 @@ body.light-mode .filter-pill.active { color:#fff; }
 <!-- SIDEBAR -->
 <aside class="sidebar">
   <div class="sb-logo">1DAYECO<small>Admin Dashboard</small>
-    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v58</span>
+    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v59</span>
   </div>
   <nav class="sb-nav">
     <div class="sb-group">운영</div>
@@ -908,25 +908,25 @@ body.light-mode .filter-pill.active { color:#fff; }
   <div class="content" id="page-subscribers">
     <!-- 구독자 현황 5개 카드 (좌측 상단) -->
     <div id="subStatCards" style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px">
-      <div style="background:var(--s2);border:1px solid var(--b);border-radius:10px;padding:12px 18px;min-width:110px;flex:1">
+      <div style="background:var(--s2);border:1px solid var(--b);border-radius:10px;padding:12px 18px;min-width:110px;flex:1;text-align:right">
         <div style="font-size:11px;color:var(--muted);margin-bottom:4px">전체</div>
-        <div style="font-size:22px;font-weight:700;color:var(--gold)" id="sc-total">—</div>
+        <div style="font-size:22px;font-weight:700;color:var(--gold)" id="sc-total">—<span style="font-size:13px;font-weight:400;margin-left:2px">명</span></div>
       </div>
-      <div style="background:var(--s2);border:1px solid rgba(16,185,129,.3);border-radius:10px;padding:12px 18px;min-width:110px;flex:1">
+      <div style="background:var(--s2);border:1px solid rgba(16,185,129,.3);border-radius:10px;padding:12px 18px;min-width:110px;flex:1;text-align:right">
         <div style="font-size:11px;color:var(--muted);margin-bottom:4px">유료</div>
-        <div style="font-size:22px;font-weight:700;color:#10b981" id="sc-active">—</div>
+        <div style="font-size:22px;font-weight:700;color:#10b981" id="sc-active">—<span style="font-size:13px;font-weight:400;margin-left:2px">명</span></div>
       </div>
-      <div style="background:var(--s2);border:1px solid rgba(245,158,11,.3);border-radius:10px;padding:12px 18px;min-width:110px;flex:1">
+      <div style="background:var(--s2);border:1px solid rgba(245,158,11,.3);border-radius:10px;padding:12px 18px;min-width:110px;flex:1;text-align:right">
         <div style="font-size:11px;color:var(--muted);margin-bottom:4px">체험</div>
-        <div style="font-size:22px;font-weight:700;color:#f59e0b" id="sc-trial">—</div>
+        <div style="font-size:22px;font-weight:700;color:#f59e0b" id="sc-trial">—<span style="font-size:13px;font-weight:400;margin-left:2px">명</span></div>
       </div>
-      <div style="background:var(--s2);border:1px solid var(--b);border-radius:10px;padding:12px 18px;min-width:110px;flex:1">
+      <div style="background:var(--s2);border:1px solid var(--b);border-radius:10px;padding:12px 18px;min-width:110px;flex:1;text-align:right">
         <div style="font-size:11px;color:var(--muted);margin-bottom:4px">취소</div>
-        <div style="font-size:22px;font-weight:700;color:#94a3b8" id="sc-cancelled">—</div>
+        <div style="font-size:22px;font-weight:700;color:#94a3b8" id="sc-cancelled">—<span style="font-size:13px;font-weight:400;margin-left:2px">명</span></div>
       </div>
-      <div style="background:var(--s2);border:1px solid rgba(139,92,246,.3);border-radius:10px;padding:12px 18px;min-width:110px;flex:1">
+      <div style="background:var(--s2);border:1px solid rgba(139,92,246,.3);border-radius:10px;padding:12px 18px;min-width:110px;flex:1;text-align:right">
         <div style="font-size:11px;color:var(--muted);margin-bottom:4px">만료·환불·오류</div>
-        <div style="font-size:22px;font-weight:700;color:#8b5cf6" id="sc-others">—</div>
+        <div style="font-size:22px;font-weight:700;color:#8b5cf6" id="sc-others">—<span style="font-size:13px;font-weight:400;margin-left:2px">명</span></div>
       </div>
     </div>
 
@@ -3329,7 +3329,7 @@ async function loadRecentSubs() {
       '<span class="empty-ico">👥</span>구독자 없음</div></td></tr>';
     return;
   }
-  const fmt = (d, opts) => d ? new Date(d).toLocaleDateString('ko-KR', opts||{year:'2-digit',month:'2-digit',day:'2-digit'}) : '—';
+  const fmt = (d) => d ? new Date(d).toLocaleDateString('ko-KR', {year:'numeric',month:'2-digit',day:'2-digit'}) : '—';
   tbody.innerHTML = subs.map(s => {
     const cd       = new Date(s.created_at);
     const diffDays = (Date.now() - cd.getTime()) / (1000*60*60*24);
@@ -3346,7 +3346,7 @@ async function loadRecentSubs() {
       <td><span class="badge ${s.plan}">${planLabel(s.plan)}</span></td>
       <td style="text-align:center">${payLabel}</td>
       <td style="font-family:var(--mono);font-size:11px;text-align:center;color:var(--muted)">${fmt(s.created_at)}</td>
-      <td style="font-family:var(--mono);font-size:11px;text-align:center;color:${s.trial_end_date && new Date(s.trial_end_date)>new Date()?'#f59e0b':'var(--muted)'}">${fmt(s.trial_end_date)}</td>
+      <td style="font-family:var(--mono);font-size:11px;text-align:center;color:var(--muted)">${fmt(s.trial_end_date)}</td>
       <td style="font-family:var(--mono);font-size:11px;text-align:center;color:var(--muted)">${fmt(s.expires_at)}</td>
     </tr>`;
   }).join('');
@@ -3439,7 +3439,10 @@ function renderSubscribersTable() {
       <span style="color:var(--muted)">표시 ${filtered.length}명</span>
     `;
     // 5개 카드 업데이트
-    const sc = (id, val) => { const el = document.getElementById(id); if(el) el.textContent = val; };
+    const sc = (id, val) => {
+      const el = document.getElementById(id);
+      if(el) el.innerHTML = val + '<span style="font-size:13px;font-weight:400;margin-left:2px">명</span>';
+    };
     sc('sc-total',     allSubs.length);
     sc('sc-active',    allSubs.filter(s=>s.status==='active').length);
     sc('sc-trial',     allSubs.filter(s=>s.status==='trial').length);
@@ -3643,8 +3646,8 @@ function renderSubscribersRows(filtered) {
       <td style="font-family:var(--mono);font-size:11px;color:var(--muted);text-align:center;white-space:nowrap">
         <div style="line-height:1.3">${startDate || '—'}${joinTimeStr ? `<br><span style="font-size:9px;opacity:.6">가입 ${joinTimeStr}</span>` : ''}</div>
       </td>
-      <td style="font-family:var(--mono);font-size:11px;text-align:center;white-space:nowrap;color:${s.trial_end_date ? (new Date(s.trial_end_date) < new Date() ? 'var(--muted)' : '#f59e0b') : 'var(--muted)'}">
-        ${s.trial_end_date ? new Date(s.trial_end_date).toLocaleDateString('ko-KR',{year:'2-digit',month:'2-digit',day:'2-digit'}) : '—'}
+      <td style="font-family:var(--mono);font-size:11px;text-align:center;white-space:nowrap;color:var(--muted)">
+        ${s.trial_end_date ? new Date(s.trial_end_date).toLocaleDateString('ko-KR',{year:'numeric',month:'2-digit',day:'2-digit'}) : '—'}
       </td>
       <td style="font-family:var(--mono);font-size:11px;color:${endColor};text-align:center;white-space:nowrap">${endDateStr}</td>
       <td style="font-size:11px;color:var(--muted);max-width:90px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${emailStr}</td>
