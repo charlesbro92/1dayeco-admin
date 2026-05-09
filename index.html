@@ -754,7 +754,7 @@ body.light-mode .filter-pill.active { color:#fff; }
 <!-- SIDEBAR -->
 <aside class="sidebar">
   <div class="sb-logo">1DAYECO<small>Admin Dashboard</small>
-    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v96</span>
+    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v97</span>
   </div>
   <nav class="sb-nav">
     <div class="sb-group">운영</div>
@@ -6492,7 +6492,12 @@ function getArchiveByDate(dateStr) {
 }
 
 // 특정 (날짜, 카테고리) 조회
-function getArchiveItem(dateStr, category) {
+function getArchiveItem(dateStr, category, subtopicId) {
+  // subtopic_id 명시되면 그 키 우선, 없으면 옛 키 폴백
+  if (subtopicId !== null && subtopicId !== undefined && subtopicId !== '' && Number(subtopicId) > 0) {
+    const item = CONTENT_ARCHIVE[archKey(dateStr, category, subtopicId)];
+    if (item) return item;
+  }
   return CONTENT_ARCHIVE[archKey(dateStr, category)];
 }
 
@@ -7330,8 +7335,8 @@ function openContentEditor(mode, presetData) {
 }
 
 // 행 더블클릭 → 편집 모드로 상세 팝업 열기
-function openContentEditorForRow(dateStr, cat) {
-  openContentPopupByDate(dateStr, cat);
+function openContentEditorForRow(dateStr, cat, subtopicId) {
+  openContentPopupByDate(dateStr, cat, subtopicId);
   // 팝업이 열린 후 편집 모드로 전환
   setTimeout(function() {
     if (typeof toggleCpEdit === 'function' && typeof cpEditMode !== 'undefined' && !cpEditMode) {
@@ -7468,42 +7473,43 @@ function _renderArchiveTable() {
           ? '<span style="display:inline-block;background:rgba(201,168,76,.1);border:1px solid rgba(201,168,76,.3);color:var(--gold);font-size:10px;padding:2px 8px;border-radius:10px;letter-spacing:.2px">' + (r.subtopic_name || '').replace(/</g,'&lt;') + '</span>'
           : '<span style="color:var(--muted);font-size:11px">—</span>';
         const rowClass = 'arch-row' + (r.hidden ? ' is-hidden' : '');
+        const sidArg = r.subtopic_id ? Number(r.subtopic_id) : 'null';
         return '<tr class="' + rowClass + '"'
           + ' style="cursor:pointer"'
-          + ' ondblclick="openContentEditorForRow(\'' + r.dateStr + '\', \'' + (r.cat || '') + '\')"'
+          + ' ondblclick="openContentEditorForRow(\'' + r.dateStr + '\', \'' + (r.cat || '') + '\', ' + sidArg + ')"'
           + ' title="클릭: 상세 보기 / 더블클릭: 편집"'
           + ' onmouseover="this.style.background=\'rgba(201,168,76,.04)\'"'
           + ' onmouseout="this.style.background=\'\'">'
           // 체크박스 컬럼 (행 클릭 이벤트 차단 + 자체 핸들러)
           + '<td style="text-align:center" onclick="event.stopPropagation()">'
           +   '<input type="checkbox" class="arch-checkbox" id="' + ckId + '"'
-          +     ' data-date="' + r.dateStr + '" data-cat="' + (r.cat || '') + '"'
+          +     ' data-date="' + r.dateStr + '" data-cat="' + (r.cat || '') + '" data-sid="' + (r.subtopic_id || '') + '"'
           +     ' onclick="onArchiveRowCheck(this)"' + (isChecked ? ' checked' : '') + '>'
           + '</td>'
           // 날짜
-          + '<td onclick="openContentPopupByDate(\'' + r.dateStr + '\', \'' + (r.cat || '') + '\')"'
+          + '<td onclick="openContentPopupByDate(\'' + r.dateStr + '\', \'' + (r.cat || '') + '\', ' + sidArg + ')"'
           +   ' style="font-family:var(--mono);font-size:11px">' + r.date + aiBadge + hiddenBadge + '</td>'
-          // 카테고리 (배지만, 부제목 텍스트 제거됨)
-          + '<td onclick="openContentPopupByDate(\'' + r.dateStr + '\', \'' + (r.cat || '') + '\')"'
+          // 카테고리
+          + '<td onclick="openContentPopupByDate(\'' + r.dateStr + '\', \'' + (r.cat || '') + '\', ' + sidArg + ')"'
           +   ' style="text-align:center"><span class="badge monthly">' + (CATEGORY_LABEL_MAP[r.cat] || r.cat) + '</span></td>'
-          // 부제목 (별도 컬럼)
-          + '<td onclick="openContentPopupByDate(\'' + r.dateStr + '\', \'' + (r.cat || '') + '\')"'
+          // 부제목
+          + '<td onclick="openContentPopupByDate(\'' + r.dateStr + '\', \'' + (r.cat || '') + '\', ' + sidArg + ')"'
           +   ' style="text-align:center">' + subtopicCell + '</td>'
           // 주제
-          + '<td onclick="openContentPopupByDate(\'' + r.dateStr + '\', \'' + (r.cat || '') + '\')">'
+          + '<td onclick="openContentPopupByDate(\'' + r.dateStr + '\', \'' + (r.cat || '') + '\', ' + sidArg + ')">'
           +   '<strong>' + topicCell + '</strong></td>'
           // 키워드
-          + '<td onclick="openContentPopupByDate(\'' + r.dateStr + '\', \'' + (r.cat || '') + '\')"'
+          + '<td onclick="openContentPopupByDate(\'' + r.dateStr + '\', \'' + (r.cat || '') + '\', ' + sidArg + ')"'
           +   ' style="color:var(--muted);font-size:11px">' + kwCell + '</td>'
           // 미리보기
-          + '<td onclick="openContentPopupByDate(\'' + r.dateStr + '\', \'' + (r.cat || '') + '\')"'
+          + '<td onclick="openContentPopupByDate(\'' + r.dateStr + '\', \'' + (r.cat || '') + '\', ' + sidArg + ')"'
           +   ' style="color:var(--muted);font-size:11px;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + headlineCell + '</td>'
           // 토큰
-          + '<td onclick="openContentPopupByDate(\'' + r.dateStr + '\', \'' + (r.cat || '') + '\')"'
+          + '<td onclick="openContentPopupByDate(\'' + r.dateStr + '\', \'' + (r.cat || '') + '\', ' + sidArg + ')"'
           +   ' style="text-align:center;font-family:var(--mono);font-size:11px;color:var(--muted)">' + (r.tok || 0) + '</td>'
           // 액션
           + '<td style="text-align:center" onclick="event.stopPropagation()">'
-          +   '<button onclick="regenerateArchiveItem(\'' + r.dateStr + '\', \'' + (r.cat || '') + '\')"'
+          +   '<button onclick="regenerateArchiveItem(\'' + r.dateStr + '\', \'' + (r.cat || '') + '\', ' + sidArg + ')"'
           +     ' class="arch-act-btn" style="padding:4px 8px;font-size:10px"'
           +     ' title="이 콘텐츠 다시 생성 (덮어쓰기)">재생성</button>'
           + '</td>'
@@ -7515,8 +7521,8 @@ function _renderArchiveTable() {
 
 // ⭐ v49: 아카이브에서 단일 콘텐츠 재생성
 //          기존 데이터 (topic, kw)를 재사용하여 새로운 본문/헤드라인 생성
-async function regenerateArchiveItem(dateStr, cat) {
-  const key = (typeof archKey === 'function') ? archKey(dateStr, cat) : (dateStr + '_' + cat);
+async function regenerateArchiveItem(dateStr, cat, subtopicId) {
+  const key = (typeof archKey === 'function') ? archKey(dateStr, cat, subtopicId) : (dateStr + '_' + cat);
   const item = CONTENT_ARCHIVE[key];
   if (!item) {
     showToast('콘텐츠를 찾을 수 없습니다', 'ng');
@@ -7559,6 +7565,7 @@ async function regenerateArchiveItem(dateStr, cat) {
       result = await apiPost('/admin/content/generate-from-topic', {
         date:     dateStr,
         category: cat,
+        subtopic_id: subtopicId || item.subtopic_id || null,
         topic:    topic,
         keywords: item.kw || '',
         overwrite: true,
@@ -7612,11 +7619,11 @@ function resetContentFilters() {
   loadContentArchive();
 }
 
-function openContentPopupByDate(dateStr, category) {
-  // 카테고리 지정되면 해당 카테고리, 아니면 그 날짜의 첫 카테고리
+function openContentPopupByDate(dateStr, category, subtopicId) {
+  // (날짜, 카테고리, 부제목) 단위로 정확히 매칭
   let archived = null;
   if (category) {
-    archived = getArchiveItem(dateStr, category);
+    archived = getArchiveItem(dateStr, category, subtopicId);
   }
   if (!archived) {
     const byDate = getArchiveByDate(dateStr);
