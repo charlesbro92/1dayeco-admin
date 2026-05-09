@@ -754,7 +754,7 @@ body.light-mode .filter-pill.active { color:#fff; }
 <!-- SIDEBAR -->
 <aside class="sidebar">
   <div class="sb-logo">1DAYECO<small>Admin Dashboard</small>
-    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v95</span>
+    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v96</span>
   </div>
   <nav class="sb-nav">
     <div class="sb-group">운영</div>
@@ -5583,8 +5583,8 @@ function selectSubtopicFilter(btnEl) {
   btnEl.classList.add('active');
   _archiveSubtopicFilter = sid;
   // 아카이브만 다시 그리기 (백엔드 재호출 불필요 — 클라이언트 필터)
-  if (typeof renderArchive === 'function') {
-    renderArchive();
+  if (typeof _renderArchiveTable === 'function') {
+    _renderArchiveTable();
   }
 }
 
@@ -6991,9 +6991,9 @@ async function _hydrateSubtopicNamesInArchive() {
   }
   if (updated > 0) {
     saveArchiveToStorage();
-    // 현재 표시 중이라면 다시 그리기
-    if (typeof renderArchive === 'function') {
-      try { renderArchive(); } catch (_) {}
+    // 현재 표시 중이라면 다시 그리기 (실제 함수명 _renderArchiveTable)
+    if (typeof _renderArchiveTable === 'function') {
+      try { _renderArchiveTable(); } catch (_) {}
     }
   }
 }
