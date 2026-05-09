@@ -754,7 +754,7 @@ body.light-mode .filter-pill.active { color:#fff; }
 <!-- SIDEBAR -->
 <aside class="sidebar">
   <div class="sb-logo">1DAYECO<small>Admin Dashboard</small>
-    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v80</span>
+    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v81</span>
   </div>
   <nav class="sb-nav">
     <div class="sb-group">운영</div>
@@ -1330,13 +1330,9 @@ body.light-mode .filter-pill.active { color:#fff; }
 
           <!-- ⭐ 줄 1: 카테고리(왼) + 액션 버튼들(오른쪽) -->
           <div style="display:flex;gap:10px;align-items:center;width:100%;flex-wrap:wrap">
-            <!-- 왼쪽: 카테고리 pill -->
+            <!-- 왼쪽: 카테고리 pill (CATEGORIES_CACHE 기반 동적 생성) -->
             <div class="cat-pill-filter" id="catPillFilter" style="display:flex;gap:4px;flex-wrap:wrap">
               <button class="cat-pill active" data-cat="" onclick="selectCatFilter(this)">전체</button>
-              <button class="cat-pill" data-cat="economy" onclick="selectCatFilter(this)">📊 경제</button>
-              <button class="cat-pill" data-cat="realestate" onclick="selectCatFilter(this)">🏠 부동산</button>
-              <button class="cat-pill" data-cat="english" onclick="selectCatFilter(this)">🇬🇧 영어</button>
-              <button class="cat-pill" data-cat="trivia" onclick="selectCatFilter(this)">🧠 상식</button>
             </div>
 
             <!-- 오른쪽: 액션 버튼들 (margin-left: auto로 밀어내기) -->
@@ -6330,16 +6326,25 @@ const ARCHIVE_KEY = '1dayeco_archive';
 
 // ── 키 헬퍼 ──────────────────────────────────────────────────
 function archKey(dateStr, category) {
-  return dateStr + '_' + category;
+  return dateStr + '|' + category;   // | 구분자 (카테고리에 _가 포함될 수 있으므로)
 }
 function archKeyParts(key) {
-  // "2026-05-04_economy" → { dateStr: "2026-05-04", category: "economy" }
-  const idx = key.indexOf('_');
-  if (idx === -1) return { dateStr: key, category: 'economy' };
+  // "2026-05-04|kr_stock" → { dateStr: "2026-05-04", category: "kr_stock" }
+  const idx = key.indexOf('|');
+  if (idx === -1) {
+    // 구버전 _ 구분자 호환 (첫 번째 _ 이후가 카테고리인 경우)
+    const uIdx = key.indexOf('_');
+    if (uIdx === -1) return { dateStr: key, category: 'economy' };
+    return { dateStr: key.slice(0, uIdx), category: key.slice(uIdx + 1) };
+  }
   return { dateStr: key.slice(0, idx), category: key.slice(idx + 1) };
 }
 function isArchKey(key) {
-  return /^\d{4}-\d{2}-\d{2}_[a-z]+$/.test(key);
+  // | 구분자 신규 형식
+  if (/^\d{4}-\d{2}-\d{2}\|[a-z_]+$/.test(key)) return true;
+  // _ 구분자 구버전 형식 호환 (날짜 부분은 항상 YYYY-MM-DD)
+  if (/^\d{4}-\d{2}-\d{2}_[a-z]+$/.test(key)) return true;
+  return false;
 }
 
 // 같은 날짜의 모든 카테고리 항목 조회
@@ -8268,12 +8273,28 @@ function populateCategorySelects() {
     if (prev) editSel.value = prev;
   }
 
-  // 아카이브 필터 카테고리
+  // 아카이브 pill 동적 생성 (위)
+
+  // 달력 카테고리 select
   const archSel = document.getElementById('calCategorySelect');
   if (archSel) {
     const prev = archSel.value;
     archSel.innerHTML = buildOptions(cats, true);
     if (prev) archSel.value = prev;
+  }
+  if (pillFilter) {
+    const currentActive = pillFilter.querySelector('.cat-pill.active')?.dataset.cat || '';
+    pillFilter.innerHTML = '<button class="cat-pill active" data-cat="" onclick="selectCatFilter(this)">전체</button>';
+    cats.forEach(c => {
+      const isComing = (c.visibility || '') === 'coming_soon';
+      const label = isComing ? `${c.emoji || '📌'} ${c.name} <span style="font-size:9px;opacity:.6">예정</span>` : `${c.emoji || '📌'} ${c.name}`;
+      pillFilter.innerHTML += `<button class="cat-pill" data-cat="${c.id}" onclick="selectCatFilter(this)">${label}</button>`;
+    });
+    // 이전 선택값 복원
+    if (currentActive) {
+      const btn = pillFilter.querySelector(`[data-cat="${currentActive}"]`);
+      if (btn) { pillFilter.querySelectorAll('.cat-pill').forEach(b => b.classList.remove('active')); btn.classList.add('active'); }
+    }
   }
 }
 
