@@ -754,7 +754,7 @@ body.light-mode .filter-pill.active { color:#fff; }
 <!-- SIDEBAR -->
 <aside class="sidebar">
   <div class="sb-logo">1DAYECO<small>Admin Dashboard</small>
-    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v78</span>
+    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v80</span>
   </div>
   <nav class="sb-nav">
     <div class="sb-group">운영</div>
@@ -2889,7 +2889,7 @@ function loadPage(name) {
     }).catch(e => console.warn('[send] 구독자 로드 실패:', e));
     loadSendLogs();
   }
-  if (name === 'content')      { loadContentArchive(); initTopicGenerator(); renderUsageWidget(); }
+  if (name === 'content')      { loadContentArchive(); initTopicGenerator(); renderUsageWidget(); if (!CATEGORIES_CACHE.length) loadCategoryList(); else populateCategorySelects(); }
   if (name === 'stats')        {
     // 통계는 구독자 기반 → 신선한 데이터 보장
     loadSubscribers({silent: true}).then(loadStats).catch(e => { loadStats(); });
@@ -8223,6 +8223,60 @@ async function saveTrialDays() {
 // ════════════════════════════════════════════════════════════
 // 카테고리 관리
 // ════════════════════════════════════════════════════════════
+// ── 카테고리 select 동적 채우기 ─────────────────────────────
+// CATEGORIES_CACHE (active + coming_soon) 기반으로
+// 운영중 / 출시예정 optgroup으로 분리해서 select에 채움
+function populateCategorySelects() {
+  const cats = CATEGORIES_CACHE || [];
+  if (!cats.length) return;
+
+  const active      = cats.filter(c => (c.visibility || (c.active ? 'active' : 'hidden')) === 'active');
+  const comingSoon  = cats.filter(c => (c.visibility || '') === 'coming_soon');
+
+  function buildOptions(list, includeAuto = false) {
+    let html = includeAuto ? '<option value="">📅 커리큘럼 자동</option>' : '';
+    if (active.length) {
+      html += '<optgroup label="── 운영중 ──────────────">';
+      active.forEach(c => {
+        html += `<option value="${c.id}">${c.emoji || '📌'} ${c.name}</option>`;
+      });
+      html += '</optgroup>';
+    }
+    if (comingSoon.length) {
+      html += '<optgroup label="── 출시예정 ─────────────">';
+      comingSoon.forEach(c => {
+        html += `<option value="${c.id}">${c.emoji || '📌'} ${c.name}</option>`;
+      });
+      html += '</optgroup>';
+    }
+    return html;
+  }
+
+  // 주제 생성 카테고리
+  const topicSel = document.getElementById('topicGenCategory');
+  if (topicSel) {
+    const prev = topicSel.value;
+    topicSel.innerHTML = buildOptions(cats);
+    if (prev) topicSel.value = prev;
+  }
+
+  // 콘텐츠 편집 카테고리
+  const editSel = document.getElementById('cpEditCategory');
+  if (editSel) {
+    const prev = editSel.value;
+    editSel.innerHTML = buildOptions(cats);
+    if (prev) editSel.value = prev;
+  }
+
+  // 아카이브 필터 카테고리
+  const archSel = document.getElementById('calCategorySelect');
+  if (archSel) {
+    const prev = archSel.value;
+    archSel.innerHTML = buildOptions(cats, true);
+    if (prev) archSel.value = prev;
+  }
+}
+
 let CATEGORIES_CACHE = [];   // 캐시
 let catEditMode = 'add';     // 'add' | 'edit'
 let catEditOriginalId = null;
@@ -8255,6 +8309,7 @@ async function loadCategoryList() {
     );
 
     CATEGORIES_CACHE = cats;
+    populateCategorySelects();
 
     if (!cats.length) {
       tbody.innerHTML = '<tr><td colspan="8" style="padding:30px 0;text-align:center;color:var(--muted)">카테고리가 없습니다</td></tr>';
