@@ -754,7 +754,7 @@ body.light-mode .filter-pill.active { color:#fff; }
 <!-- SIDEBAR -->
 <aside class="sidebar">
   <div class="sb-logo">1DAYECO<small>Admin Dashboard</small>
-    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v63</span>
+    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v64</span>
   </div>
   <nav class="sb-nav">
     <div class="sb-group">운영</div>
@@ -971,7 +971,9 @@ body.light-mode .filter-pill.active { color:#fff; }
         <option value="active">유료</option>
         <option value="trial">체험중</option>
         <option value="expired">만료</option>
-        <option value="cancelled">취소</option>
+        <option value="cancelled">체험취소</option>
+        <option value="payment_failed">결제오류</option>
+        <option value="refund_requested">환불요청</option>
       </select>
       <!-- 시간 필터: 8시 고정으로 숨김 처리 (legacy 호환 위해 hidden으로 유지) -->
       <input type="hidden" id="hourFilter" value="">
@@ -2329,7 +2331,7 @@ body.light-mode .filter-pill.active { color:#fff; }
           <label style="font-size:10px;color:var(--muted);letter-spacing:.5px;display:block;margin-bottom:4px">상태</label>
           <select id="sdInputStatus" style="width:100%;background:var(--s3);border:1.5px solid var(--b);border-radius:7px;padding:9px 12px;font-size:13px;color:var(--text);font-family:var(--sans);outline:none">
             <option value="trial">체험중</option><option value="active">활성</option>
-            <option value="cancelled">해지</option><option value="expired">만료</option>
+            <option value="cancelled">체험취소</option><option value="expired">만료</option>
           </select>
         </div>
       </div>
@@ -3638,7 +3640,7 @@ function renderSubscribersRows(filtered) {
       : s.status === 'active'
       ? `<div style="display:flex;gap:4px;align-items:center;flex-wrap:nowrap">
            <button onclick="event.stopPropagation();cancelSub('${s.id}','${s.name}')"
-             style="background:none;border:1px solid var(--b);color:var(--muted);padding:4px 10px;border-radius:4px;font-size:11px;cursor:pointer;font-family:var(--sans);white-space:nowrap">해지</button>
+             style="background:none;border:1px solid var(--b);color:var(--muted);padding:4px 10px;border-radius:4px;font-size:11px;cursor:pointer;font-family:var(--sans);white-space:nowrap">구독해지</button>
            <button onclick="event.stopPropagation();confirmRefundRequest('${s.id}','${s.name}')"
              style="background:rgba(248,113,113,.08);border:1px solid rgba(248,113,113,.3);color:#f87171;padding:4px 8px;border-radius:4px;font-size:11px;cursor:pointer;font-family:var(--sans);font-weight:700;white-space:nowrap">환불</button>
          </div>`
@@ -3674,10 +3676,13 @@ function renderSubscribersRows(filtered) {
       </td>
       <td style="text-align:center"><span class="badge ${s.status}">${{
   active:'유료',
-  trial: s.billing_key ? '체험(카드O)' : '체험(카드X)',
-  cancelled:'해지',
+  trial:'체험중',
+  cancelled:'체험취소',
   expired:'만료',
-  pending_payment:'카드등록중',
+  pending_payment:'가입중',
+  pending_charge:'결제대기',
+  payment_failed:'결제오류',
+  refund_requested:'환불요청',
   pending_charge:'결제대기',
   payment_failed:'결제오류',
   refund_requested:'환불요청'
