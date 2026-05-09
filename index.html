@@ -754,7 +754,7 @@ body.light-mode .filter-pill.active { color:#fff; }
 <!-- SIDEBAR -->
 <aside class="sidebar">
   <div class="sb-logo">1DAYECO<small>Admin Dashboard</small>
-    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v83</span>
+    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v84</span>
   </div>
   <nav class="sb-nav">
     <div class="sb-group">운영</div>
@@ -6836,7 +6836,7 @@ async function syncArchiveFromBackend() {
         const dateStr = row.date_str || row.dateStr;
         if (!dateStr) return;
         const cat = row.category || '';
-        if (!['economy','realestate','english','trivia'].includes(cat)) return;
+        if (!cat) return;  // 카테고리 없는 행만 제외, 신규 카테고리 모두 허용
         const k = archKey(dateStr, cat);
         fetched.add(k);
         // 복합키로 저장: 같은 날짜라도 다른 카테고리면 별도 항목
