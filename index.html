@@ -754,7 +754,7 @@ body.light-mode .filter-pill.active { color:#fff; }
 <!-- SIDEBAR -->
 <aside class="sidebar">
   <div class="sb-logo">1DAYECO<small>Admin Dashboard</small>
-    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v84</span>
+    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v85</span>
   </div>
   <nav class="sb-nav">
     <div class="sb-group">운영</div>
@@ -3245,13 +3245,12 @@ function renderTodayContent(el, d, dateStr) {
 
 // ── 콘텐츠 생성 현황 (개요 페이지용) ──────────────────────
 function loadContentSummary() {
-  const catMeta = {
-    economy:    { label: '📊 경제',    color: '#C9A84C' },
-    realestate: { label: '🏠 부동산',  color: '#7BB3F7' },
-    english:    { label: '🇬🇧 영어',   color: '#A78BFA' },
-    trivia:     { label: '🧠 상식',    color: '#5EE3B0' },
-  };
-  const cats = ['economy', 'realestate', 'english', 'trivia'];
+  const CAT_COLORS = ['#C9A84C', '#7BB3F7', '#A78BFA', '#5EE3B0', '#FF9F76', '#76C7FF', '#FFD166', '#06D6A0'];
+  const cats = getAllCatIds();
+  const catMeta = {};
+  cats.forEach((id, idx) => {
+    catMeta[id] = { label: getCatLabel(id), color: CAT_COLORS[idx % CAT_COLORS.length] };
+  });
 
   // 날짜 키 생성
   const today = new Date();
@@ -3278,7 +3277,8 @@ function loadContentSummary() {
   // 집계
   const todayCats = new Set();
   let weekCount = 0, lastWeekCount = 0;
-  const monthByCat = { economy:0, realestate:0, english:0, trivia:0 };
+  const monthByCat = {};
+  cats.forEach(id => { monthByCat[id] = 0; });
   let monthTotal = 0;
 
   for (const k in CONTENT_ARCHIVE) {
@@ -3450,22 +3450,21 @@ const SUB_CAT_META = {
   trivia:     { icon: '🧠', short: '상식',   color: '#5EE3B0' },
 };
 function renderSubCategories(categories) {
-  // categories: ["economy","english"] | null | undefined | "economy,english"
   let arr = categories;
   if (typeof arr === 'string') {
     arr = arr.split(',').map(s => s.trim()).filter(Boolean);
   }
   if (!Array.isArray(arr) || arr.length === 0) {
-    // 옛 데이터: 디폴트로 4개 모두로 가정
     return '<span style="color:var(--muted);font-size:10px">— 미설정 —</span>';
   }
-  const orderedCats = ['economy','realestate','english','trivia'];
-  const valid = orderedCats.filter(c => arr.includes(c));
-  if (valid.length === 4) {
-    return '<span style="font-size:10px;color:var(--gold);letter-spacing:.3px">📊🏠🇬🇧🧠 전체</span>';
+  const allCatIds = getAllCatIds();
+  const valid = allCatIds.filter(c => arr.includes(c));
+  if (valid.length === allCatIds.length && allCatIds.length > 0) {
+    const allEmojis = allCatIds.map(id => getCatEmoji(id)).join('');
+    return '<span style="font-size:10px;color:var(--gold);letter-spacing:.3px">' + allEmojis + ' 전체</span>';
   }
   return valid.map(function(c) {
-    const meta = SUB_CAT_META[c];
+    const meta = SUB_CAT_META[c] || { icon: getCatEmoji(c), short: getCatShortName(c) };
     return '<span title="' + meta.short + '" style="display:inline-block;background:rgba(201,168,76,.08);border:1px solid var(--b);color:var(--text);font-size:10px;padding:1px 5px;border-radius:3px;margin:0 1px;letter-spacing:.2px">' + meta.icon + '</span>';
   }).join('');
 }
@@ -3575,7 +3574,7 @@ async function loadSubscribers(opts) {
       notify_d1:      s.notify_d1 || false,
       billing_key:    s.billing_key || null,
       memo:           s.memo || null,
-      categories:     s.categories || ['economy','realestate','english','trivia'],
+      categories:     s.categories || getAllCatIds(),
       // ── 친구톡 관련 (v22+) ──
       payment_status:        s.payment_status || 'pending',
       kakao_channel_added:   !!s.kakao_channel_added,
@@ -3963,10 +3962,11 @@ async function loadSendPreview() {
 
     // 2. 활성 구독자 카테고리별 분류 (1인이 여러 카테고리 구독 시 모두 카운트)
     const activeSubs = STATE.subscribers.filter(s => ['active','trial'].includes(s.status));
-    const subsByCategory = { economy: [], realestate: [], english: [], trivia: [] };
+    const allCatIds = getActiveCatIds();
+    const subsByCategory = {};
+    allCatIds.forEach(id => { subsByCategory[id] = []; });
     activeSubs.forEach(s => {
       const cats = s.categories || [];
-      // 사용자가 구독 중인 모든 카테고리에 추가 (각 카테고리별 1통씩 발송됨)
       cats.forEach(c => {
         if (subsByCategory[c]) subsByCategory[c].push(s);
       });
@@ -3984,13 +3984,18 @@ async function loadSendPreview() {
     document.getElementById('prevDateInfo').textContent =
       `— ${todayDisplay} · 활성 구독자 ${totalSubs}명`;
 
-    // 5. 카테고리 그리드 렌더링 (좌측 영역, 2x2)
+    // 5. 카테고리 그리드 렌더링 (좌측 영역, 카테고리 수에 따라 자동 조정)
     const grid = document.getElementById('prevCategoriesGrid');
-    grid.style.gridTemplateColumns = '1fr 1fr';
-    const categories = ['economy', 'realestate', 'english', 'trivia'];
+    const catCount = allCatIds.length;
+    if (catCount <= 4) {
+      grid.style.gridTemplateColumns = catCount === 1 ? '1fr' : (catCount === 2 ? '1fr 1fr' : '1fr 1fr');
+    } else {
+      grid.style.gridTemplateColumns = '1fr 1fr 1fr';
+    }
+    const categories = allCatIds;
     grid.innerHTML = categories.map(cat => {
-      const meta = CATEGORY_META[cat];
-      const count = subsByCategory[cat].length;
+      const meta = CATEGORY_META[cat] || { icon: getCatEmoji(cat), name: getCatShortName(cat) };
+      const count = (subsByCategory[cat] || []).length;
       const hasContent = !!todayItems[cat];
       const isOk = hasContent && count > 0;
       const isWarn = !hasContent && count > 0;
@@ -5435,14 +5440,14 @@ function updateTopicWorkBadge() {
 
   // 카테고리별 분포 표시
   if (breakdownEl) {
-    const catCount = { economy: 0, realestate: 0, english: 0, trivia: 0 };
+    const catCount = {};
+    getAllCatIds().forEach(id => { catCount[id] = 0; });
     GENERATED_TOPICS.forEach(t => {
       if (catCount.hasOwnProperty(t.cat)) catCount[t.cat]++;
     });
-    const catLabels = { economy:'📊', realestate:'🏠', english:'🇬🇧', trivia:'🧠' };
     const parts = Object.keys(catCount)
       .filter(c => catCount[c] > 0)
-      .map(c => catLabels[c] + ' ' + catCount[c]);
+      .map(c => getCatEmoji(c) + ' ' + catCount[c]);
     breakdownEl.textContent = parts.length > 0 ? '— ' + parts.join('  ') : '';
   }
 }
@@ -6258,8 +6263,10 @@ function computeUsageThisMonth() {
 
   let totalCount = 0;
   let totalTokens = 0;
-  const byCat = { economy: 0, realestate: 0, english: 0, trivia: 0 };
-  const tokensByCat = { economy: 0, realestate: 0, english: 0, trivia: 0 };
+  const allCatIds = getAllCatIds();
+  const byCat = {};
+  const tokensByCat = {};
+  allCatIds.forEach(id => { byCat[id] = 0; tokensByCat[id] = 0; });
 
   for (const k in CONTENT_ARCHIVE) {
     if (!Object.prototype.hasOwnProperty.call(CONTENT_ARCHIVE, k)) continue;
@@ -6268,7 +6275,7 @@ function computeUsageThisMonth() {
     if (!parts.dateStr.startsWith(ym)) continue;
     const item = CONTENT_ARCHIVE[k] || {};
     const cat = item.cat || parts.category;
-    if (!['economy','realestate','english','trivia'].includes(cat)) continue;
+    if (!cat) continue;
     const tok = item.tok || 0;
     totalCount  += 1;
     totalTokens += tok;
@@ -6446,10 +6453,13 @@ function renderUsageWidget() {
   const barsEl = document.getElementById('usageCatBars');
   if (barsEl) {
     const maxTokens = Math.max(1, ...Object.values(u.tokensByCat));
-    barsEl.innerHTML = ['economy','realestate','english','trivia'].map(function(cat) {
-      const meta = CAT_LABELS_MAP[cat];
+    const CAT_COLORS = ['#C9A84C', '#7BB3F7', '#A78BFA', '#5EE3B0', '#FF9F76', '#76C7FF', '#FFD166', '#06D6A0'];
+    const allCats = getAllCatIds();
+    barsEl.innerHTML = allCats.map(function(cat, idx) {
       const tok = u.tokensByCat[cat] || 0;
       const cnt = u.byCat[cat] || 0;
+      if (cnt === 0 && tok === 0) return '';  // 데이터 없는 카테고리 숨김
+      const meta = CAT_LABELS_MAP[cat] || { label: getCatLabel(cat), color: CAT_COLORS[idx % CAT_COLORS.length] };
       const pct = (tok / maxTokens) * 100;
       return '<div style="display:flex;align-items:center;gap:10px;font-size:11px">'
         + '<div style="width:80px;color:var(--muted);font-size:11px;letter-spacing:.3px">' + meta.label + '</div>'
@@ -8292,9 +8302,50 @@ function populateCategorySelects() {
   }
 }
 
-let CATEGORIES_CACHE = [];   // 캐시
+let CATEGORIES_CACHE = [];   // 캐시 (loadCategoryList에서 채워짐)
 let catEditMode = 'add';     // 'add' | 'edit'
 let catEditOriginalId = null;
+
+// ── 카테고리 헬퍼 (CATEGORIES_CACHE 동적 활용) ────────────────
+function getAllCatIds() {
+  // 모든 카테고리 ID (active + coming_soon + hidden)
+  if (CATEGORIES_CACHE && CATEGORIES_CACHE.length) {
+    return CATEGORIES_CACHE.map(c => c.id).filter(Boolean);
+  }
+  return ['economy', 'realestate', 'english', 'trivia']; // 폴백
+}
+function getActiveCatIds() {
+  if (CATEGORIES_CACHE && CATEGORIES_CACHE.length) {
+    return CATEGORIES_CACHE
+      .filter(c => (c.visibility || (c.active ? 'active' : 'hidden')) === 'active')
+      .map(c => c.id);
+  }
+  return ['economy', 'realestate', 'english', 'trivia'];
+}
+function getCatLabel(catId) {
+  if (CATEGORIES_CACHE && CATEGORIES_CACHE.length) {
+    const c = CATEGORIES_CACHE.find(c => c.id === catId);
+    if (c) return `${c.emoji || '📌'} ${c.name || c.id}`;
+  }
+  const fallback = { economy:'📊 경제', realestate:'🏠 부동산', english:'🇬🇧 영어', trivia:'🧠 상식' };
+  return fallback[catId] || catId;
+}
+function getCatEmoji(catId) {
+  if (CATEGORIES_CACHE && CATEGORIES_CACHE.length) {
+    const c = CATEGORIES_CACHE.find(c => c.id === catId);
+    if (c) return c.emoji || '📌';
+  }
+  const fallback = { economy:'📊', realestate:'🏠', english:'🇬🇧', trivia:'🧠' };
+  return fallback[catId] || '📌';
+}
+function getCatShortName(catId) {
+  if (CATEGORIES_CACHE && CATEGORIES_CACHE.length) {
+    const c = CATEGORIES_CACHE.find(c => c.id === catId);
+    if (c) return c.name || c.id;
+  }
+  const fallback = { economy:'경제', realestate:'부동산', english:'영어', trivia:'상식' };
+  return fallback[catId] || catId;
+}
 
 async function loadCategoryList() {
   const tbody = document.getElementById('catManageBody');
