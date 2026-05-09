@@ -754,7 +754,7 @@ body.light-mode .filter-pill.active { color:#fff; }
 <!-- SIDEBAR -->
 <aside class="sidebar">
   <div class="sb-logo">1DAYECO<small>Admin Dashboard</small>
-    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v86</span>
+    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v87</span>
   </div>
   <nav class="sb-nav">
     <div class="sb-group">운영</div>
@@ -1876,6 +1876,7 @@ body.light-mode .filter-pill.active { color:#fff; }
                 <tr style="border-bottom:1px solid var(--b);text-align:left;color:var(--muted);font-size:11px;letter-spacing:.3px">
                   <th style="padding:8px 6px;font-weight:500;width:40px"></th>
                   <th style="padding:8px 6px;font-weight:500">ID / 이름</th>
+                  <th style="padding:8px 6px;font-weight:500;text-align:center;width:90px">대분류</th>
                   <th style="padding:8px 6px;font-weight:500;text-align:right">월정액</th>
                   <th style="padding:8px 6px;font-weight:500;text-align:right">3개월<br><span style="font-size:9px;opacity:.6">정가/할인</span></th>
                   <th style="padding:8px 6px;font-weight:500;text-align:right">6개월<br><span style="font-size:9px;opacity:.6">정가/할인</span></th>
@@ -1885,7 +1886,7 @@ body.light-mode .filter-pill.active { color:#fff; }
                 </tr>
               </thead>
               <tbody id="catManageBody">
-                <tr><td colspan="8" style="padding:30px 0;text-align:center;color:var(--muted)">로딩 중…</td></tr>
+                <tr><td colspan="9" style="padding:30px 0;text-align:center;color:var(--muted)">로딩 중…</td></tr>
               </tbody>
             </table>
           </div>
@@ -1985,6 +1986,17 @@ body.light-mode .filter-pill.active { color:#fff; }
             </select>
             <!-- legacy 호환 hidden checkbox -->
             <input type="checkbox" id="catInputActive" checked style="display:none">
+          </div>
+        </div>
+        <div style="display:flex;gap:10px;margin-top:10px">
+          <div style="flex:1">
+            <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:4px">대분류 (그룹)</label>
+            <select id="catInputSuperCategory" style="width:100%;background:var(--s3);border:1px solid var(--b);border-radius:6px;padding:9px 12px;font-size:13px;color:var(--text);font-family:var(--sans);outline:none">
+              <option value="finance">💼 경제·금융</option>
+              <option value="lifestyle">🏠 생활·실용</option>
+              <option value="language">🌐 글로벌·언어</option>
+              <option value="tech">💻 테크·트렌드</option>
+            </select>
           </div>
         </div>
       </div>
@@ -8381,7 +8393,7 @@ async function loadCategoryList() {
     populateCategorySelects();
 
     if (!cats.length) {
-      tbody.innerHTML = '<tr><td colspan="8" style="padding:30px 0;text-align:center;color:var(--muted)">카테고리가 없습니다</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="9" style="padding:30px 0;text-align:center;color:var(--muted)">카테고리가 없습니다</td></tr>';
       return;
     }
 
@@ -8428,8 +8440,17 @@ async function loadCategoryList() {
       return `<span style="display:inline-block;font-size:10px;font-weight:700;padding:3px 9px;border-radius:100px;color:${conf.color};background:${conf.bg};white-space:nowrap">${conf.label}</span>`;
     };
 
+    const SUPER_CAT_LABELS = {
+      finance:   { emoji: '💼', label: '경제·금융' },
+      lifestyle: { emoji: '🏠', label: '생활·실용' },
+      language:  { emoji: '🌐', label: '글로벌·언어' },
+      tech:      { emoji: '💻', label: '테크·트렌드' },
+    };
+
     tbody.innerHTML = cats.map(c => {
       const monthly = (c.monthly_price || 0).toLocaleString('ko-KR');
+      const sc = SUPER_CAT_LABELS[c.super_category] || { emoji: '—', label: '미분류' };
+      const superCellHtml = `<div style="display:flex;flex-direction:column;align-items:center;gap:1px"><span style="font-size:14px">${sc.emoji}</span><span style="font-size:9px;color:var(--muted);letter-spacing:.2px">${sc.label}</span></div>`;
       return `
         <tr style="border-bottom:1px solid var(--b)">
           <td style="padding:10px 6px;font-size:18px;text-align:center">${c.emoji || '📌'}</td>
@@ -8437,6 +8458,7 @@ async function loadCategoryList() {
             <div style="font-weight:600;color:var(--text)">${c.name || ''}</div>
             <div style="font-family:var(--mono);font-size:10px;color:var(--muted);margin-top:1px">${c.id}</div>
           </td>
+          <td style="padding:10px 6px;text-align:center">${superCellHtml}</td>
           <td style="padding:10px 6px;text-align:right;font-family:var(--mono)">
             <span style="color:var(--gold);font-weight:700">₩${monthly}</span>
             <span style="font-size:9px;color:var(--muted);display:block">/월</span>
@@ -8502,6 +8524,8 @@ function openCategoryAdd() {
   document.getElementById('catInputActive').checked = true;
   const visEl = document.getElementById('catInputVisibility');
   if (visEl) visEl.value = 'active';
+  const superEl = document.getElementById('catInputSuperCategory');
+  if (superEl) superEl.value = 'finance';
   // 저장 버튼 초기화
   const btn = document.getElementById('catSaveBtn');
   if (btn) { btn.disabled = false; btn.textContent = '💾 저장'; }
@@ -8528,10 +8552,11 @@ function openCategoryEdit(catId) {
   document.getElementById('catInputActive').checked = !!cat.active;
   const visEl = document.getElementById('catInputVisibility');
   if (visEl) {
-    // visibility 우선, 없으면 active 폴백
     const vis = cat.visibility || (cat.active ? 'active' : 'hidden');
     visEl.value = vis;
   }
+  const superEl = document.getElementById('catInputSuperCategory');
+  if (superEl) superEl.value = cat.super_category || 'finance';
   // 저장 버튼 초기화 (이전 모달에서 disabled 잔존 방지)
   const btn = document.getElementById('catSaveBtn');
   if (btn) { btn.disabled = false; btn.textContent = '💾 저장'; }
@@ -8572,6 +8597,8 @@ async function saveCategoryEdit() {
     const visibility = visEl ? visEl.value : 'active';
     // active는 visibility와 동기화 (legacy 호환)
     const active = (visibility !== 'hidden');
+    const superEl = document.getElementById('catInputSuperCategory');
+    const super_category = superEl ? superEl.value : 'finance';
 
     // 일시불 plan별 가격
     const pkg3mOriginal = parseInt(document.getElementById('catInputPkg3mOriginal').value || '0', 10);
@@ -8614,6 +8641,7 @@ async function saveCategoryEdit() {
       display_order:    order,
       visibility,
       active,
+      super_category,
     };
 
     let response;
