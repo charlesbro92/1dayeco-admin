@@ -754,7 +754,7 @@ body.light-mode .filter-pill.active { color:#fff; }
 <!-- SIDEBAR -->
 <aside class="sidebar">
   <div class="sb-logo">1DAYECO<small>Admin Dashboard</small>
-    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v67</span>
+    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v68</span>
   </div>
   <nav class="sb-nav">
     <div class="sb-group">운영</div>
@@ -9032,30 +9032,36 @@ async function setRefundStatus(newPaymentStatus) {
   if (!confirm(`${label} 처리하시겠습니까?\n환불완료 시 구독 상태가 'cancelled'로 변경됩니다.`)) return;
 
   try {
+    const sub = STATE.subscribers.find(s => s.id === sdCurrentId);
+    if (!sub) throw new Error('구독자 정보를 찾을 수 없습니다');
+
     const kst = new Date().toLocaleString('ko-KR', { timeZone:'Asia/Seoul',
       year:'numeric', month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit', hour12:false });
-    const updatePayload = { payment_status: newPaymentStatus };
+    const note = `[${kst}] ${label} 처리 완료 (어드민)`;
+    const existingMemo = (sub.memo || '').trim();
+
+    // PUT은 전체 필드를 넘겨야 하므로 기존 데이터에 변경값만 덮어씀
+    const updatePayload = {
+      ...sub,
+      payment_status: newPaymentStatus,
+      memo: existingMemo ? `${existingMemo}\n${note}` : note,
+    };
     if (newPaymentStatus === 'refunded') {
       updatePayload.status = 'cancelled';
     }
-
-    // memo에 처리 기록 추가
-    const sub = STATE.subscribers.find(s => s.id === sdCurrentId);
-    if (sub) {
-      const existingMemo = (sub.memo || '').trim();
-      const note = `[${kst}] ${label} 처리 완료 (어드민)`;
-      updatePayload.memo = existingMemo ? `${existingMemo}\n${note}` : note;
-    }
+    // PUT에 불필요한 computed 필드 제거
+    delete updatePayload._inputName;
 
     const r = await fetch(API_BASE + '/admin/subscribers/' + sdCurrentId, {
-      method: 'PATCH',
+      method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(updatePayload),
     });
-    if (!r.ok) throw new Error('업데이트 실패');
+    const d = await r.json();
+    if (!r.ok || d.success === false) throw new Error(d.message || '업데이트 실패');
     showToast(`${label} 처리 완료`, 'ok');
     closeSubDetail();
-    loadSubscribers({ silent: true });
+    if (typeof loadSubscribers === 'function') loadSubscribers({ silent: true });
   } catch(e) {
     showToast('처리 중 오류: ' + e.message, 'ng');
   }
