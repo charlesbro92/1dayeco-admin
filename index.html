@@ -754,7 +754,7 @@ body.light-mode .filter-pill.active { color:#fff; }
 <!-- SIDEBAR -->
 <aside class="sidebar">
   <div class="sb-logo">1DAYECO<small>Admin Dashboard</small>
-    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v76</span>
+    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v77</span>
   </div>
   <nav class="sb-nav">
     <div class="sb-group">운영</div>
@@ -4208,12 +4208,77 @@ function sendHistGoPage(p) {
   loadSendHistory();
 }
 
-function loadSendHistory() {
+async function loadSendHistory() {
   const fromVal = document.getElementById('sendDateFrom')?.value || '';
   const toVal   = document.getElementById('sendDateTo')?.value   || '';
-  const allRows = buildMonthHistory(fromVal, toVal);
   selectedSendIdx = null;
   document.getElementById('sendDetailPanel').innerHTML = '';
+  document.getElementById('sendHistBody').innerHTML =
+    '<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:24px">발송 이력 로딩 중...</td></tr>';
+
+  // send_logs API에서 날짜별 집계
+  let allRows = [];
+  try {
+    const params = new URLSearchParams({ limit: 3000 });
+    if (fromVal) params.set('date_from', fromVal);
+    if (toVal)   params.set('date_to',   toVal);
+    const r = await fetch(API_BASE + '/admin/send-logs?' + params.toString());
+    if (r.ok) {
+      const d = await r.json();
+      const logs = d.data || [];
+
+      // 날짜별 집계
+      const dateMap = {};
+      for (const log of logs) {
+        const ds = log.send_date || (log.sent_at || '').slice(0, 10);
+        if (!ds) continue;
+        if (!dateMap[ds]) dateMap[ds] = { sent: 0, failed: 0 };
+        if (log.success) dateMap[ds].sent++;
+        else             dateMap[ds].failed++;
+      }
+
+      // buildMonthHistory와 동일한 형태로 변환
+      const todayKST = new Date(new Date().getTime() + 9*3600000).toISOString().slice(0, 10);
+      allRows = Object.entries(dateMap).map(([ds, v]) => {
+        const total = v.sent + v.failed;
+        const rate  = total === 0 ? null : Math.floor(v.sent / total * 1000) / 10;
+        const hasContent = !!(typeof CONTENT_ARCHIVE !== 'undefined' && hasArchiveAtDate(ds));
+        return {
+          dateStr: ds,
+          date: new Date(ds + 'T12:00:00+09:00').toLocaleDateString('ko-KR'),
+          total, sent: v.sent, failed: v.failed, rate, hasContent,
+        };
+      });
+
+      // 오늘이 dateMap에 없어도 표시 (콘텐츠 있거나 오늘이면)
+      if (!dateMap[todayKST]) {
+        const hasContent = !!(typeof CONTENT_ARCHIVE !== 'undefined' && hasArchiveAtDate(todayKST));
+        if (hasContent) {
+          allRows.push({
+            dateStr: todayKST,
+            date: new Date(todayKST + 'T12:00:00+09:00').toLocaleDateString('ko-KR'),
+            total: 0, sent: 0, failed: 0, rate: null, hasContent,
+          });
+        }
+      }
+
+      allRows.sort((a, b) => b.dateStr.localeCompare(a.dateStr));
+
+      // STATE 업데이트 (오늘 발송 현황 반영)
+      const todayData = dateMap[todayKST];
+      if (todayData) {
+        STATE._todaySent   = todayData.sent;
+        STATE._todayFailed = todayData.failed;
+      }
+    }
+  } catch(e) {
+    console.warn('[loadSendHistory] API 실패, buildMonthHistory 폴백:', e);
+    allRows = buildMonthHistory(fromVal, toVal);
+  }
+
+  // MOCK_SEND_HISTORY 업데이트 (미니바 등 다른 곳에서 참조)
+  MOCK_SEND_HISTORY.length = 0;
+  allRows.forEach(r => MOCK_SEND_HISTORY.push(r));
 
   // 페이지네이션
   const totalRows = allRows.length;
@@ -4224,29 +4289,18 @@ function loadSendHistory() {
   const endIdx   = startIdx + SEND_HIST_PAGE_SIZE;
   const rows = allRows.slice(startIdx, endIdx);
 
-  // 페이지네이션 UI 갱신
+  // 페이지네이션 UI
   const paginationEl = document.getElementById('sendHistPagination');
   const pageInfoEl   = document.getElementById('sendHistPageInfo');
   const pageNumEl    = document.getElementById('sendHistPageNum');
   const prevBtn      = document.getElementById('sendHistPrev');
   const nextBtn      = document.getElementById('sendHistNext');
-
   if (totalRows > SEND_HIST_PAGE_SIZE) {
     if (paginationEl) paginationEl.style.display = 'flex';
-    if (pageInfoEl) {
-      pageInfoEl.textContent = `${startIdx + 1}-${Math.min(endIdx, totalRows)} / ${totalRows}일`;
-    }
-    if (pageNumEl) pageNumEl.textContent = `${sendHistPage} / ${totalPages}`;
-    if (prevBtn) {
-      prevBtn.disabled = (sendHistPage === 1);
-      prevBtn.style.opacity = (sendHistPage === 1) ? '0.4' : '1';
-      prevBtn.style.cursor  = (sendHistPage === 1) ? 'not-allowed' : 'pointer';
-    }
-    if (nextBtn) {
-      nextBtn.disabled = (sendHistPage === totalPages);
-      nextBtn.style.opacity = (sendHistPage === totalPages) ? '0.4' : '1';
-      nextBtn.style.cursor  = (sendHistPage === totalPages) ? 'not-allowed' : 'pointer';
-    }
+    if (pageInfoEl)   pageInfoEl.textContent = `${startIdx + 1}-${Math.min(endIdx, totalRows)} / ${totalRows}일`;
+    if (pageNumEl)    pageNumEl.textContent  = `${sendHistPage} / ${totalPages}`;
+    if (prevBtn) { prevBtn.disabled = sendHistPage === 1; prevBtn.style.opacity = sendHistPage === 1 ? '0.4' : '1'; }
+    if (nextBtn) { nextBtn.disabled = sendHistPage === totalPages; nextBtn.style.opacity = sendHistPage === totalPages ? '0.4' : '1'; }
   } else {
     if (paginationEl) paginationEl.style.display = 'none';
   }
@@ -4257,9 +4311,7 @@ function loadSendHistory() {
     return;
   }
 
-  // 각 행 뒤에 detail 행을 함께 렌더링 (초기 숨김)
   document.getElementById('sendHistBody').innerHTML = rows.map(r => {
-    // rate가 null이면 발송 없음 → "—" 표시
     const isEmpty   = r.rate === null;
     const rateColor = isEmpty ? 'var(--muted)' :
                        r.rate === 100 ? 'var(--green)' : r.rate >= 95 ? 'var(--amber)' : 'var(--red)';
