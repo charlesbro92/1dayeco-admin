@@ -754,7 +754,7 @@ body.light-mode .filter-pill.active { color:#fff; }
 <!-- SIDEBAR -->
 <aside class="sidebar">
   <div class="sb-logo">1DAYECO<small>Admin Dashboard</small>
-    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v68</span>
+    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v69</span>
   </div>
   <nav class="sb-nav">
     <div class="sb-group">운영</div>
@@ -3021,6 +3021,11 @@ function loadKPIs() {
 
   // ── KPI: 이번달 환불 ────────────────────────────────────
   const payments = STATE.payments || [];
+  // payments 미로드 시 백그라운드 로드 후 KPI 재갱신
+  if (payments.length === 0 && !STATE._paymentsLoading) {
+    STATE._paymentsLoading = true;
+    loadPayments().then(() => { STATE._paymentsLoading = false; loadKPIs(); });
+  }
   const nowDate2  = new Date();
   const mStart = new Date(nowDate2.getFullYear(), nowDate2.getMonth(), 1).toISOString();
   const mEnd   = new Date(nowDate2.getFullYear(), nowDate2.getMonth()+1, 0, 23,59,59).toISOString();
@@ -7843,6 +7848,7 @@ async function loadPayments() {
   }
 
   _allPayments = payments;
+  STATE.payments = payments;  // KPI 집계용
   renderPayments();
 }
 
@@ -9035,33 +9041,41 @@ async function setRefundStatus(newPaymentStatus) {
     const sub = STATE.subscribers.find(s => s.id === sdCurrentId);
     if (!sub) throw new Error('구독자 정보를 찾을 수 없습니다');
 
-    const kst = new Date().toLocaleString('ko-KR', { timeZone:'Asia/Seoul',
-      year:'numeric', month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit', hour12:false });
-    const note = `[${kst}] ${label} 처리 완료 (어드민)`;
-    const existingMemo = (sub.memo || '').trim();
-
-    // PUT은 전체 필드를 넘겨야 하므로 기존 데이터에 변경값만 덮어씀
-    const updatePayload = {
-      ...sub,
-      payment_status: newPaymentStatus,
-      memo: existingMemo ? `${existingMemo}\n${note}` : note,
-    };
     if (newPaymentStatus === 'refunded') {
-      updatePayload.status = 'cancelled';
+      // 환불완료: 전용 API로 payments.refund_amount까지 저장
+      const r = await fetch(API_BASE + '/api/admin/complete-refund/' + sdCurrentId, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reason: '어드민 환불완료 처리' }),
+      });
+      const d = await r.json();
+      if (!r.ok || d.success === false) throw new Error(d.message || d.error || '환불완료 처리 실패');
+      showToast(`환불완료 처리 ₩${(d.refund_amount||0).toLocaleString('ko-KR')}`, 'ok');
+    } else {
+      // 환불대기: subscriber payment_status만 변경
+      const kst = new Date().toLocaleString('ko-KR', { timeZone:'Asia/Seoul',
+        year:'numeric', month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit', hour12:false });
+      const note = `[${kst}] 환불대기 설정 (어드민)`;
+      const existingMemo = (sub.memo || '').trim();
+      const updatePayload = {
+        ...sub,
+        payment_status: 'refund_pending',
+        memo: existingMemo ? `${existingMemo}\n${note}` : note,
+      };
+      delete updatePayload._inputName;
+      const r = await fetch(API_BASE + '/admin/subscribers/' + sdCurrentId, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updatePayload),
+      });
+      const d = await r.json();
+      if (!r.ok || d.success === false) throw new Error(d.message || '업데이트 실패');
+      showToast('환불대기 설정 완료', 'ok');
     }
-    // PUT에 불필요한 computed 필드 제거
-    delete updatePayload._inputName;
 
-    const r = await fetch(API_BASE + '/admin/subscribers/' + sdCurrentId, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(updatePayload),
-    });
-    const d = await r.json();
-    if (!r.ok || d.success === false) throw new Error(d.message || '업데이트 실패');
-    showToast(`${label} 처리 완료`, 'ok');
     closeSubDetail();
-    if (typeof loadSubscribers === 'function') loadSubscribers({ silent: true });
+    await loadPayments();
+    loadKPIs();
   } catch(e) {
     showToast('처리 중 오류: ' + e.message, 'ng');
   }
