@@ -754,7 +754,7 @@ body.light-mode .filter-pill.active { color:#fff; }
 <!-- SIDEBAR -->
 <aside class="sidebar">
   <div class="sb-logo">1DAYECO<small>Admin Dashboard</small>
-    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v87</span>
+    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v88</span>
   </div>
   <nav class="sb-nav">
     <div class="sb-group">운영</div>
@@ -1921,6 +1921,11 @@ body.light-mode .filter-pill.active { color:#fff; }
             <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:4px">표시 이름</label>
             <input type="text" id="catInputName" placeholder="예: 주식, 의학" style="width:100%;background:var(--s3);border:1px solid var(--b);border-radius:6px;padding:9px 12px;font-size:13px;color:var(--text);font-family:var(--sans);outline:none">
           </div>
+        </div>
+        <!-- 부제목 -->
+        <div style="margin-top:10px">
+          <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:4px">부제목 (제목 아래 한 줄 — 카테고리 컨셉)</label>
+          <input type="text" id="catInputSubtitle" placeholder="예: 일상 회화 표현 / 심슨과 영어공부" maxlength="40" style="width:100%;background:var(--s3);border:1px solid var(--b);border-radius:6px;padding:9px 12px;font-size:13px;color:var(--text);font-family:var(--sans);outline:none">
         </div>
         <!-- 설명 -->
         <div>
@@ -8518,6 +8523,7 @@ function openCategoryAdd() {
   document.getElementById('catInputId').style.opacity = '1';
   document.getElementById('catInputEmoji').value = '📌';
   document.getElementById('catInputName').value  = '';
+  document.getElementById('catInputSubtitle').value = '';
   document.getElementById('catInputDesc').value  = '';
   setCategoryFormPrices(null);  // 디폴트 가격으로
   document.getElementById('catInputOrder').value   = String((CATEGORIES_CACHE.length + 1) * 10);
@@ -8546,6 +8552,7 @@ function openCategoryEdit(catId) {
   document.getElementById('catInputId').style.opacity = '0.5';
   document.getElementById('catInputEmoji').value = cat.emoji || '📌';
   document.getElementById('catInputName').value  = cat.name || '';
+  document.getElementById('catInputSubtitle').value = cat.subtitle || '';
   document.getElementById('catInputDesc').value  = cat.description || '';
   setCategoryFormPrices(cat);  // 현재 가격 채움
   document.getElementById('catInputOrder').value   = String(cat.display_order || 0);
@@ -8590,6 +8597,7 @@ async function saveCategoryEdit() {
     const id      = document.getElementById('catInputId').value.trim().toLowerCase();
     const name    = document.getElementById('catInputName').value.trim();
     const emoji   = document.getElementById('catInputEmoji').value.trim() || '📌';
+    const subtitle = document.getElementById('catInputSubtitle').value.trim();
     const desc    = document.getElementById('catInputDesc').value.trim();
     const monthly = parseInt(document.getElementById('catInputMonthly').value || '0', 10);
     const order   = parseInt(document.getElementById('catInputOrder').value || '0', 10);
@@ -8629,7 +8637,7 @@ async function saveCategoryEdit() {
     }
 
     const payload = {
-      name, emoji, description: desc,
+      name, emoji, subtitle, description: desc,
       monthly_price:    monthly,
       monthly_original: monthly,  // 월정액은 정가=가격 (할인 없음)
       pkg3m_original:   pkg3mOriginal,
