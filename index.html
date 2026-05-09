@@ -722,7 +722,7 @@ body.light-mode .filter-pill.active { color:#fff; }
 <!-- SIDEBAR -->
 <aside class="sidebar">
   <div class="sb-logo">1DAYECO<small>Admin Dashboard</small>
-    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v54</span>
+    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v55</span>
   </div>
   <nav class="sb-nav">
     <div class="sb-group">운영</div>
@@ -3570,7 +3570,15 @@ function renderSubscribersRows(filtered) {
       <td style="font-family:var(--mono);font-size:12px;text-align:right;color:var(--muted)">
         ${{monthly:'₩9,900',yearly:'₩79,000',free:'₩0',pkg3m:'₩14,900',pkg6m:'₩24,900',pkg1y:'₩41,900'}[s.plan]||''}
       </td>
-      <td style="text-align:center"><span class="badge ${s.status}">${{active:'활성',trial:'체험',cancelled:'해지',expired:'만료',pending_payment:'결제대기'}[s.status]||s.status}</span></td>
+      <td style="text-align:center"><span class="badge ${s.status}">${{
+  active:'✅ 유료',
+  trial: s.billing_key ? '🟡 체험(카드✅)' : '🟡 체험(카드❌)',
+  cancelled:'해지',
+  expired:'만료',
+  pending_payment:'카드등록중',
+  pending_charge:'결제대기',
+  payment_failed:'❌ 결제오류'
+}[s.status]||s.status}</span></td>
       <td style="text-align:center">${paymentStatusLabel(s.payment_status)}</td>
       <td style="text-align:center">${renderKakaoChannelCell(s)}</td>
       <td style="text-align:center;white-space:nowrap">${renderSubCategories(s.categories)}</td>
