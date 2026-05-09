@@ -754,7 +754,7 @@ body.light-mode .filter-pill.active { color:#fff; }
 <!-- SIDEBAR -->
 <aside class="sidebar">
   <div class="sb-logo">1DAYECO<small>Admin Dashboard</small>
-    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v85</span>
+    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v86</span>
   </div>
   <nav class="sb-nav">
     <div class="sb-group">운영</div>
@@ -877,7 +877,7 @@ body.light-mode .filter-pill.active { color:#fff; }
               <div style="font-size:10px;color:var(--muted);letter-spacing:.5px;margin-bottom:4px">오늘 생성</div>
               <div style="display:flex;align-items:baseline;gap:6px">
                 <span id="csToday" style="font-size:24px;font-weight:700;color:var(--gold);font-family:var(--mono)">0</span>
-                <span style="font-size:11px;color:var(--muted)">/ 4 카테고리</span>
+                <span id="csTodayTotal" style="font-size:11px;color:var(--muted)">/ 0 카테고리</span>
               </div>
               <div id="csTodayCats" style="font-size:10px;color:var(--muted);margin-top:4px;letter-spacing:.3px">—</div>
             </div>
@@ -3305,6 +3305,8 @@ function loadContentSummary() {
   // 오늘 카드
   const csTodayEl = document.getElementById('csToday');
   if (csTodayEl) csTodayEl.textContent = todayCats.size;
+  const csTodayTotalEl = document.getElementById('csTodayTotal');
+  if (csTodayTotalEl) csTodayTotalEl.textContent = `/ ${cats.length} 카테고리`;
   const csTodayCatsEl = document.getElementById('csTodayCats');
   if (csTodayCatsEl) {
     if (todayCats.size === 0) {
@@ -3374,7 +3376,7 @@ function loadContentSummary() {
           + '<span style="color:var(--text);font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0">'
           + (item.topic || item.headline || '제목 없음') + '</span>'
           + '</div>';
-      }).join('') + '<div style="font-size:10px;color:var(--muted);margin-top:6px;letter-spacing:.3px">' + presentCats.length + ' / 4 카테고리 준비됨</div>';
+      }).join('') + '<div style="font-size:10px;color:var(--muted);margin-top:6px;letter-spacing:.3px">' + presentCats.length + ' / ' + cats.length + ' 카테고리 준비됨</div>';
     }
   }
 }
@@ -3994,7 +3996,7 @@ async function loadSendPreview() {
     }
     const categories = allCatIds;
     grid.innerHTML = categories.map(cat => {
-      const meta = CATEGORY_META[cat] || { icon: getCatEmoji(cat), name: getCatShortName(cat) };
+      const meta = CATEGORY_META[cat] || { emoji: getCatEmoji(cat), label: getCatShortName(cat) };
       const count = (subsByCategory[cat] || []).length;
       const hasContent = !!todayItems[cat];
       const isOk = hasContent && count > 0;
@@ -4043,7 +4045,7 @@ async function loadSendPreview() {
         _prevState.selectedTab = availableTabs[0];
       }
       tabBar.innerHTML = availableTabs.map(cat => {
-        const meta = CATEGORY_META[cat];
+        const meta = CATEGORY_META[cat] || { emoji: getCatEmoji(cat), label: getCatShortName(cat) };
         const isActive = cat === _prevState.selectedTab;
         return `<button onclick="prevSelectTab('${cat}')"
           style="background:${isActive ? 'var(--gold)' : 'none'};
@@ -4063,10 +4065,11 @@ async function loadSendPreview() {
     const warnEl = document.getElementById('prevWarnings');
     const warnings = [];
     categories.forEach(cat => {
-      const count = subsByCategory[cat].length;
+      const count = (subsByCategory[cat] || []).length;
       const hasContent = !!todayItems[cat];
       if (count > 0 && !hasContent) {
-        warnings.push(`${CATEGORY_META[cat].emoji} <strong>${CATEGORY_META[cat].label}</strong> 카테고리 콘텐츠가 없어 ${count}명에게 발송 불가`);
+        const m = CATEGORY_META[cat] || { emoji: getCatEmoji(cat), label: getCatShortName(cat) };
+        warnings.push(`${m.emoji} <strong>${m.label}</strong> 카테고리 콘텐츠가 없어 ${count}명에게 발송 불가`);
       }
     });
     if (warnings.length > 0) {
