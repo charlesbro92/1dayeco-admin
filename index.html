@@ -769,7 +769,7 @@ body.light-mode .filter-pill.active { color:#fff; }
 <!-- SIDEBAR -->
 <aside class="sidebar">
   <div class="sb-logo">1DAYECO<small>Admin Dashboard</small>
-    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v117</span>
+    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v118</span>
   </div>
   <nav class="sb-nav">
     <div class="sb-group">운영</div>
@@ -1352,6 +1352,13 @@ body.light-mode .filter-pill.active { color:#fff; }
                 <input type="date" id="topicListDateTo" onchange="renderTopicList()"
                   style="background:var(--s3);border:1px solid var(--b);color:var(--text);padding:5px 8px;border-radius:5px;font-size:11px;font-family:var(--mono)">
                 <button onclick="resetTopicListFilters()" style="background:none;border:1px solid var(--b);color:var(--muted);padding:5px 10px;border-radius:5px;font-size:10px;cursor:pointer">초기화</button>
+              </div>
+            </div>
+            <!-- 줄 2: 부제목 pill (카테고리 선택 후 표시) -->
+            <div id="topicListSubtopicWrap" style="display:none;align-items:center;gap:6px;flex-wrap:wrap">
+              <span style="font-size:11px;color:var(--muted);letter-spacing:.5px;margin-right:4px">부제목</span>
+              <div class="cat-pill-filter" id="topicListSubtopicPills" style="display:flex;gap:4px;flex-wrap:wrap;flex:1">
+                <button class="cat-pill active" data-subtopic="" onclick="selectTopicSubtopicFilter(this)">전체</button>
               </div>
             </div>
           </div>
@@ -2118,9 +2125,9 @@ body.light-mode .filter-pill.active { color:#fff; }
     <div style="padding:18px 20px;display:flex;flex-direction:column;gap:14px;overflow-y:auto;flex:1">
       <input type="hidden" id="topicEditId">
       <div>
-        <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:5px;letter-spacing:.5px">날짜</label>
-        <input type="date" id="topicEditDate"
-          style="width:100%;background:var(--s3);border:1px solid var(--b);border-radius:6px;padding:8px 10px;font-size:13px;color:var(--text);font-family:var(--sans);outline:none;color-scheme:dark">
+        <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:5px;letter-spacing:.5px">날짜 <span style="font-size:10px;color:var(--muted);font-weight:400">(변경 불가)</span></label>
+        <input type="date" id="topicEditDate" readonly disabled
+          style="width:100%;background:var(--s2);border:1px solid var(--b);border-radius:6px;padding:8px 10px;font-size:13px;color:var(--muted);font-family:var(--sans);outline:none;color-scheme:dark;cursor:not-allowed;opacity:.6">
       </div>
       <div>
         <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:5px;letter-spacing:.5px">주제 <span style="color:var(--gold)">필수</span></label>
@@ -5585,9 +5592,17 @@ async function generateTopics() {
       return x.date === dateStr && x.cat === cat && (x.subtopic_id || null) === (subtopicId || null);
     });
 
+    // 날짜를 일관된 형식 (예: 2026. 5. 11.) 으로 표시
+    const dispDate = (function() {
+      try {
+        return new Date(dateStr + 'T00:00:00+09:00').toLocaleDateString('ko-KR');
+      } catch(e) { return dateStr; }
+    })();
+
     const newTopic = {
       id: 't_' + Date.now() + '_' + i,
-      date: dateStr,
+      date: dispDate,
+      dateStr: dateStr,
       cat: cat,
       subtopic_id: subtopicId ? Number(subtopicId) : null,
       subtopic_name: subtopicName || '',
@@ -5649,34 +5664,31 @@ async function generateTopics() {
 
 // 주제 목록 필터 상태
 let _topicListCatFilter = '';  // '' = 전체
+let _topicListSubtopicFilter = '';  // 부제목 ID 또는 ''
 
 function selectTopicCatFilter(btnEl) {
   const cat = btnEl.dataset.cat || '';
   document.querySelectorAll('#topicListCatPills .cat-pill').forEach(function(b) {
     b.classList.remove('active');
-    b.style.background = 'none';
-    b.style.color = 'var(--text)';
   });
   btnEl.classList.add('active');
-  btnEl.style.background = 'var(--gold)';
-  btnEl.style.color = 'var(--bg)';
   _topicListCatFilter = cat;
+  // 부제목 필터 갱신
+  _topicListSubtopicFilter = '';
+  _renderTopicListSubtopicPills(cat);
   renderTopicList();
 }
 
 function resetTopicListFilters() {
   _topicListCatFilter = '';
+  _topicListSubtopicFilter = '';
   document.querySelectorAll('#topicListCatPills .cat-pill').forEach(function(b) {
     b.classList.remove('active');
-    b.style.background = 'none';
-    b.style.color = 'var(--text)';
   });
   const all = document.querySelector('#topicListCatPills .cat-pill[data-cat=""]');
-  if (all) {
-    all.classList.add('active');
-    all.style.background = 'var(--gold)';
-    all.style.color = 'var(--bg)';
-  }
+  if (all) all.classList.add('active');
+  // 부제목 필터 숨김
+  _renderTopicListSubtopicPills('');
   const fromEl = document.getElementById('topicListDateFrom');
   const toEl   = document.getElementById('topicListDateTo');
   if (fromEl) fromEl.value = '';
@@ -5702,7 +5714,7 @@ function _renderTopicListCatPills() {
   sorted.forEach(c => {
     const isComing = (c.visibility || '') === 'coming_soon';
     const btn = document.createElement('button');
-    btn.className = 'cat-pill' + (isComing ? ' coming-soon-pill' : '');
+    btn.className = 'cat-pill' + (isComing ? ' coming-soon-pill' : '') + (_topicListCatFilter === c.id ? ' active' : '');
     btn.dataset.cat = c.id;
     btn.onclick = function() { selectTopicCatFilter(btn); };
     if (isComing) {
@@ -5713,6 +5725,52 @@ function _renderTopicListCatPills() {
     }
     wrap.appendChild(btn);
   });
+  // "전체" 버튼 active 동기화
+  const allBtn = wrap.querySelector('.cat-pill[data-cat=""]');
+  if (allBtn) {
+    if (_topicListCatFilter) allBtn.classList.remove('active');
+    else allBtn.classList.add('active');
+  }
+}
+
+// 부제목 필터 pill 동적 채움
+async function _renderTopicListSubtopicPills(catId) {
+  const wrap  = document.getElementById('topicListSubtopicWrap');
+  const pills = document.getElementById('topicListSubtopicPills');
+  if (!wrap || !pills) return;
+
+  if (!catId) {
+    wrap.style.display = 'none';
+    pills.innerHTML = '<button class="cat-pill active" data-subtopic="" onclick="selectTopicSubtopicFilter(this)">전체</button>';
+    return;
+  }
+
+  function _build(list) {
+    if (list.length === 0) { wrap.style.display = 'none'; return; }
+    wrap.style.display = 'flex';
+    let html = '<button class="cat-pill ' + (_topicListSubtopicFilter ? '' : 'active') + '" data-subtopic="" onclick="selectTopicSubtopicFilter(this)">전체</button>';
+    list.forEach(s => {
+      const isActive = String(_topicListSubtopicFilter) === String(s.id);
+      html += `<button class="cat-pill${isActive ? ' active' : ''}" data-subtopic="${s.id}" onclick="selectTopicSubtopicFilter(this)">${(s.name||'').replace(/"/g,'&quot;')}</button>`;
+    });
+    pills.innerHTML = html;
+  }
+
+  // 캐시 우선
+  if (_SUBTOPIC_CACHE[catId]) {
+    _build(_SUBTOPIC_CACHE[catId]);
+    return;
+  }
+  const list = await _fetchSubtopics(catId, false);
+  _build(list);
+}
+
+function selectTopicSubtopicFilter(btnEl) {
+  const sid = btnEl.dataset.subtopic || '';
+  document.querySelectorAll('#topicListSubtopicPills .cat-pill').forEach(b => b.classList.remove('active'));
+  btnEl.classList.add('active');
+  _topicListSubtopicFilter = sid;
+  renderTopicList();
 }
 
 function renderTopicList() {
@@ -5740,6 +5798,9 @@ function renderTopicList() {
   let filtered = GENERATED_TOPICS.slice();
   if (_topicListCatFilter) {
     filtered = filtered.filter(t => t.cat === _topicListCatFilter);
+  }
+  if (_topicListSubtopicFilter) {
+    filtered = filtered.filter(t => String(t.subtopic_id) === String(_topicListSubtopicFilter));
   }
   const fromVal = fromEl ? fromEl.value : '';
   const toVal   = toEl   ? toEl.value   : '';
@@ -6050,7 +6111,6 @@ async function saveTopicEdit() {
   const tid   = document.getElementById('topicEditId').value;
   const topic = document.getElementById('topicEditText').value.trim();
   const kw    = document.getElementById('topicEditKw').value.trim();
-  const date  = document.getElementById('topicEditDate').value.trim();
   const errEl = document.getElementById('topicEditErr');
 
   if (!topic) {
@@ -6071,7 +6131,6 @@ async function saveTopicEdit() {
   if (!t.db_id) {
     t.topic = topic;
     t.kw    = kw;
-    if (date) { t.dateStr = date; t.date = date; }
     closeTopicEditModal();
     renderTopicList();
     showToast('수정 완료 (로컬)', 'ok');
@@ -6080,8 +6139,7 @@ async function saveTopicEdit() {
 
   try {
     const body = { topic };
-    if (kw   !== undefined) body.keyword  = kw;
-    if (date)               body.date_str = date;
+    if (kw !== undefined) body.keyword = kw;
 
     const res  = await apiFetch('/admin/topics/' + t.db_id, {
       method: 'PATCH',
@@ -6097,7 +6155,6 @@ async function saveTopicEdit() {
     // 로컬 업데이트
     t.topic = topic;
     t.kw    = kw;
-    if (date) { t.dateStr = date; t.date = date; }
     closeTopicEditModal();
     renderTopicList();
     showToast('주제 수정 완료', 'ok');
