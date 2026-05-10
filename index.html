@@ -769,7 +769,7 @@ body.light-mode .filter-pill.active { color:#fff; }
 <!-- SIDEBAR -->
 <aside class="sidebar">
   <div class="sb-logo">1DAYECO<small>Admin Dashboard</small>
-    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v114</span>
+    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v115</span>
   </div>
   <nav class="sb-nav">
     <div class="sb-group">운영</div>
@@ -4616,7 +4616,7 @@ function toggleSendDetail(dateStr) {
   }
 
   var retryAllBtn = failList.length > 0
-    ? ('<button onclick="retryAllFailed(' + JSON.stringify(dateStr) + ')" ' +
+    ? ('<button data-date="' + dateStr + '" onclick="retryAllFailed(this.dataset.date)" ' +
        'style="margin-left:auto;background:rgba(248,113,113,.12);border:1px solid rgba(248,113,113,.3);color:var(--red);' +
        'padding:3px 12px;border-radius:4px;font-size:11px;font-weight:700;cursor:pointer;font-family:var(--sans)">' +
        '↺ 실패 ' + failList.length + '건 전체 재발송</button>')
@@ -4642,7 +4642,8 @@ function toggleSendDetail(dateStr) {
     allRecip.forEach(function(r) {
       var ok = r.status === 'success';
       var retryBtn = !ok
-        ? ('<button onclick="retrySingleSend(' + JSON.stringify((r.phone||'').replace(/-/g,'')) + ',' + JSON.stringify(r.name||'') + ')" ' +
+        ? ('<button data-phone="' + (r.phone||'').replace(/-/g,'') + '" data-name="' + (r.name||'').replace(/"/g,'&quot;') + '" ' +
+           'onclick="retrySingleSend(this.dataset.phone, this.dataset.name)" ' +
            'style="background:rgba(248,113,113,.12);border:1px solid rgba(248,113,113,.3);color:var(--red);' +
            'padding:3px 10px;border-radius:4px;font-size:10px;cursor:pointer;font-family:var(--sans)">↺ 재발송</button>')
         : '';
