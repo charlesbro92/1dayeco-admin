@@ -769,7 +769,7 @@ body.light-mode .filter-pill.active { color:#fff; }
 <!-- SIDEBAR -->
 <aside class="sidebar">
   <div class="sb-logo">1DAYECO<small>Admin Dashboard</small>
-    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v119</span>
+    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v120</span>
   </div>
   <nav class="sb-nav">
     <div class="sb-group">운영</div>
@@ -7956,10 +7956,9 @@ function _renderArchiveTable() {
   });
 
   // === 결과 카운트 표시 ===
+  // v120: 카테고리 화이트리스트 제거 — 모든 활성 카테고리 포함
   const totalCount = Object.keys(CONTENT_ARCHIVE).filter(function(k){
-    if (!isArchKey(k)) return false;
-    const c = CONTENT_ARCHIVE[k]?.cat || archKeyParts(k).category;
-    return ['economy','realestate','english','trivia'].includes(c);
+    return isArchKey(k);
   }).length;
   const cntEl = document.getElementById('archiveResultCount');
   if (cntEl) {
@@ -8384,7 +8383,7 @@ async function saveContentEdit() {
 
   // 검증
   if (!date_str) { showToast('날짜를 선택해 주세요', 'ng'); return; }
-  if (!category || !['economy','realestate','english','trivia'].includes(category)) {
+  if (!category || !getAllCatIds().includes(category)) {
     showToast('카테고리를 선택해 주세요', 'ng'); return;
   }
   if (!newBody) { showToast('본문을 입력해 주세요', 'ng'); return; }
@@ -10807,8 +10806,8 @@ function closeSendConfirm() { document.getElementById('sendConfirm').classList.r
 
 // 발송 페이지에서 "📤 발송 시작" 클릭 시 - 진짜 발송 확인
 function confirmExecuteSend() {
-  // 발송 가능 메시지 건수 확인
-  const sendableCount = ['economy','realestate','english','trivia'].reduce((sum, cat) => {
+  // 발송 가능 메시지 건수 확인 (활성 카테고리 모두 포함)
+  const sendableCount = getActiveCatIds().reduce((sum, cat) => {
     const hasContent = !!_prevState.contents[cat];
     return sum + (hasContent ? (_prevState.subsByCategory[cat] || []).length : 0);
   }, 0);
