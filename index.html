@@ -152,11 +152,16 @@ body {
 .content.active { display:block; }
 
 /* ─── 콘텐츠 페이지: 아카이브 메인 + 주제 작업 collapsible ─── */
-#page-content.content.active {
+#page-content.content.active,
+#page-archive.content.active {
   display:flex; flex-direction:column;
   height:calc(100vh - 58px); /* topbar 높이 제외 */
   padding:20px 28px; gap:14px;
   box-sizing:border-box; overflow:hidden;
+}
+#page-archive #archiveSlot {
+  display:flex; flex-direction:column;
+  flex:1 1 auto; min-height:0;
 }
 /* 사용량 위젯 + 주제 작업 영역은 자기 크기만 차지 */
 .usage-widget, .topic-work-panel { flex-shrink:0; }
@@ -754,7 +759,7 @@ body.light-mode .filter-pill.active { color:#fff; }
 <!-- SIDEBAR -->
 <aside class="sidebar">
   <div class="sb-logo">1DAYECO<small>Admin Dashboard</small>
-    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v103</span>
+    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v104</span>
   </div>
   <nav class="sb-nav">
     <div class="sb-group">운영</div>
@@ -1237,17 +1242,15 @@ body.light-mode .filter-pill.active { color:#fff; }
       </div>
     </div>
 
-    <!-- 주제 작업 영역 (collapsible) -->
+    <!-- 주제 작업 영역 (항상 펼침) -->
     <div class="panel topic-work-panel" id="topicWorkPanel" style="margin-bottom:14px;flex-shrink:0">
-      <div class="panel-head" onclick="toggleTopicWorkPanel()" style="cursor:pointer;user-select:none">
+      <div class="panel-head">
         <div class="panel-title">
-          <span id="topicWorkArrow" style="display:inline-block;font-size:10px;margin-right:6px;transition:transform .2s">▶</span>
           🎯 주제 작업 영역
           <span id="topicWorkBadge" style="display:none;background:rgba(201,168,76,.15);color:var(--gold);font-size:10px;padding:2px 8px;border-radius:100px;margin-left:8px;font-weight:600">0개 대기</span>
         </div>
-        <span id="topicWorkHint" style="font-size:11px;color:var(--muted);letter-spacing:.3px">클릭해서 펼치기</span>
       </div>
-      <div id="topicWorkBody" style="display:none">
+      <div id="topicWorkBody">
         <!-- 주제 생성 입력 -->
         <div class="panel-body" style="padding:20px;display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;border-bottom:1px solid var(--b)">
           <div style="flex:1.2;min-width:140px">
@@ -1297,7 +1300,7 @@ body.light-mode .filter-pill.active { color:#fff; }
         </div>
 
         <!-- 생성된 주제 목록 -->
-        <div id="topicListSection">
+        <div id="topicListSection" style="flex:1 1 auto;min-height:0;display:flex;flex-direction:column">
           <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 18px;border-bottom:1px solid var(--b);gap:8px;flex-wrap:wrap">
             <div style="font-size:12px;font-weight:700;color:var(--text);letter-spacing:.3px">📋 생성된 주제 목록 <span id="topicListCatBreakdown" style="color:var(--muted);font-weight:400;font-size:10px;margin-left:6px"></span></div>
             <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
@@ -1309,11 +1312,28 @@ body.light-mode .filter-pill.active { color:#fff; }
               </button>
             </div>
           </div>
+          <!-- 카테고리 / 기간 필터 -->
+          <div style="padding:10px 18px;border-bottom:1px solid var(--b);display:flex;gap:8px;align-items:center;flex-wrap:wrap;background:var(--s1)">
+            <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap" id="topicListCatPills">
+              <span style="font-size:10px;color:var(--muted);letter-spacing:.5px;margin-right:4px">카테고리</span>
+              <button class="cat-pill active" data-cat="" onclick="selectTopicCatFilter(this)" style="background:none;border:1px solid var(--b);color:var(--text);padding:5px 12px;border-radius:6px;font-size:11px;cursor:pointer">전체</button>
+              <!-- 동적 추가됨 -->
+            </div>
+            <div style="display:flex;gap:6px;align-items:center;margin-left:auto">
+              <span style="font-size:10px;color:var(--muted);letter-spacing:.5px">기간</span>
+              <input type="date" id="topicListDateFrom" onchange="renderTopicList()"
+                style="background:var(--s3);border:1px solid var(--b);color:var(--text);padding:5px 8px;border-radius:5px;font-size:11px;font-family:var(--mono)">
+              <span style="color:var(--muted);font-size:11px">~</span>
+              <input type="date" id="topicListDateTo" onchange="renderTopicList()"
+                style="background:var(--s3);border:1px solid var(--b);color:var(--text);padding:5px 8px;border-radius:5px;font-size:11px;font-family:var(--mono)">
+              <button onclick="resetTopicListFilters()" style="background:none;border:1px solid var(--b);color:var(--muted);padding:5px 10px;border-radius:5px;font-size:10px;cursor:pointer">초기화</button>
+            </div>
+          </div>
           <div id="topicListEmpty" style="padding:32px 20px;text-align:center;color:var(--muted);font-size:13px;line-height:1.7">
             <span style="font-size:24px;display:block;margin-bottom:6px;opacity:.6">🎯</span>
             위에서 카테고리·기간을 선택하고 주제 생성 버튼을 눌러주세요
           </div>
-          <div id="topicListTableWrap" style="display:none;max-height:340px;overflow-y:auto">
+          <div id="topicListTableWrap" style="display:none;flex:1 1 auto;min-height:0;overflow-y:auto">
             <table>
               <thead>
                 <tr>
@@ -2894,17 +2914,20 @@ const pageTitles = {
   revenue:'💰 매출 현황', payments:'💳 결제 이력', scheduler:'⏰ 스케줄러', settings:'⚙️ 설정',
 };
 // 아카이브 영역(#contentArchiveArea)을 두 페이지 사이에서 이동
-// mode: 'show' = archive 페이지로, 'hide' = page-content로 (원위치)
+// - 주제 관리 페이지에서는 안 보이게 (display:none)
+// - 아카이브 페이지에서는 슬롯으로 옮겨서 표시
 function _moveArchiveSection(mode) {
   const area = document.getElementById('contentArchiveArea');
   const slot = document.getElementById('archiveSlot');
   if (!area || !slot) return;
   if (mode === 'show') {
     if (area.parentElement !== slot) slot.appendChild(area);
-    area.style.display = '';
+    area.style.display = 'flex';
+    area.style.flex = '1 1 auto';
+    area.style.minHeight = '0';
+    area.style.flexDirection = 'column';
   } else {
-    // 원위치 — page-content 안의 마지막 자식으로 (DOM 안정 위해 그대로 두는 것도 OK)
-    // 단순화: 표시만 끄기 (page-content 활성화 시 다른 영역 보임)
+    // hide: 단순히 안 보이게. (DOM 위치는 archiveSlot 안에 있어도 무방)
     area.style.display = 'none';
   }
 }
@@ -5502,21 +5525,99 @@ async function generateTopics() {
   }
 }
 
+// 주제 목록 필터 상태
+let _topicListCatFilter = '';  // '' = 전체
+
+function selectTopicCatFilter(btnEl) {
+  const cat = btnEl.dataset.cat || '';
+  document.querySelectorAll('#topicListCatPills .cat-pill').forEach(function(b) {
+    b.classList.remove('active');
+    b.style.background = 'none';
+    b.style.color = 'var(--text)';
+  });
+  btnEl.classList.add('active');
+  btnEl.style.background = 'var(--gold)';
+  btnEl.style.color = 'var(--bg)';
+  _topicListCatFilter = cat;
+  renderTopicList();
+}
+
+function resetTopicListFilters() {
+  _topicListCatFilter = '';
+  document.querySelectorAll('#topicListCatPills .cat-pill').forEach(function(b) {
+    b.classList.remove('active');
+    b.style.background = 'none';
+    b.style.color = 'var(--text)';
+  });
+  const all = document.querySelector('#topicListCatPills .cat-pill[data-cat=""]');
+  if (all) {
+    all.classList.add('active');
+    all.style.background = 'var(--gold)';
+    all.style.color = 'var(--bg)';
+  }
+  const fromEl = document.getElementById('topicListDateFrom');
+  const toEl   = document.getElementById('topicListDateTo');
+  if (fromEl) fromEl.value = '';
+  if (toEl)   toEl.value   = '';
+  renderTopicList();
+}
+
+// 주제 목록 카테고리 pill 동적 채움 (CATEGORIES_CACHE 기반)
+function _renderTopicListCatPills() {
+  const wrap = document.getElementById('topicListCatPills');
+  if (!wrap) return;
+  const cats = (CATEGORIES_CACHE && CATEGORIES_CACHE.length)
+    ? CATEGORIES_CACHE.filter(c => (c.visibility || (c.active ? 'active' : 'hidden')) === 'active')
+    : [{id:'economy',name:'경제'},{id:'realestate',name:'부동산'},{id:'english',name:'영어'},{id:'trivia',name:'상식'}];
+  // 첫 child(label)와 첫 button(전체)는 유지, 그 뒤 동적 추가
+  // 기존 카테고리 pill 제거 후 재생성
+  Array.from(wrap.querySelectorAll('.cat-pill[data-cat]:not([data-cat=""])')).forEach(b => b.remove());
+  cats.forEach(c => {
+    const btn = document.createElement('button');
+    btn.className = 'cat-pill';
+    btn.dataset.cat = c.id;
+    btn.onclick = function() { selectTopicCatFilter(btn); };
+    btn.style.cssText = 'background:none;border:1px solid var(--b);color:var(--text);padding:5px 12px;border-radius:6px;font-size:11px;cursor:pointer';
+    btn.textContent = c.name || c.id;
+    wrap.appendChild(btn);
+  });
+}
+
 function renderTopicList() {
   const tbody     = document.getElementById('topicListBody');
   const emptyEl   = document.getElementById('topicListEmpty');
   const tableWrap = document.getElementById('topicListTableWrap');
 
-  if (GENERATED_TOPICS.length === 0) {
-    if (emptyEl)   emptyEl.style.display   = 'block';
+  // pill 동적 채우기
+  _renderTopicListCatPills();
+
+  // 필터 적용
+  let filtered = GENERATED_TOPICS.slice();
+  if (_topicListCatFilter) {
+    filtered = filtered.filter(t => t.cat === _topicListCatFilter);
+  }
+  const fromEl = document.getElementById('topicListDateFrom');
+  const toEl   = document.getElementById('topicListDateTo');
+  const fromVal = fromEl ? fromEl.value : '';
+  const toVal   = toEl   ? toEl.value   : '';
+  if (fromVal) filtered = filtered.filter(t => (t.dateStr || t.date) >= fromVal);
+  if (toVal)   filtered = filtered.filter(t => (t.dateStr || t.date) <= toVal);
+
+  if (filtered.length === 0) {
+    if (emptyEl) {
+      emptyEl.style.display = 'block';
+      emptyEl.innerHTML = (GENERATED_TOPICS.length === 0)
+        ? '<span style="font-size:24px;display:block;margin-bottom:6px;opacity:.6">🎯</span>위에서 카테고리·기간을 선택하고 주제 생성 버튼을 눌러주세요'
+        : '<span style="font-size:24px;display:block;margin-bottom:6px;opacity:.6">🔍</span>필터 조건에 맞는 주제가 없습니다';
+    }
     if (tableWrap) tableWrap.style.display = 'none';
     updateTopicWorkBadge();
     return;
   }
   if (emptyEl)   emptyEl.style.display   = 'none';
-  if (tableWrap) tableWrap.style.display = 'block';
+  if (tableWrap) tableWrap.style.display = 'flex';
 
-  tbody.innerHTML = GENERATED_TOPICS.map(function(t) {
+  tbody.innerHTML = filtered.map(function(t) {
     const checked = t.selected ? 'checked' : '';
     const statusBadge = t.status === 'generated'
       ? '<span style="background:rgba(74,222,128,.12);color:var(--green);font-size:10px;padding:3px 8px;border-radius:4px;border:1px solid rgba(74,222,128,.25)">✓ 생성됨</span>'
@@ -5593,19 +5694,10 @@ function clearAllTopics() {
   showToast('주제 목록을 비웠습니다', 'ok');
 }
 
-// 주제 작업 패널 펼침/접힘
-function toggleTopicWorkPanel(forceOpen) {
-  const panel = document.getElementById('topicWorkPanel');
+// 주제 작업 패널 — 접히기 기능 제거됨, 항상 표시
+function toggleTopicWorkPanel(_forceOpen) {
   const body  = document.getElementById('topicWorkBody');
-  const arrow = document.getElementById('topicWorkArrow');
-  const hint  = document.getElementById('topicWorkHint');
-  if (!panel || !body) return;
-  const isOpen = body.style.display !== 'none';
-  const willOpen = (forceOpen === true) ? true : (forceOpen === false ? false : !isOpen);
-  body.style.display = willOpen ? 'block' : 'none';
-  if (arrow) arrow.style.transform = willOpen ? 'rotate(90deg)' : 'rotate(0)';
-  if (hint)  hint.textContent = willOpen ? '클릭해서 접기' : '클릭해서 펼치기';
-  panel.classList.toggle('expanded', willOpen);
+  if (body) body.style.display = '';  // 무조건 보이게
 }
 
 // 카테고리 pill 필터
