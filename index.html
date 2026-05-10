@@ -769,7 +769,7 @@ body.light-mode .filter-pill.active { color:#fff; }
 <!-- SIDEBAR -->
 <aside class="sidebar">
   <div class="sb-logo">1DAYECO<small>Admin Dashboard</small>
-    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v120</span>
+    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v121</span>
   </div>
   <nav class="sb-nav">
     <div class="sb-group">운영</div>
@@ -10209,25 +10209,26 @@ function autoFmtPhone(input) {
   else                     input.value = v.slice(0,3) + '-' + v.slice(3,7) + '-' + v.slice(7,11);
 }
 
-// 플랜 변경 시 종료일 자동 계산
+// 플랜 변경 시 종료일 자동 계산 (백엔드 가입 로직과 동일하게)
 function updateAddSubDates() { updateAddSubEndDate(); }
 function updateAddSubEndDate() {
   const start = document.getElementById('addSubStartDate').value;
   if (!start) return;
   const plan = document.getElementById('addSubPlan').value;
-  // 모든 plan 지원
+  // 백엔드 /api/signup과 동일한 계산: 첫 발송일(시작일+1) + plan_total_days
   const PLAN_DAYS = { free: 5, monthly: 30, pkg3m: 90, pkg6m: 180, pkg1y: 365, yearly: 365 };
   const days = PLAN_DAYS[plan] || 30;
-  const end  = new Date(start + 'T00:00:00');
-  end.setDate(end.getDate() + days);
-  document.getElementById('addSubEndDate').value = end.toISOString().split('T')[0];
+  const startDt     = new Date(start + 'T00:00:00');
+  const firstSendDt = new Date(startDt.getTime() + 86400000);
+  const endDt       = new Date(firstSendDt.getTime() + days * 86400000);
+  document.getElementById('addSubEndDate').value = endDt.toISOString().split('T')[0];
 }
 
 function openAddSubscriber() {
   ['addSubName','addSubPhone','addSubEmail','addSubMemo'].forEach(id => {
     const el = document.getElementById(id); if (el) el.value = '';
   });
-  document.getElementById('addSubPlan').value  = 'free';
+  document.getElementById('addSubPlan').value  = 'pkg6m';  // HTML selected와 일치
   document.getElementById('addSubHour').value  = '8';
   document.getElementById('addSubErr').style.display = 'none';
   // 시작일 = 오늘 KST 날짜 (UTC+9 기준 YYYY-MM-DD)
@@ -10267,29 +10268,40 @@ async function confirmAddSubscriber() {
 
   // 시작일 KST 00:00:00 고정 (서버 한국시간 기준)
   const createdAt = startDate + 'T00:00:00+09:00';
-  // 종료일 자동계산 (미입력 시 플랜별 자동)
+
+  // ⭐ v121: plan 기반 end_date + trial_end_date 무조건 재계산 (입력값 무시)
+  // 이유: 사용자가 플랜 변경 후 end_date를 수동으로 안 고치면 잘못된 값이 들어가는 버그 방지
   const PLAN_DAYS_MS = { free: 5, monthly: 30, pkg3m: 90, pkg6m: 180, pkg1y: 365, yearly: 365 };
-  let endAt = null;
-  if (endDate) {
-    endAt = endDate + 'T23:59:59+09:00';
-  } else {
-    const start = new Date(createdAt);
-    const days  = PLAN_DAYS_MS[plan] || 30;
-    endAt = new Date(start.getTime() + days*86400000).toISOString();
-  }
+  const totalDays = PLAN_DAYS_MS[plan] || 30;
+
+  // 체험일수 (기본 3일)
+  const TRIAL_DAYS = 3;
+
+  // 시작일 자정 + 1일 = 첫 발송일
+  const startDt = new Date(startDate + 'T00:00:00+09:00');
+  const firstSendDt = new Date(startDt.getTime() + 86400000);
+  // 체험 종료 = 첫 발송일 + TRIAL_DAYS
+  const trialEndDt = new Date(firstSendDt.getTime() + TRIAL_DAYS * 86400000);
+  // 구독 종료 = 첫 발송일 + totalDays
+  const endDt = new Date(firstSendDt.getTime() + totalDays * 86400000);
+
+  const trialEndAt = trialEndDt.toISOString();
+  const endAt      = endDt.toISOString();
+
   const emailVal = email || null;
   const memoVal  = memo  || null;
 
   const newSub = {
-    id:         'sub_manual_' + Date.now(),
-    name, phone: phone.replace(/-/g,''),
-    email:      emailVal,
-    memo:       memoVal,
+    id:             'sub_manual_' + Date.now(),
+    name, phone:    phone.replace(/-/g,''),
+    email:          emailVal,
+    memo:           memoVal,
     plan,
-    status:     plan === 'free' ? 'trial' : 'active',
-    send_hour:  hour,
-    created_at: createdAt,
-    end_date:   endAt,
+    status:         plan === 'free' ? 'trial' : 'trial',  // 항상 trial 시작 (체험 부여)
+    send_hour:      hour,
+    created_at:     createdAt,
+    trial_end_date: trialEndAt,
+    end_date:       endAt,
   };
 
   // DB에도 저장
