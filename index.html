@@ -769,7 +769,7 @@ body.light-mode .filter-pill.active { color:#fff; }
 <!-- SIDEBAR -->
 <aside class="sidebar">
   <div class="sb-logo">1DAYECO<small>Admin Dashboard</small>
-    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v124</span>
+    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v125</span>
   </div>
   <nav class="sb-nav">
     <div class="sb-group">운영</div>
@@ -7698,13 +7698,16 @@ function resetArchiveDateRange() {
 }
 
 // ── 아카이브 일괄 액션 (숨김/영구 삭제/복구) ───────────────
-// ARCHIVE_SELECTED: 선택된 행 키 set ("dateStr|category" 포맷)
+// ARCHIVE_SELECTED: 선택된 행 키 set ("dateStr|category|subtopic_id" 포맷)
+// v125: subtopic_id 포함해서 정밀 매칭 (부제목 무시 삭제 방지)
 const ARCHIVE_SELECTED = new Set();
 
-function archiveSelKey(dateStr, cat) { return dateStr + '|' + cat; }
+function archiveSelKey(dateStr, cat, sid) {
+  return dateStr + '|' + cat + '|' + (sid || '');
+}
 
 function onArchiveRowCheck(el) {
-  const key = archiveSelKey(el.dataset.date, el.dataset.cat);
+  const key = archiveSelKey(el.dataset.date, el.dataset.cat, el.dataset.sid);
   if (el.checked) ARCHIVE_SELECTED.add(key);
   else ARCHIVE_SELECTED.delete(key);
   updateArchiveSelectCount();
@@ -7724,7 +7727,7 @@ function onToggleArchiveCheckAll() {
   const target = headEl.checked;
   document.querySelectorAll('#contentBody input.arch-checkbox').forEach(function(ck) {
     ck.checked = target;
-    const key = archiveSelKey(ck.dataset.date, ck.dataset.cat);
+    const key = archiveSelKey(ck.dataset.date, ck.dataset.cat, ck.dataset.sid);
     if (target) ARCHIVE_SELECTED.add(key);
     else ARCHIVE_SELECTED.delete(key);
   });
@@ -7768,7 +7771,14 @@ async function archiveBulkHide() {
   const items = [];
   ARCHIVE_SELECTED.forEach(function(key) {
     const parts = key.split('|');
-    if (parts[0] && parts[1]) items.push({ date_str: parts[0], category: parts[1] });
+    if (parts[0] && parts[1]) {
+      const item = { date_str: parts[0], category: parts[1] };
+      // v125: subtopic_id 정밀 매칭 (parts[2]==''면 NULL row 매칭)
+      if (parts[2] !== undefined) {
+        item.subtopic_id = parts[2] === '' ? 'null' : parts[2];
+      }
+      items.push(item);
+    }
   });
   try {
     const res = await apiPost('/admin/contents/hide', { items: items });
@@ -7801,7 +7811,14 @@ async function archiveBulkUnhide() {
   const items = [];
   ARCHIVE_SELECTED.forEach(function(key) {
     const parts = key.split('|');
-    if (parts[0] && parts[1]) items.push({ date_str: parts[0], category: parts[1] });
+    if (parts[0] && parts[1]) {
+      const item = { date_str: parts[0], category: parts[1] };
+      // v125: subtopic_id 정밀 매칭 (parts[2]==''면 NULL row 매칭)
+      if (parts[2] !== undefined) {
+        item.subtopic_id = parts[2] === '' ? 'null' : parts[2];
+      }
+      items.push(item);
+    }
   });
   try {
     const res = await apiPost('/admin/contents/unhide', { items: items });
@@ -7842,7 +7859,14 @@ async function archiveBulkDelete() {
   const items = [];
   ARCHIVE_SELECTED.forEach(function(key) {
     const parts = key.split('|');
-    if (parts[0] && parts[1]) items.push({ date_str: parts[0], category: parts[1] });
+    if (parts[0] && parts[1]) {
+      const item = { date_str: parts[0], category: parts[1] };
+      // v125: subtopic_id 정밀 매칭 (parts[2]==''면 NULL row 매칭)
+      if (parts[2] !== undefined) {
+        item.subtopic_id = parts[2] === '' ? 'null' : parts[2];
+      }
+      items.push(item);
+    }
   });
   try {
     const res = await apiPost('/admin/contents/delete-batch', { items: items });
