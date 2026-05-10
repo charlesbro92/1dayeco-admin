@@ -8694,15 +8694,33 @@ let CATEGORIES_CACHE = [];   // 캐시 (loadCategoryList에서 채워짐)
 // ── 부제목 캐시 (카테고리별로 메모리 캐시) ──
 const _SUBTOPIC_CACHE = {};
 
-// ── 전용 빌더 키 목록 (prompts_v7.py PROMPT_BUILDERS + subtopic 전용 키와 동기화) ──
-// 형식: "category" 또는 "category:부제목이름"
-const KNOWN_BUILDER_KEYS = new Set([
-  // 카테고리 전용 빌더
+// ── 전용 빌더 키 목록 ──
+// 초기값: 백엔드 API 호출 전 오프라인 폴백용 (prompts_v8.py 기본 카테고리)
+// 실제 값은 _syncBuilderKeys()가 /admin/builders 에서 동적으로 채움
+let KNOWN_BUILDER_KEYS = new Set([
   'economy', 'realestate', 'english', 'trivia',
   'kr_stock', 'us_stock', 'it_news', 'vietnamese',
-  // 부제목 전용 빌더 (추가할 때마다 여기 등록)
-  // 예: 'english:영어회화 초급', 'english:비즈니스 영어'
 ]);
+
+/**
+ * 백엔드 /admin/builders 에서 빌더 키를 동기화한다.
+ * - API 성공 시 KNOWN_BUILDER_KEYS를 서버 기준으로 덮어씀
+ * - API 실패(오프라인/미연결) 시 폴백값 유지, 에러 무시
+ * - loadCategoryList() 에서 호출됨
+ */
+async function _syncBuilderKeys() {
+  if (!API_BASE) return;  // mock 모드면 스킵
+  try {
+    const res = await fetch(API_BASE + '/admin/builders');
+    const data = await res.json().catch(() => ({}));
+    if (data && data.success && Array.isArray(data.keys) && data.keys.length) {
+      KNOWN_BUILDER_KEYS = new Set(data.keys);
+    }
+  } catch (e) {
+    // 네트워크 오류 시 폴백값 유지
+    console.warn('[builders] 동기화 실패 (폴백 유지):', e.message);
+  }
+}
 
 /**
  * 카테고리+부제목 조합의 전용 빌더 유무 반환
@@ -9067,6 +9085,9 @@ function getCatShortName(catId) {
 async function loadCategoryList() {
   const tbody = document.getElementById('catManageBody');
   if (!tbody) return;
+
+  // 빌더 키 동기화 (비동기, 실패해도 무시)
+  _syncBuilderKeys().catch(() => {});
 
   try {
     const res = await apiFetch('/admin/categories');
