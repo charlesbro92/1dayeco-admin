@@ -769,7 +769,7 @@ body.light-mode .filter-pill.active { color:#fff; }
 <!-- SIDEBAR -->
 <aside class="sidebar">
   <div class="sb-logo">1DAYECO<small>Admin Dashboard</small>
-    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v125</span>
+    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v126</span>
   </div>
   <nav class="sb-nav">
     <div class="sb-group">운영</div>
@@ -2099,10 +2099,12 @@ body.light-mode .filter-pill.active { color:#fff; }
           <div style="flex:1">
             <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:4px">대분류 (그룹)</label>
             <select id="catInputSuperCategory" style="width:100%;background:var(--s3);border:1px solid var(--b);border-radius:6px;padding:9px 12px;font-size:13px;color:var(--text);font-family:var(--sans);outline:none">
-              <option value="finance">💼 경제·금융</option>
-              <option value="lifestyle">🏠 생활·실용</option>
-              <option value="language">🌐 글로벌·언어</option>
-              <option value="tech">💻 테크·트렌드</option>
+              <option value="finance">💰 금융·투자</option>
+              <option value="tech">💻 테크·디지털</option>
+              <option value="language">🌐 외국어</option>
+              <option value="work">💼 일·업무</option>
+              <option value="knowledge">📚 교양·지식</option>
+              <option value="wellness">🌱 건강·일상</option>
             </select>
           </div>
         </div>
@@ -9670,10 +9672,12 @@ async function loadCategoryList() {
     };
 
     const SUPER_CAT_LABELS = {
-      finance:   { emoji: '💼', label: '경제·금융' },
-      lifestyle: { emoji: '🏠', label: '생활·실용' },
-      language:  { emoji: '🌐', label: '글로벌·언어' },
-      tech:      { emoji: '💻', label: '테크·트렌드' },
+      finance:   { emoji: '💰', label: '금융·투자' },
+      tech:      { emoji: '💻', label: '테크·디지털' },
+      language:  { emoji: '🌐', label: '외국어' },
+      work:      { emoji: '💼', label: '일·업무' },
+      knowledge: { emoji: '📚', label: '교양·지식' },
+      wellness:  { emoji: '🌱', label: '건강·일상' },
     };
 
     tbody.innerHTML = cats.map(c => {
