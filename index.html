@@ -759,7 +759,7 @@ body.light-mode .filter-pill.active { color:#fff; }
 <!-- SIDEBAR -->
 <aside class="sidebar">
   <div class="sb-logo">1DAYECO<small>Admin Dashboard</small>
-    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v109</span>
+    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v110</span>
   </div>
   <nav class="sb-nav">
     <div class="sb-group">운영</div>
@@ -1266,13 +1266,15 @@ body.light-mode .filter-pill.active { color:#fff; }
             </select>
           </div>
           <div style="flex:1.2;min-width:140px">
-            <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:6px;letter-spacing:.5px">부제목 <span style="color:var(--gold);font-size:10px">필수</span></label>
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+              <label style="font-size:11px;color:var(--muted);letter-spacing:.5px">부제목 <span style="color:var(--gold);font-size:10px">필수</span></label>
+              <div id="topicGenBuilderBadge" style="display:flex;align-items:center;gap:4px"></div>
+            </div>
             <select id="topicGenSubtopic" class="dark-select"
               style="width:100%;background:var(--s3);border:1px solid var(--b);color:var(--text);
                      padding:10px;border-radius:6px;font-size:13px;outline:none;font-family:var(--sans)">
               <option value="">— 카테고리 선택 후 —</option>
             </select>
-            <div id="topicGenBuilderBadge" style="margin-top:6px;display:flex;align-items:center;min-height:20px"></div>
           </div>
           <div style="flex:.8;min-width:100px">
             <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:6px;letter-spacing:.5px">기간 (일) <span style="color:var(--gold);font-size:10px">권장 30</span></label>
@@ -1313,21 +1315,22 @@ body.light-mode .filter-pill.active { color:#fff; }
               </button>
             </div>
           </div>
-          <!-- 카테고리 / 기간 필터 -->
-          <div style="padding:10px 18px;border-bottom:1px solid var(--b);display:flex;gap:8px;align-items:center;flex-wrap:wrap;background:var(--s1)">
-            <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap" id="topicListCatPills">
-              <span style="font-size:10px;color:var(--muted);letter-spacing:.5px;margin-right:4px">카테고리</span>
-              <button class="cat-pill active" data-cat="" onclick="selectTopicCatFilter(this)" style="background:none;border:1px solid var(--b);color:var(--text);padding:5px 12px;border-radius:6px;font-size:11px;cursor:pointer">전체</button>
-              <!-- 동적 추가됨 -->
-            </div>
-            <div style="display:flex;gap:6px;align-items:center;margin-left:auto">
-              <span style="font-size:10px;color:var(--muted);letter-spacing:.5px">기간</span>
-              <input type="date" id="topicListDateFrom" onchange="renderTopicList()"
-                style="background:var(--s3);border:1px solid var(--b);color:var(--text);padding:5px 8px;border-radius:5px;font-size:11px;font-family:var(--mono)">
-              <span style="color:var(--muted);font-size:11px">~</span>
-              <input type="date" id="topicListDateTo" onchange="renderTopicList()"
-                style="background:var(--s3);border:1px solid var(--b);color:var(--text);padding:5px 8px;border-radius:5px;font-size:11px;font-family:var(--mono)">
-              <button onclick="resetTopicListFilters()" style="background:none;border:1px solid var(--b);color:var(--muted);padding:5px 10px;border-radius:5px;font-size:10px;cursor:pointer">초기화</button>
+          <!-- 카테고리 / 기간 필터 (아카이브 스타일) -->
+          <div style="padding:10px 18px;border-bottom:1px solid var(--b);display:flex;flex-direction:column;gap:8px;background:var(--s1)">
+            <!-- 줄 1: 카테고리 pill + 기간 필터 -->
+            <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+              <div class="cat-pill-filter" id="topicListCatPills" style="display:flex;gap:4px;flex-wrap:wrap;flex:1">
+                <button class="cat-pill active" data-cat="" onclick="selectTopicCatFilter(this)">전체</button>
+                <!-- 동적 추가됨 -->
+              </div>
+              <div style="display:flex;gap:6px;align-items:center;flex-shrink:0">
+                <input type="date" id="topicListDateFrom" onchange="renderTopicList()"
+                  style="background:var(--s3);border:1px solid var(--b);color:var(--text);padding:5px 8px;border-radius:5px;font-size:11px;font-family:var(--mono)">
+                <span style="color:var(--muted);font-size:11px">~</span>
+                <input type="date" id="topicListDateTo" onchange="renderTopicList()"
+                  style="background:var(--s3);border:1px solid var(--b);color:var(--text);padding:5px 8px;border-radius:5px;font-size:11px;font-family:var(--mono)">
+                <button onclick="resetTopicListFilters()" style="background:none;border:1px solid var(--b);color:var(--muted);padding:5px 10px;border-radius:5px;font-size:10px;cursor:pointer">초기화</button>
+              </div>
             </div>
           </div>
           <div id="topicListEmpty" style="padding:32px 20px;text-align:center;color:var(--muted);font-size:13px;line-height:1.7">
@@ -1947,12 +1950,12 @@ body.light-mode .filter-pill.active { color:#fff; }
 
   <!-- 카테고리 추가/수정 모달 -->
   <div class="overlay" id="categoryEditOverlay" onclick="if(event.target.id==='categoryEditOverlay')closeCategoryEdit()">
-    <div class="modal" style="max-width:520px;padding:0">
+    <div class="modal" style="max-width:520px;padding:0;max-height:90vh;display:flex;flex-direction:column">
       <div style="display:flex;justify-content:space-between;align-items:center;padding:18px 22px;border-bottom:1px solid var(--b)">
         <div class="modal-title" id="catModalTitle">카테고리 추가</div>
         <button onclick="closeCategoryEdit()" style="background:none;border:none;color:var(--muted);font-size:18px;cursor:pointer">✕</button>
       </div>
-      <div style="padding:20px 22px;display:flex;flex-direction:column;gap:14px">
+      <div style="padding:20px 22px;display:flex;flex-direction:column;gap:14px;overflow-y:auto;flex:1;min-height:0">
         <!-- ID (수정 시 readonly) -->
         <div>
           <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:4px">카테고리 ID <span style="color:var(--gold)">(영문 소문자, 변경 불가)</span></label>
@@ -1975,7 +1978,7 @@ body.light-mode .filter-pill.active { color:#fff; }
         <!-- 부제목 (다중) - 즉시 저장/삭제 -->
         <div style="margin-top:10px">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
-            <label style="font-size:11px;color:var(--muted)">부제목 — 카테고리에 귀속되는 컨텐츠 그룹 <span id="subtopicSaveHint" style="color:var(--gold);font-size:10px;margin-left:6px">(추가/삭제 시 즉시 저장됨)</span></label>
+            <label style="font-size:11px;color:var(--muted)">부제목 — 카테고리에 귀속되는 컨텐츠 그룹 <span id="subtopicSaveHint" style="color:var(--gold);font-size:10px;margin-left:6px">(추가/삭제 즉시 저장 · 이름/설명 수정 후 💾 저장 클릭)</span></label>
           </div>
           <div id="subtopicListWrap" style="border:1px solid var(--b);border-radius:6px;padding:8px;background:rgba(255,255,255,.01);min-height:60px">
             <!-- 입력 + 추가 버튼 -->
@@ -1986,6 +1989,9 @@ body.light-mode .filter-pill.active { color:#fff; }
                 style="flex:1;background:var(--s3);border:1px solid var(--b);border-radius:4px;padding:7px 10px;font-size:13px;color:var(--text);font-family:var(--sans);outline:none">
               <button type="button" onclick="saveNewSubtopic()"
                 style="background:var(--gold);color:var(--bg);border:none;font-size:12px;padding:7px 14px;border-radius:4px;cursor:pointer;font-weight:700;letter-spacing:.3px;flex-shrink:0">+ 추가</button>
+              <button type="button" onclick="saveSubtopicEdits()"
+                title="이름·설명 변경사항 저장"
+                style="background:rgba(74,222,128,.12);color:#4ADE80;border:1px solid rgba(74,222,128,.3);font-size:12px;padding:7px 14px;border-radius:4px;cursor:pointer;font-weight:700;letter-spacing:.3px;flex-shrink:0">💾 저장</button>
             </div>
             <div id="subtopicEmptyHint" style="text-align:center;font-size:11px;color:var(--muted);padding:14px 0">
               위에 부제목을 입력하고 + 추가 버튼을 누르세요.
@@ -5609,8 +5615,7 @@ function _renderTopicListCatPills() {
     btn.className = 'cat-pill';
     btn.dataset.cat = c.id;
     btn.onclick = function() { selectTopicCatFilter(btn); };
-    btn.style.cssText = 'background:none;border:1px solid var(--b);color:var(--text);padding:5px 12px;border-radius:6px;font-size:11px;cursor:pointer';
-    btn.textContent = c.name || c.id;
+    btn.textContent = (c.emoji ? c.emoji + ' ' : '') + (c.name || c.id);
     wrap.appendChild(btn);
   });
 }
@@ -8792,15 +8797,8 @@ function _updateTopicBuilderBadge(catId, subName) {
   if (!catId) { badgeEl.innerHTML = ''; return; }
   const status = getBuilderStatus(catId, subName);
   const badge  = builderBadgeHtml(status);
-  let hint = '';
-  if (status === 'generic') {
-    hint = '<span style="font-size:10px;color:var(--amber);margin-left:6px">— 부제목 설명을 입력하면 품질이 올라갑니다</span>';
-  } else if (status === 'category') {
-    hint = '<span style="font-size:10px;color:var(--muted);margin-left:6px">— 카테고리 전용 빌더 사용</span>';
-  } else {
-    hint = '<span style="font-size:10px;color:var(--green);margin-left:6px">— 부제목 전용 빌더 사용</span>';
-  }
-  badgeEl.innerHTML = badge + hint;
+  // 뱃지만 표시 (제목행 우측 공간이 좁으므로 힌트 텍스트 제거)
+  badgeEl.innerHTML = badge;
 }
 
 // 페이지 로드 후 카테고리 select 채워지면 부제목도 자동 로드
@@ -8867,7 +8865,7 @@ function _renderSubtopicList() {
             rows="2"
             ${isDedicated ? 'disabled' : ''}
             placeholder="예: 심슨 가족 실제 에피소드 대사 기반. 호머·바트·리사 캐릭터 명시. 유머러스한 톤 유지."
-            onblur="${isDedicated ? '' : '_saveSubtopicDesc(' + s.id + ', this.value)'}"
+            data-sid-desc="${s.id}"
             style="width:100%;background:${isDedicated ? 'rgba(74,222,128,.04)' : 'var(--s2)'};border:1px solid ${descBorderColor};border-radius:4px;padding:6px 8px;font-size:11px;color:${isDedicated ? 'var(--muted)' : 'var(--text)'};font-family:var(--sans);outline:none;resize:${isDedicated ? 'none' : 'vertical'};cursor:${isDedicated ? 'not-allowed' : 'auto'};opacity:${isDedicated ? '.6' : '1'}"
           >${(s.description || '').replace(/</g,'&lt;')}</textarea>
           ${isDedicated ? '<div style="font-size:10px;color:var(--muted);margin-top:3px">전용 빌더가 등록되어 있어 이 설명은 사용되지 않습니다.</div>' : ''}
@@ -8878,7 +8876,7 @@ function _renderSubtopicList() {
         <div style="display:flex;gap:6px;align-items:center">
           <span style="color:var(--muted);font-size:11px;font-family:var(--mono);width:18px;text-align:center;flex-shrink:0">${idx+1}</span>
           <input type="text" value="${(s.name || '').replace(/"/g, '&quot;')}"
-            onblur="_renameSubtopic(${s.id}, this.value)"
+            data-sid-name="${s.id}"
             onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}"
             placeholder="부제목 이름"
             style="flex:1;background:transparent;border:none;color:var(--text);font-size:13px;outline:none;padding:4px 0">
@@ -8986,6 +8984,81 @@ async function _renameSubtopic(subtopicId, newName) {
     console.warn('[subtopics] 수정 실패:', e);
     showToast('네트워크 오류', 'ng');
     _renderSubtopicList();
+  }
+}
+
+// 부제목 이름+설명 일괄 저장 (💾 저장 버튼 클릭 시)
+async function saveSubtopicEdits() {
+  const list = document.getElementById('subtopicList');
+  if (!list) return;
+
+  // 변경된 항목만 수집
+  const updates = [];
+
+  // 이름 변경 수집
+  list.querySelectorAll('input[data-sid-name]').forEach(input => {
+    const sid = parseInt(input.getAttribute('data-sid-name'));
+    const item = _modalSubtopics.find(s => s.id === sid);
+    if (!item) return;
+    const newName = (input.value || '').trim();
+    if (newName && newName !== (item.name || '')) {
+      updates.push({ id: sid, name: newName });
+    }
+  });
+
+  // description 변경 수집
+  list.querySelectorAll('textarea[data-sid-desc]').forEach(ta => {
+    const sid = parseInt(ta.getAttribute('data-sid-desc'));
+    const item = _modalSubtopics.find(s => s.id === sid);
+    if (!item) return;
+    const newDesc = (ta.value || '').trim();
+    if (newDesc !== (item.description || '')) {
+      const existing = updates.find(u => u.id === sid);
+      if (existing) existing.description = newDesc;
+      else updates.push({ id: sid, description: newDesc });
+    }
+  });
+
+  if (updates.length === 0) {
+    showToast('변경된 내용이 없습니다', 'ng'); return;
+  }
+
+  // 순차 저장
+  let successCount = 0;
+  for (const upd of updates) {
+    try {
+      const body = {};
+      if (upd.name !== undefined) body.name = upd.name;
+      if (upd.description !== undefined) body.description = upd.description;
+      const res = await fetch(API_BASE + '/admin/subtopics/' + upd.id, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || data.success === false) {
+        showToast(`ID ${upd.id} 저장 실패: ${data.error || '오류'}`, 'ng');
+        continue;
+      }
+      // 캐시 업데이트
+      const item = _modalSubtopics.find(s => s.id === upd.id);
+      if (item) {
+        if (upd.name !== undefined) item.name = upd.name;
+        if (upd.description !== undefined) item.description = upd.description;
+      }
+      successCount++;
+    } catch (e) {
+      showToast('네트워크 오류', 'ng');
+    }
+  }
+
+  if (successCount > 0) {
+    // 캐시 무효화 후 리렌더
+    if (_modalCurrentCategoryId) {
+      _SUBTOPIC_CACHE[_modalCurrentCategoryId] = _modalSubtopics.slice();
+    }
+    _renderSubtopicList();
+    showToast(`${successCount}개 항목 저장 완료`, 'ok');
   }
 }
 
@@ -9315,7 +9388,7 @@ function openCategoryEdit(catId) {
   const newInput = document.getElementById('subtopicNewInput');
   if (newInput) newInput.value = '';
   const hint = document.getElementById('subtopicSaveHint');
-  if (hint) hint.textContent = '(추가/삭제 시 즉시 저장됨)';
+  if (hint) hint.textContent = '(추가/삭제 즉시 저장 · 이름/설명 수정 후 💾 저장 클릭)';
   setCategoryFormPrices(cat);  // 현재 가격 채움
   document.getElementById('catInputOrder').value   = String(cat.display_order || 0);
   document.getElementById('catInputActive').checked = !!cat.active;
