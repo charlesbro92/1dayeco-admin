@@ -769,7 +769,7 @@ body.light-mode .filter-pill.active { color:#fff; }
 <!-- SIDEBAR -->
 <aside class="sidebar">
   <div class="sb-logo">1DAYECO<small>Admin Dashboard</small>
-    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v118</span>
+    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v119</span>
   </div>
   <nav class="sb-nav">
     <div class="sb-group">운영</div>
@@ -5488,8 +5488,8 @@ async function generateTopics() {
       }
 
       try {
-        // exclude는 500개로 제한 (요청 페이로드 비대화 방지)
-        const excludeForChunk = runningExclude.slice(0, 500);
+        // exclude는 1000개로 제한 (1년치 365개 부제목 단위 운영 + 중복 5% 미만 목표)
+        const excludeForChunk = runningExclude.slice(0, 1000);
         const res = await apiPost('/admin/topics/generate', {
           category: cat,
           count: chunkCount,
@@ -5510,7 +5510,7 @@ async function generateTopics() {
 
           // 다음 청크의 exclude에 이번 결과의 topic 추가 (같은 세션 내 중복 회피)
           chunkTopics.forEach(t => {
-            if (t.topic && runningExclude.length < 500) {
+            if (t.topic && runningExclude.length < 1000) {
               runningExclude.push(t.topic);
             }
           });
