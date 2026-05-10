@@ -163,8 +163,8 @@ body {
   display:flex; flex-direction:column;
   flex:1 1 auto; min-height:0;
 }
-/* 사용량 위젯 + 주제 작업 영역은 자기 크기만 차지 */
-.usage-widget, .topic-work-panel { flex-shrink:0; }
+/* 사용량 위젯은 자기 크기만, 주제 작업 영역은 화면 끝까지 */
+.usage-widget { flex-shrink:0; }
 /* 주제 작업 영역 헤더 hover 효과 */
 .topic-work-panel .panel-head:hover { background:rgba(201,168,76,.04); transition:background .15s; }
 .topic-work-panel.expanded #topicWorkArrow { transform:rotate(90deg); }
@@ -759,7 +759,7 @@ body.light-mode .filter-pill.active { color:#fff; }
 <!-- SIDEBAR -->
 <aside class="sidebar">
   <div class="sb-logo">1DAYECO<small>Admin Dashboard</small>
-    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v105</span>
+    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v106</span>
   </div>
   <nav class="sb-nav">
     <div class="sb-group">운영</div>
@@ -1242,15 +1242,15 @@ body.light-mode .filter-pill.active { color:#fff; }
       </div>
     </div>
 
-    <!-- 주제 작업 영역 (항상 펼침) -->
-    <div class="panel topic-work-panel" id="topicWorkPanel" style="margin-bottom:14px;flex-shrink:0">
-      <div class="panel-head">
+    <!-- 주제 작업 영역 (항상 펼침, 화면 끝까지) -->
+    <div class="panel topic-work-panel" id="topicWorkPanel" style="margin-bottom:0;flex:1 1 auto;min-height:0;display:flex;flex-direction:column;overflow:hidden">
+      <div class="panel-head" style="flex-shrink:0">
         <div class="panel-title">
           🎯 주제 작업 영역
           <span id="topicWorkBadge" style="display:none;background:rgba(201,168,76,.15);color:var(--gold);font-size:10px;padding:2px 8px;border-radius:100px;margin-left:8px;font-weight:600">0개 대기</span>
         </div>
       </div>
-      <div id="topicWorkBody">
+      <div id="topicWorkBody" style="flex:1 1 auto;min-height:0;display:flex;flex-direction:column;overflow:hidden">
         <!-- 주제 생성 입력 -->
         <div class="panel-body" style="padding:20px;display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;border-bottom:1px solid var(--b)">
           <div style="flex:1.2;min-width:140px">
@@ -1353,6 +1353,12 @@ body.light-mode .filter-pill.active { color:#fff; }
       </div>
     </div>
 
+
+  </div>
+
+  <!-- ── PAGE: 콘텐츠 아카이브 ── -->
+  <div class="content" id="page-archive">
+    <div id="archiveSlot" style="height:100%;display:flex;flex-direction:column;flex:1 1 auto">
     <!-- 콘텐츠 아카이브 (메인 영역) -->
     <div id="contentArchiveArea" style="flex:1 1 auto;min-height:0;display:flex;flex-direction:column">
       <div class="panel split-panel" style="flex:1 1 auto;min-height:0;display:flex;flex-direction:column;overflow:hidden">
@@ -1478,12 +1484,7 @@ body.light-mode .filter-pill.active { color:#fff; }
         </div>
       </div>
     </div>
-
-  </div>
-
-  <!-- ── PAGE: 콘텐츠 아카이브 (영역은 JS로 page-content에서 이동) ── -->
-  <div class="content" id="page-archive" style="display:none">
-    <div id="archiveSlot" style="height:100%;display:flex;flex-direction:column;flex:1 1 auto"></div>
+    </div>
   </div>
 
   <!-- ── PAGE: 통계 ── -->
@@ -2913,23 +2914,9 @@ const pageTitles = {
   stats:'📈 통계 분석',
   revenue:'💰 매출 현황', payments:'💳 결제 이력', scheduler:'⏰ 스케줄러', settings:'⚙️ 설정',
 };
-// 아카이브 영역(#contentArchiveArea)을 두 페이지 사이에서 이동
-// - 주제 관리 페이지에서는 안 보이게 (display:none)
-// - 아카이브 페이지에서는 슬롯으로 옮겨서 표시
-function _moveArchiveSection(mode) {
-  const area = document.getElementById('contentArchiveArea');
-  const slot = document.getElementById('archiveSlot');
-  if (!area || !slot) return;
-  if (mode === 'show') {
-    if (area.parentElement !== slot) slot.appendChild(area);
-    area.style.display = 'flex';
-    area.style.flex = '1 1 auto';
-    area.style.minHeight = '0';
-    area.style.flexDirection = 'column';
-  } else {
-    // hide: 단순히 안 보이게. (DOM 위치는 archiveSlot 안에 있어도 무방)
-    area.style.display = 'none';
-  }
+// 아카이브 영역은 이제 page-archive 안에 정적으로 있음 — 동적 이동 불필요
+function _moveArchiveSection(_mode) {
+  // no-op: 옛 호출처 호환
 }
 
 // 콘텐츠 생성 완료 후 "아카이브로 이동할까요?" 확인 팝업
@@ -2984,14 +2971,12 @@ function loadPage(name) {
     loadSendLogs();
   }
   if (name === 'content')      {
-    // 주제 관리: 아카이브 영역 → 주제 관리 페이지에서는 숨김 (별도 archive 페이지로 이동)
-    _moveArchiveSection('hide');
+    // 주제 관리 페이지
     initTopicGenerator(); renderUsageWidget();
     if (!CATEGORIES_CACHE.length) loadCategoryList(); else populateCategorySelects();
   }
   if (name === 'archive')      {
-    // 콘텐츠 아카이브: 아카이브 영역을 archive 페이지로 이동 + 동기화
-    _moveArchiveSection('show');
+    // 콘텐츠 아카이브 페이지
     loadContentArchive();
     if (!CATEGORIES_CACHE.length) loadCategoryList();
   }
