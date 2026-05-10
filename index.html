@@ -769,7 +769,7 @@ body.light-mode .filter-pill.active { color:#fff; }
 <!-- SIDEBAR -->
 <aside class="sidebar">
   <div class="sb-logo">1DAYECO<small>Admin Dashboard</small>
-    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v122</span>
+    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v123</span>
   </div>
   <nav class="sb-nav">
     <div class="sb-group">운영</div>
@@ -2897,6 +2897,15 @@ function planLabel(plan) {
   return PLAN_LABELS[plan] || plan;
 }
 
+// 전화번호 포맷: "01088880009" → "010-8888-0009"
+function fmtPhone(phone) {
+  if (!phone) return '';
+  const p = String(phone).replace(/\D/g, '');
+  if (p.length === 11) return p.slice(0,3) + '-' + p.slice(3,7) + '-' + p.slice(7);
+  if (p.length === 10) return p.slice(0,3) + '-' + p.slice(3,6) + '-' + p.slice(6);
+  return phone;
+}
+
 const PAYMENT_STATUS_LABELS = {
   pending:              { text: '대기중',     color: '#94a3b8', bg: 'rgba(148,163,184,.12)' },
   billing_registered:   { text: '카드등록', color: '#f59e0b', bg: 'rgba(245,158,11,.12)'  },
@@ -3585,7 +3594,7 @@ async function loadRecentSubs() {
         onmouseover="this.style.background='rgba(201,168,76,.04)'"
         onmouseout="this.style.background=''">
       <td><strong>${s.name}</strong>${newBadge}</td>
-      <td class="t-phone" style="font-size:12px">${s.phone}</td>
+      <td class="t-phone" style="font-size:12px">${fmtPhone(s.phone)}</td>
       <td><span class="badge ${s.plan}">${planLabel(s.plan)}</span></td>
       <td style="text-align:center">${payLabel}</td>
       <td style="font-family:var(--mono);font-size:11px;text-align:center;color:var(--muted)">${fmt(s.created_at)}</td>
@@ -3687,7 +3696,7 @@ function renderSubSubtopicName(subtopicId, catId, subtopicName) {
   if (!name) {
     return '<span style="color:var(--muted);font-size:11px">…</span>';
   }
-  return '<span style="display:inline-block;background:rgba(201,168,76,.1);border:1px solid rgba(201,168,76,.3);color:var(--gold);font-size:10px;padding:2px 8px;border-radius:10px;letter-spacing:.2px">' + name.replace(/</g,'&lt;') + '</span>';
+  return '<span title="' + name.replace(/"/g,'&quot;') + '" style="display:inline-block;background:rgba(201,168,76,.1);border:1px solid rgba(201,168,76,.3);color:var(--gold);font-size:10px;padding:2px 8px;border-radius:10px;letter-spacing:.2px;max-width:100px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;vertical-align:middle">' + name.replace(/</g,'&lt;') + '</span>';
 }
 
 // 구독자 테이블 렌더링 (STATE.subscribers 기반)
@@ -3855,33 +3864,18 @@ function renderSubscribersRows(filtered) {
       ? createdDt.toLocaleDateString('ko-KR', {timeZone:'Asia/Seoul'})
       : '';
 
-    // 종료일 + 트라이얼 정보
+    // 종료일: 항상 진짜 end_date만 표시 (체험 D-N은 체험종료 컬럼에서)
     let endDateStr;
     let endColor = 'var(--muted)';
-    if (s.status === 'trial' && s.trial_end_date) {
-      // 트라이얼 → "D-2일" 카운트다운 + 진짜 구독 종료일 표시
-      const trialEnd = new Date(s.trial_end_date);
-      const now = new Date();
-      const diffMs = trialEnd - now;
-      const diffDays = Math.ceil(diffMs / 86400000);
-      // v122: 종료일 컬럼은 진짜 end_date 우선 (체험종료일 아님)
-      const realEndStr = s.end_date
-        ? new Date(s.end_date).toLocaleDateString('ko-KR')
-        : '—';
-      if (diffDays > 0) {
-        endDateStr = `<div style="line-height:1.3"><strong style="color:#5eea91">D-${diffDays}일</strong><br><span style="font-size:9px;opacity:.7">${realEndStr}</span></div>`;
-        endColor = '#5eea91';
-      } else if (diffDays === 0) {
-        endDateStr = `<div style="line-height:1.3"><strong style="color:var(--amber)">오늘 종료</strong><br><span style="font-size:9px;opacity:.7">${realEndStr}</span></div>`;
-      } else {
-        endDateStr = `<div style="line-height:1.3"><strong style="color:var(--red)">${Math.abs(diffDays)}일 초과</strong><br><span style="font-size:9px;opacity:.7">${realEndStr}</span></div>`;
-      }
-    } else {
-      endDateStr = s.end_date
-        ? new Date(s.end_date).toLocaleDateString('ko-KR')
-        : (isCancelled ? '해지됨' : '');
-      endColor = s.end_date && new Date(s.end_date) < new Date(Date.now()+7*86400000)
+    if (s.end_date) {
+      endDateStr = new Date(s.end_date).toLocaleDateString('ko-KR');
+      // 종료일 7일 이내면 amber, 아니면 muted
+      endColor = new Date(s.end_date) < new Date(Date.now() + 7*86400000)
         ? 'var(--amber)' : 'var(--muted)';
+    } else if (isCancelled) {
+      endDateStr = '해지됨';
+    } else {
+      endDateStr = '—';
     }
 
     const notifyD1Badge = ''; // D-1 배지 제거
@@ -3935,7 +3929,7 @@ function renderSubscribersRows(filtered) {
           onchange="onSubCheck()">
       </td>
       <td style="text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"><strong>${s.name}</strong>${newBadge}${notifyD1Badge}</td>
-      <td class="t-phone" style="font-size:12px;text-align:center;white-space:nowrap">${s.phone}</td>
+      <td class="t-phone" style="font-size:12px;text-align:center;white-space:nowrap">${fmtPhone(s.phone)}</td>
       <td style="font-family:var(--mono);font-size:12px;text-align:center;color:var(--muted);white-space:nowrap">
         ${{monthly:'₩9,900',yearly:'₩79,000',free:'₩0',pkg3m:'₩14,900',pkg6m:'₩24,900',pkg1y:'₩41,900'}[s.plan]||''}
       </td>
@@ -3955,12 +3949,27 @@ function renderSubscribersRows(filtered) {
       <td style="text-align:center">${paymentStatusLabel(s.payment_status)}</td>
       <td style="text-align:center">${renderKakaoChannelCell(s)}</td>
       <td style="text-align:center;white-space:nowrap">${renderSubCategoryName(s.categories)}</td>
-      <td style="text-align:center;white-space:nowrap">${renderSubSubtopicName(s.subtopic_id, (Array.isArray(s.categories) ? s.categories[0] : ''), s.subtopic_name)}</td>
+      <td style="text-align:center;white-space:nowrap;max-width:110px;overflow:hidden">${renderSubSubtopicName(s.subtopic_id, (Array.isArray(s.categories) ? s.categories[0] : ''), s.subtopic_name)}</td>
       <td style="font-family:var(--mono);font-size:11px;color:var(--muted);text-align:center;white-space:nowrap">
         <div style="line-height:1.3">${startDate || '—'}${joinTimeStr ? `<br><span style="font-size:9px;opacity:.6">가입 ${joinTimeStr}</span>` : ''}</div>
       </td>
       <td style="font-family:var(--mono);font-size:11px;text-align:center;white-space:nowrap;color:var(--muted)">
-        ${s.trial_end_date ? new Date(s.trial_end_date).toLocaleDateString('ko-KR',{year:'numeric',month:'2-digit',day:'2-digit'}) : '—'}
+        ${(() => {
+          if (!s.trial_end_date) return '—';
+          const dateStr = new Date(s.trial_end_date).toLocaleDateString('ko-KR',{year:'numeric',month:'2-digit',day:'2-digit'});
+          // trial 상태일 때만 D-N 카운트다운 추가
+          if (s.status === 'trial') {
+            const diffDays = Math.ceil((new Date(s.trial_end_date) - new Date()) / 86400000);
+            if (diffDays > 0) {
+              return `<div style="line-height:1.3"><strong style="color:#5eea91">D-${diffDays}일</strong><br><span style="font-size:9px;opacity:.7">${dateStr}</span></div>`;
+            } else if (diffDays === 0) {
+              return `<div style="line-height:1.3"><strong style="color:var(--amber)">오늘 종료</strong><br><span style="font-size:9px;opacity:.7">${dateStr}</span></div>`;
+            } else {
+              return `<div style="line-height:1.3"><strong style="color:var(--red)">${Math.abs(diffDays)}일 초과</strong><br><span style="font-size:9px;opacity:.7">${dateStr}</span></div>`;
+            }
+          }
+          return dateStr;
+        })()}
       </td>
       <td style="font-family:var(--mono);font-size:11px;color:${endColor};text-align:center;white-space:nowrap">${endDateStr}</td>
       <td onclick="event.stopPropagation()" style="text-align:center">
@@ -4764,7 +4773,7 @@ function renderSendDetail(idx, tab) {
           : '';
         return `<tr id="failRow_${idx}_${s.id}">
           <td><strong>${s.name}</strong></td>
-          <td class="t-phone">${s.phone}</td>
+          <td class="t-phone">${fmtPhone(s.phone)}</td>
           <td style="font-family:var(--mono);font-size:10px;color:var(--red)">${s.errorCode}</td>
           ${errorCell}
           <td style="max-width:160px">
@@ -4784,7 +4793,7 @@ function renderSendDetail(idx, tab) {
   const successRows = successSubs.slice(0,20).map(s => `
     <tr>
       <td><strong>${s.name}</strong></td>
-      <td class="t-phone">${s.phone}</td>
+      <td class="t-phone">${fmtPhone(s.phone)}</td>
       <td><span class="badge success" style="font-size:10px">✓ 발송완료</span></td>
       <td style="font-family:var(--mono);font-size:10px;color:var(--muted)">msg_${Math.random().toString(36).slice(2,10)}</td>
       <td></td>
