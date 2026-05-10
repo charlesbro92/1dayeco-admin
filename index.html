@@ -754,7 +754,7 @@ body.light-mode .filter-pill.active { color:#fff; }
 <!-- SIDEBAR -->
 <aside class="sidebar">
   <div class="sb-logo">1DAYECO<small>Admin Dashboard</small>
-    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v101</span>
+    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v102</span>
   </div>
   <nav class="sb-nav">
     <div class="sb-group">운영</div>
@@ -5136,32 +5136,18 @@ const DUMMY_TOPICS = {
 const TOPICS_STORAGE_KEY = '1dayeco_generated_topics_v1';
 
 function _loadTopicsFromStorage() {
+  // localStorage 의존 제거 — 옛 데이터 정리만 하고 빈 배열 반환
   try {
-    const raw = localStorage.getItem(TOPICS_STORAGE_KEY);
-    if (!raw) return [];
-    const arr = JSON.parse(raw);
-    if (!Array.isArray(arr)) return [];
-    // 형식 검증: 필수 필드만 통과
-    return arr.filter(t => t && t.date && t.cat && t.topic);
-  } catch (e) {
-    console.warn('[topics-storage] load 실패:', e);
-    return [];
-  }
+    localStorage.removeItem(TOPICS_STORAGE_KEY);
+  } catch(e) {}
+  return [];
 }
 
 function _saveTopicsToStorage() {
-  try {
-    // 'generated' 상태(이미 콘텐츠 만들어진 것)는 저장 안 함 — 아카이브에 있어 중복 불필요
-    // 'pending' (미생성), 'failed' (실패), 'generating' (진행 중) 만 보존
-    const toSave = GENERATED_TOPICS.filter(t => t.status !== 'generated');
-    localStorage.setItem(TOPICS_STORAGE_KEY, JSON.stringify(toSave));
-  } catch (e) {
-    // 저장 실패 (용량 초과 등) — 무시. 다음에 시도.
-    console.warn('[topics-storage] save 실패:', e);
-  }
+  // 의도적으로 비워둠 — 메모리에서만 관리 (새로고침 시 초기화)
 }
 
-// 페이지 로드 시 즉시 복원
+// 페이지 로드 시 항상 빈 배열로 시작
 let GENERATED_TOPICS = _loadTopicsFromStorage();
 
 // 콘텐츠 페이지 진입 시 주제 생성 영역 초기화
@@ -6536,43 +6522,21 @@ function hasArchiveAtDate(dateStr) {
   return false;
 }
 
-// ── 저장소 로드 + v12→v13 마이그레이션 ─────────────────────
+// ── CONTENT_ARCHIVE는 백엔드가 진짜 소스 ─────────────────────
+// localStorage 의존 제거 — 새로고침마다 백엔드에서 다시 받음
+// 옛 캐시는 페이지 로드 시 1회 정리
 function loadArchiveFromStorage() {
+  // 옛 localStorage 데이터 정리 (마이그레이션 종료)
   try {
-    // 기존 키(haru1min_archive)는 폐기
     localStorage.removeItem('haru1min_archive');
-    const s = localStorage.getItem(ARCHIVE_KEY);
-    if (!s) return {};
-    const parsed = JSON.parse(s);
-
-    // v12 → v13 자동 마이그레이션: "YYYY-MM-DD" → "YYYY-MM-DD_<cat>"
-    const migrated = {};
-    let migCount = 0;
-    for (const k in parsed) {
-      if (!Object.prototype.hasOwnProperty.call(parsed, k)) continue;
-      const v = parsed[k];
-      if (isArchKey(k)) {
-        // 이미 v13 형식
-        migrated[k] = v;
-      } else if (/^\d{4}-\d{2}-\d{2}$/.test(k)) {
-        // v12 형식: 날짜만 → 카테고리 붙여 새 키로
-        const cat = (v && v.cat) || 'economy';
-        migrated[archKey(k, cat)] = v;
-        migCount++;
-      }
-      // 그 외 잘못된 키는 폐기
-    }
-    if (migCount > 0) {
-      console.log('[archive] v12→v13 마이그레이션: ' + migCount + '건 변환됨');
-    }
-    return migrated;
-  }
-  catch(e) { return {}; }
+    localStorage.removeItem(ARCHIVE_KEY);
+  } catch(e) {}
+  return {};  // 항상 빈 메모리 캐시로 시작
 }
 
+// 호환용 — 메모리에만 작용 (no-op)
 function saveArchiveToStorage() {
-  try { localStorage.setItem(ARCHIVE_KEY, JSON.stringify(CONTENT_ARCHIVE)); }
-  catch(e) {}
+  // 의도적으로 비워둠. 백엔드가 진짜 소스이므로 localStorage 저장 불필요.
 }
 
 const CONTENT_ARCHIVE = loadArchiveFromStorage();
@@ -7072,14 +7036,11 @@ async function syncArchiveFromBackend() {
         };
         added++;
       });
-      // 숨김 보기 OFF + 백엔드에 없는 (=숨김된) 로컬 캐시 행 제거
-      // → 숨김 처리 직후 즉시 사라지게
-      if (!_archiveShowHidden) {
-        Object.keys(CONTENT_ARCHIVE).forEach(function(k) {
-          if (!isArchKey(k)) return;
-          if (!fetched.has(k)) delete CONTENT_ARCHIVE[k];
-        });
-      }
+      // 백엔드가 진실 소스: 백엔드에 없는 (삭제됨/숨김됨) 로컬 캐시 항목 항상 제거
+      Object.keys(CONTENT_ARCHIVE).forEach(function(k) {
+        if (!isArchKey(k)) return;
+        if (!fetched.has(k)) delete CONTENT_ARCHIVE[k];
+      });
       saveArchiveToStorage();
       console.log('백엔드 아카이브 동기화: ' + added + '건' + (_archiveShowHidden ? ' (숨김 포함)' : ''));
 
