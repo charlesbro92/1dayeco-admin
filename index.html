@@ -754,14 +754,15 @@ body.light-mode .filter-pill.active { color:#fff; }
 <!-- SIDEBAR -->
 <aside class="sidebar">
   <div class="sb-logo">1DAYECO<small>Admin Dashboard</small>
-    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v102</span>
+    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v103</span>
   </div>
   <nav class="sb-nav">
     <div class="sb-group">운영</div>
     <a class="sb-item active" onclick="showPage('overview')"><span class="ico">📊</span>개요</a>
     <a class="sb-item" onclick="showPage('subscribers');countSubIconClick()" id="sbSubscribers"><span class="ico">👥</span>구독자</a>
     <a class="sb-item" onclick="showPage('send')"><span class="ico">📨</span>발송 현황<span class="sb-badge" id="failBadge" style="display:none;font-size:9px;letter-spacing:0;padding:2px 5px" title="오늘 실패/총 실패"></span></a>
-    <a class="sb-item" onclick="showPage('content')"><span class="ico">📝</span>콘텐츠</a>
+    <a class="sb-item" onclick="showPage('content')"><span class="ico">📝</span>주제 관리</a>
+    <a class="sb-item" onclick="showPage('archive')"><span class="ico">📚</span>콘텐츠 아카이브</a>
     <a class="sb-item" onclick="showPage('stats')"><span class="ico">📈</span>통계</a>
     <div class="sb-group">수익</div>
     <a class="sb-item" onclick="showPage('revenue')"><span class="ico">💰</span>매출</a>
@@ -866,7 +867,7 @@ body.light-mode .filter-pill.active { color:#fff; }
       <div class="panel">
         <div class="panel-head">
           <div class="panel-title">📝 콘텐츠 생성 현황</div>
-          <span class="panel-act" onclick="showPage('content')">콘텐츠 관리</span>
+          <span class="panel-act" onclick="showPage('archive')">콘텐츠 아카이브</span>
         </div>
         <div class="panel-body" id="contentSummary"
           style="padding:18px 20px;display:flex;flex-direction:column;gap:14px;
@@ -1458,6 +1459,11 @@ body.light-mode .filter-pill.active { color:#fff; }
       </div>
     </div>
 
+  </div>
+
+  <!-- ── PAGE: 콘텐츠 아카이브 (영역은 JS로 page-content에서 이동) ── -->
+  <div class="content" id="page-archive" style="display:none">
+    <div id="archiveSlot" style="height:100%;display:flex;flex-direction:column;flex:1 1 auto"></div>
   </div>
 
   <!-- ── PAGE: 통계 ── -->
@@ -2882,10 +2888,37 @@ setInterval(updateClock, 1000); updateClock();
 // ── 페이지 전환 ───────────────────────────────────────────────
 const pageTitles = {
   overview:'📊 개요', subscribers:'👥 구독자 관리',
-  send:'📨 발송 현황', content:'📝 콘텐츠 관리',
+  send:'📨 발송 현황', content:'📝 주제 관리',
+  archive:'📚 콘텐츠 아카이브',
   stats:'📈 통계 분석',
   revenue:'💰 매출 현황', payments:'💳 결제 이력', scheduler:'⏰ 스케줄러', settings:'⚙️ 설정',
 };
+// 아카이브 영역(#contentArchiveArea)을 두 페이지 사이에서 이동
+// mode: 'show' = archive 페이지로, 'hide' = page-content로 (원위치)
+function _moveArchiveSection(mode) {
+  const area = document.getElementById('contentArchiveArea');
+  const slot = document.getElementById('archiveSlot');
+  if (!area || !slot) return;
+  if (mode === 'show') {
+    if (area.parentElement !== slot) slot.appendChild(area);
+    area.style.display = '';
+  } else {
+    // 원위치 — page-content 안의 마지막 자식으로 (DOM 안정 위해 그대로 두는 것도 OK)
+    // 단순화: 표시만 끄기 (page-content 활성화 시 다른 영역 보임)
+    area.style.display = 'none';
+  }
+}
+
+// 콘텐츠 생성 완료 후 "아카이브로 이동할까요?" 확인 팝업
+function askMoveToArchiveAfterGenerate(generatedCount) {
+  // generatedCount: 방금 생성된 콘텐츠 개수
+  const msg = (generatedCount && generatedCount > 0)
+    ? `콘텐츠 ${generatedCount}건이 생성되었습니다.\n\n아카이브로 이동해서 확인하시겠습니까?`
+    : '콘텐츠 생성이 완료되었습니다.\n\n아카이브로 이동해서 확인하시겠습니까?';
+  if (confirm(msg)) {
+    showPage('archive');
+  }
+}
 function showPage(name) {
   document.querySelectorAll('.content').forEach(el => el.classList.remove('active'));
   document.getElementById('page-'+name).classList.add('active');
@@ -2927,7 +2960,18 @@ function loadPage(name) {
     }).catch(e => console.warn('[send] 구독자 로드 실패:', e));
     loadSendLogs();
   }
-  if (name === 'content')      { loadContentArchive(); initTopicGenerator(); renderUsageWidget(); if (!CATEGORIES_CACHE.length) loadCategoryList(); else populateCategorySelects(); }
+  if (name === 'content')      {
+    // 주제 관리: 아카이브 영역 → 주제 관리 페이지에서는 숨김 (별도 archive 페이지로 이동)
+    _moveArchiveSection('hide');
+    initTopicGenerator(); renderUsageWidget();
+    if (!CATEGORIES_CACHE.length) loadCategoryList(); else populateCategorySelects();
+  }
+  if (name === 'archive')      {
+    // 콘텐츠 아카이브: 아카이브 영역을 archive 페이지로 이동 + 동기화
+    _moveArchiveSection('show');
+    loadContentArchive();
+    if (!CATEGORIES_CACHE.length) loadCategoryList();
+  }
   if (name === 'stats')        {
     // 통계는 구독자 기반 → 신선한 데이터 보장
     loadSubscribers({silent: true}).then(loadStats).catch(e => { loadStats(); });
@@ -6326,6 +6370,10 @@ async function _executeGenerate(items) {
       title:    `✅ ${successCount}개 콘텐츠 생성 완료`,
       subtitle: '아카이브에서 확인하실 수 있습니다',
     });
+    // 진행률 모달 닫힌 후 아카이브 이동 확인 팝업
+    setTimeout(function() {
+      askMoveToArchiveAfterGenerate(successCount);
+    }, 500);
   }
 }
 
