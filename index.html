@@ -769,7 +769,7 @@ body.light-mode .filter-pill.active { color:#fff; }
 <!-- SIDEBAR -->
 <aside class="sidebar">
   <div class="sb-logo">1DAYECO<small>Admin Dashboard</small>
-    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v115</span>
+    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v117</span>
   </div>
   <nav class="sb-nav">
     <div class="sb-group">운영</div>
@@ -3076,11 +3076,22 @@ async function refreshSendPanel(el) {
 }
 
 // ── API 유틸 ─────────────────────────────────────────────────
-async function apiFetch(path) {
+async function apiFetch(path, opts) {
   if (!API_BASE) return null;  // 설정 전엔 모의 데이터 사용
-  const r = await fetch(API_BASE + path);
-  if (!r.ok) throw new Error(`HTTP ${r.status}`);
-  return r.json();
+  // opts 없으면 기존 GET 동작 유지 (JSON 반환)
+  if (!opts) {
+    const r = await fetch(API_BASE + path);
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    return r.json();
+  }
+  // opts 있으면 fetch Response 그대로 반환 (호출자가 .json() 결정)
+  const fetchOpts = {
+    method: opts.method || 'GET',
+    headers: opts.headers || (opts.body ? {'Content-Type':'application/json'} : undefined),
+  };
+  if (opts.body) fetchOpts.body = opts.body;
+  if (opts.signal) fetchOpts.signal = opts.signal;
+  return fetch(API_BASE + path, fetchOpts);
 }
 async function apiPost(path, body={}, opts={}) {
   if (!API_BASE) return null;
@@ -5941,15 +5952,25 @@ async function _renderArchiveSubtopicPills(catId) {
 /** 단일 주제 삭제 */
 async function deleteSingleTopic(tid) {
   const t = GENERATED_TOPICS.find(x => x.id === tid);
-  const label = t ? `"${t.topic.slice(0,20)}${t.topic.length>20?'…':''}"` : `ID ${tid}`;
+  if (!t) { showToast('주제를 찾을 수 없습니다', 'ng'); return; }
+  const label = `"${t.topic.slice(0,20)}${t.topic.length>20?'…':''}"`;
   if (!confirm(`주제 ${label} 을(를) 삭제하시겠습니까?\n삭제 후 복구할 수 없습니다.`)) return;
+
+  // DB에 저장 안 된 주제(db_id 없음)는 로컬에서만 제거
+  if (!t.db_id) {
+    const idx = GENERATED_TOPICS.findIndex(x => x.id === tid);
+    if (idx !== -1) GENERATED_TOPICS.splice(idx, 1);
+    renderTopicList();
+    showToast('삭제 완료 (로컬)', 'ok');
+    return;
+  }
+
   try {
-    const res = await apiFetch('/admin/topics/' + tid, { method: 'DELETE' });
+    const res = await apiFetch('/admin/topics/' + t.db_id, { method: 'DELETE' });
     const data = await res.json().catch(() => ({}));
     if (!res.ok || data.success === false) {
       showToast(data.error || '삭제 실패', 'ng'); return;
     }
-    // 로컬 목록에서 제거
     const idx = GENERATED_TOPICS.findIndex(x => x.id === tid);
     if (idx !== -1) GENERATED_TOPICS.splice(idx, 1);
     renderTopicList();
@@ -5968,21 +5989,43 @@ async function deleteSelectedTopics() {
   if (!confirm(`선택한 ${selected.length}개 주제를 삭제하시겠습니까?\n삭제 후 복구할 수 없습니다.`)) return;
 
   let successCount = 0;
+  let localOnlyCount = 0;
+  const failedIds = [];
+
   for (const t of selected) {
+    if (!t.db_id) {
+      // DB에 없는 주제는 로컬 카운트만 증가 (아래에서 일괄 제거)
+      localOnlyCount++;
+      continue;
+    }
     try {
-      const res = await apiFetch('/admin/topics/' + t.id, { method: 'DELETE' });
+      const res = await apiFetch('/admin/topics/' + t.db_id, { method: 'DELETE' });
       const data = await res.json().catch(() => ({}));
-      if (res.ok && data.success !== false) successCount++;
-    } catch (e) {}
+      if (res.ok && data.success !== false) {
+        successCount++;
+      } else {
+        failedIds.push(t.id);
+      }
+    } catch (e) {
+      failedIds.push(t.id);
+    }
   }
-  // 성공한 것 로컬 제거
-  const deletedIds = new Set(selected.slice(0, successCount).map(t => t.id));
-  // 실제로는 전부 삭제 시도했으므로 재조회보다 로컬 갱신
+
+  // 실패한 것 빼고 로컬에서 제거
   for (let i = GENERATED_TOPICS.length - 1; i >= 0; i--) {
-    if (GENERATED_TOPICS[i].selected) GENERATED_TOPICS.splice(i, 1);
+    const t = GENERATED_TOPICS[i];
+    if (t.selected && !failedIds.includes(t.id)) {
+      GENERATED_TOPICS.splice(i, 1);
+    }
   }
   renderTopicList();
-  showToast(`${successCount}개 삭제 완료`, successCount > 0 ? 'ok' : 'ng');
+
+  const total = successCount + localOnlyCount;
+  if (failedIds.length > 0) {
+    showToast(`${total}개 삭제, ${failedIds.length}개 실패`, 'ng');
+  } else {
+    showToast(`${total}개 삭제 완료`, 'ok');
+  }
 }
 
 /** 주제 수정 모달 열기 */
@@ -6017,12 +6060,30 @@ async function saveTopicEdit() {
   }
   errEl.style.display = 'none';
 
+  const t = GENERATED_TOPICS.find(x => x.id === tid);
+  if (!t) {
+    errEl.textContent = '주제를 찾을 수 없습니다';
+    errEl.style.display = 'block';
+    return;
+  }
+
+  // DB에 저장 안 된 주제(db_id 없음)는 로컬에서만 업데이트
+  if (!t.db_id) {
+    t.topic = topic;
+    t.kw    = kw;
+    if (date) { t.dateStr = date; t.date = date; }
+    closeTopicEditModal();
+    renderTopicList();
+    showToast('수정 완료 (로컬)', 'ok');
+    return;
+  }
+
   try {
     const body = { topic };
     if (kw   !== undefined) body.keyword  = kw;
     if (date)               body.date_str = date;
 
-    const res  = await apiFetch('/admin/topics/' + tid, {
+    const res  = await apiFetch('/admin/topics/' + t.db_id, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body)
@@ -6034,12 +6095,9 @@ async function saveTopicEdit() {
       return;
     }
     // 로컬 업데이트
-    const t = GENERATED_TOPICS.find(x => x.id === tid);
-    if (t) {
-      t.topic = topic;
-      t.kw    = kw;
-      if (date) { t.dateStr = date; t.date = date; }
-    }
+    t.topic = topic;
+    t.kw    = kw;
+    if (date) { t.dateStr = date; t.date = date; }
     closeTopicEditModal();
     renderTopicList();
     showToast('주제 수정 완료', 'ok');
