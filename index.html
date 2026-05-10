@@ -769,7 +769,7 @@ body.light-mode .filter-pill.active { color:#fff; }
 <!-- SIDEBAR -->
 <aside class="sidebar">
   <div class="sb-logo">1DAYECO<small>Admin Dashboard</small>
-    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v121</span>
+    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v122</span>
   </div>
   <nav class="sb-nav">
     <div class="sb-group">운영</div>
@@ -3859,19 +3859,22 @@ function renderSubscribersRows(filtered) {
     let endDateStr;
     let endColor = 'var(--muted)';
     if (s.status === 'trial' && s.trial_end_date) {
-      // 트라이얼 → "D-2일" 카운트다운 표시
+      // 트라이얼 → "D-2일" 카운트다운 + 진짜 구독 종료일 표시
       const trialEnd = new Date(s.trial_end_date);
       const now = new Date();
       const diffMs = trialEnd - now;
       const diffDays = Math.ceil(diffMs / 86400000);
-      const trialEndDateStr = trialEnd.toLocaleDateString('ko-KR');
+      // v122: 종료일 컬럼은 진짜 end_date 우선 (체험종료일 아님)
+      const realEndStr = s.end_date
+        ? new Date(s.end_date).toLocaleDateString('ko-KR')
+        : '—';
       if (diffDays > 0) {
-        endDateStr = `<div style="line-height:1.3"><strong style="color:#5eea91">D-${diffDays}일</strong><br><span style="font-size:9px;opacity:.7">${trialEndDateStr}</span></div>`;
+        endDateStr = `<div style="line-height:1.3"><strong style="color:#5eea91">D-${diffDays}일</strong><br><span style="font-size:9px;opacity:.7">${realEndStr}</span></div>`;
         endColor = '#5eea91';
       } else if (diffDays === 0) {
-        endDateStr = `<div style="line-height:1.3"><strong style="color:var(--amber)">오늘 종료</strong><br><span style="font-size:9px;opacity:.7">${trialEndDateStr}</span></div>`;
+        endDateStr = `<div style="line-height:1.3"><strong style="color:var(--amber)">오늘 종료</strong><br><span style="font-size:9px;opacity:.7">${realEndStr}</span></div>`;
       } else {
-        endDateStr = `<div style="line-height:1.3"><strong style="color:var(--red)">${Math.abs(diffDays)}일 초과</strong><br><span style="font-size:9px;opacity:.7">${trialEndDateStr}</span></div>`;
+        endDateStr = `<div style="line-height:1.3"><strong style="color:var(--red)">${Math.abs(diffDays)}일 초과</strong><br><span style="font-size:9px;opacity:.7">${realEndStr}</span></div>`;
       }
     } else {
       endDateStr = s.end_date
