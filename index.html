@@ -729,6 +729,16 @@ body.light-mode .filter-pill.active { color:#fff; }
 .sc-label { font-size:13px; font-weight:600; color:var(--muted); margin-bottom:6px; align-self:flex-start; letter-spacing:.3px; }
 .sc-num { font-size:24px; font-weight:700; font-family:var(--mono); line-height:1; }
 .sc-num::after { content:'명'; font-size:13px; font-weight:400; margin-left:3px; opacity:.7; }
+
+/* 주제 액션 버튼 */
+.topic-act-btn {
+  background:none; border:none; cursor:pointer;
+  color:var(--muted); font-size:13px; padding:3px 5px;
+  border-radius:3px; transition:color .15s;
+}
+.topic-act-btn:hover { color:var(--gold); }
+.topic-act-del:hover { color:#F87171; }
+
 </style>
 </head>
 <body>
@@ -759,7 +769,7 @@ body.light-mode .filter-pill.active { color:#fff; }
 <!-- SIDEBAR -->
 <aside class="sidebar">
   <div class="sb-logo">1DAYECO<small>Admin Dashboard</small>
-    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v112</span>
+    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v113</span>
   </div>
   <nav class="sb-nav">
     <div class="sb-group">운영</div>
@@ -1321,6 +1331,7 @@ body.light-mode .filter-pill.active { color:#fff; }
               <span id="topicSelectedCount" style="font-size:11px;color:var(--muted);letter-spacing:.5px">0개 선택</span>
               <button onclick="toggleAllTopics()" style="background:none;border:1px solid var(--b);color:var(--muted);padding:6px 12px;border-radius:6px;font-size:11px;cursor:pointer">전체 선택</button>
               <button onclick="clearAllTopics()" style="background:none;border:1px solid var(--b);color:var(--muted);padding:6px 10px;border-radius:6px;font-size:11px;cursor:pointer" title="목록 전체 비우기">🗑 비우기</button>
+              <button onclick="deleteSelectedTopics()" style="background:rgba(248,113,113,.1);border:1px solid rgba(248,113,113,.3);color:#F87171;padding:6px 12px;border-radius:6px;font-size:11px;cursor:pointer" title="선택한 주제 삭제">🗑 선택 삭제</button>
               <button class="btn-send" onclick="generateContentFromTopics()" style="font-size:11px;padding:7px 14px">
                 📝 콘텐츠 생성
               </button>
@@ -1359,6 +1370,7 @@ body.light-mode .filter-pill.active { color:#fff; }
                   <th style="background:var(--s1);position:sticky;top:0;z-index:2">주제</th>
                   <th style="background:var(--s1);position:sticky;top:0;z-index:2">키워드</th>
                   <th style="background:var(--s1);position:sticky;top:0;z-index:2;text-align:center">상태</th>
+                  <th style="background:var(--s1);position:sticky;top:0;z-index:2;width:72px;text-align:center">액션</th>
                 </tr>
               </thead>
               <tbody id="topicListBody"></tbody>
@@ -2094,6 +2106,42 @@ body.light-mode .filter-pill.active { color:#fff; }
       </div>
     </div>
   </div>
+
+
+<!-- 주제 수정 모달 -->
+<div class="overlay" id="topicEditOverlay" onclick="if(event.target.id==='topicEditOverlay')closeTopicEditModal()">
+  <div class="modal" style="max-width:480px;padding:0;max-height:90vh;display:flex;flex-direction:column">
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:16px 20px;border-bottom:1px solid var(--b);flex-shrink:0">
+      <div class="modal-title">주제 수정</div>
+      <button onclick="closeTopicEditModal()" style="background:none;border:none;color:var(--muted);font-size:18px;cursor:pointer">✕</button>
+    </div>
+    <div style="padding:18px 20px;display:flex;flex-direction:column;gap:14px;overflow-y:auto;flex:1">
+      <input type="hidden" id="topicEditId">
+      <div>
+        <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:5px;letter-spacing:.5px">날짜</label>
+        <input type="date" id="topicEditDate"
+          style="width:100%;background:var(--s3);border:1px solid var(--b);border-radius:6px;padding:8px 10px;font-size:13px;color:var(--text);font-family:var(--sans);outline:none;color-scheme:dark">
+      </div>
+      <div>
+        <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:5px;letter-spacing:.5px">주제 <span style="color:var(--gold)">필수</span></label>
+        <textarea id="topicEditText" rows="3"
+          placeholder="주제를 입력하세요"
+          style="width:100%;background:var(--s3);border:1px solid var(--b);border-radius:6px;padding:8px 10px;font-size:13px;color:var(--text);font-family:var(--sans);outline:none;resize:vertical"></textarea>
+      </div>
+      <div>
+        <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:5px;letter-spacing:.5px">키워드</label>
+        <input type="text" id="topicEditKw"
+          placeholder="#태그1 #태그2"
+          style="width:100%;background:var(--s3);border:1px solid var(--b);border-radius:6px;padding:8px 10px;font-size:13px;color:var(--text);font-family:var(--sans);outline:none">
+      </div>
+      <div id="topicEditErr" style="font-size:11px;color:var(--red);display:none"></div>
+    </div>
+    <div style="display:flex;gap:8px;padding:12px 20px;border-top:1px solid var(--b);flex-shrink:0">
+      <button class="m-btn" onclick="closeTopicEditModal()" style="flex:1">취소</button>
+      <button class="m-btn" onclick="saveTopicEdit()" style="flex:1;background:rgba(201,168,76,.1);border-color:rgba(201,168,76,.3);color:var(--gold)">💾 저장</button>
+    </div>
+  </div>
+</div>
 
 </div><!-- /main -->
 
@@ -5716,14 +5764,19 @@ function renderTopicList() {
     const subtopicCell = t.subtopic_name
       ? '<span style="display:inline-block;background:rgba(201,168,76,.1);border:1px solid rgba(201,168,76,.3);color:var(--gold);font-size:10px;padding:2px 8px;border-radius:10px;letter-spacing:.2px">' + (t.subtopic_name || '').replace(/</g,'&lt;') + '</span>'
       : '<span style="color:var(--muted);font-size:11px">—</span>';
-    return '<tr>'
-      + '<td><input type="checkbox" data-tid="' + t.id + '" ' + checked + ' onchange="onTopicCheck(this)"></td>'
+    const tid = t.id;
+    return '<tr id="topicRow_' + tid + '">'
+      + '<td><input type="checkbox" data-tid="' + tid + '" ' + checked + ' onchange="onTopicCheck(this)"></td>'
       + '<td style="font-family:var(--mono);font-size:11px">' + t.date + '</td>'
       + '<td style="text-align:center"><span class="badge monthly">' + (CATEGORY_LABEL_MAP[t.cat] || t.cat) + '</span></td>'
       + '<td style="text-align:center">' + subtopicCell + '</td>'
-      + '<td><strong>' + t.topic + '</strong></td>'
-      + '<td style="color:var(--muted);font-size:11px">' + t.kw + '</td>'
+      + '<td><strong id="topicText_' + tid + '">' + t.topic.replace(/</g,'&lt;') + '</strong></td>'
+      + '<td style="color:var(--muted);font-size:11px" id="topicKw_' + tid + '">' + (t.kw||'').replace(/</g,'&lt;') + '</td>'
       + '<td style="text-align:center">' + statusBadge + '</td>'
+      + '<td style="text-align:center;white-space:nowrap">'
+      +   '<button class="topic-act-btn" onclick="openTopicEditModal(' + JSON.stringify(tid) + ')" title="수정">✏</button>'
+      +   '<button class="topic-act-btn topic-act-del" onclick="deleteSingleTopic(' + JSON.stringify(tid) + ')" title="삭제">🗑</button>'
+      + '</td>'
       + '</tr>';
   }).join('');
 
@@ -5877,6 +5930,122 @@ async function _renderArchiveSubtopicPills(catId) {
   // 캐시 없으면 API 호출 후 렌더
   const list = await _fetchSubtopics(catId, false);
   _buildSubPills(list);
+}
+
+
+// ════════════════════════════════════════════════════════════
+// 주제 CRUD — 수정 / 삭제 / 선택 삭제
+// ════════════════════════════════════════════════════════════
+
+/** 단일 주제 삭제 */
+async function deleteSingleTopic(tid) {
+  const t = GENERATED_TOPICS.find(x => x.id === tid);
+  const label = t ? `"${t.topic.slice(0,20)}${t.topic.length>20?'…':''}"` : `ID ${tid}`;
+  if (!confirm(`주제 ${label} 을(를) 삭제하시겠습니까?\n삭제 후 복구할 수 없습니다.`)) return;
+  try {
+    const res = await apiFetch('/admin/topics/' + tid, { method: 'DELETE' });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || data.success === false) {
+      showToast(data.error || '삭제 실패', 'ng'); return;
+    }
+    // 로컬 목록에서 제거
+    const idx = GENERATED_TOPICS.findIndex(x => x.id === tid);
+    if (idx !== -1) GENERATED_TOPICS.splice(idx, 1);
+    renderTopicList();
+    showToast('삭제 완료', 'ok');
+  } catch (e) {
+    showToast('네트워크 오류', 'ng');
+  }
+}
+
+/** 선택된 주제 일괄 삭제 */
+async function deleteSelectedTopics() {
+  const selected = GENERATED_TOPICS.filter(t => t.selected);
+  if (selected.length === 0) {
+    showToast('삭제할 주제를 먼저 선택해주세요', 'ng'); return;
+  }
+  if (!confirm(`선택한 ${selected.length}개 주제를 삭제하시겠습니까?\n삭제 후 복구할 수 없습니다.`)) return;
+
+  let successCount = 0;
+  for (const t of selected) {
+    try {
+      const res = await apiFetch('/admin/topics/' + t.id, { method: 'DELETE' });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data.success !== false) successCount++;
+    } catch (e) {}
+  }
+  // 성공한 것 로컬 제거
+  const deletedIds = new Set(selected.slice(0, successCount).map(t => t.id));
+  // 실제로는 전부 삭제 시도했으므로 재조회보다 로컬 갱신
+  for (let i = GENERATED_TOPICS.length - 1; i >= 0; i--) {
+    if (GENERATED_TOPICS[i].selected) GENERATED_TOPICS.splice(i, 1);
+  }
+  renderTopicList();
+  showToast(`${successCount}개 삭제 완료`, successCount > 0 ? 'ok' : 'ng');
+}
+
+/** 주제 수정 모달 열기 */
+function openTopicEditModal(tid) {
+  const t = GENERATED_TOPICS.find(x => x.id === tid);
+  if (!t) return;
+  document.getElementById('topicEditId').value   = tid;
+  document.getElementById('topicEditDate').value  = t.dateStr || t.date || '';
+  document.getElementById('topicEditText').value  = t.topic || '';
+  document.getElementById('topicEditKw').value    = t.kw || '';
+  document.getElementById('topicEditErr').style.display = 'none';
+  document.getElementById('topicEditOverlay').classList.add('open');
+  setTimeout(() => document.getElementById('topicEditText').focus(), 80);
+}
+
+function closeTopicEditModal() {
+  document.getElementById('topicEditOverlay').classList.remove('open');
+}
+
+/** 주제 수정 저장 */
+async function saveTopicEdit() {
+  const tid   = document.getElementById('topicEditId').value;
+  const topic = document.getElementById('topicEditText').value.trim();
+  const kw    = document.getElementById('topicEditKw').value.trim();
+  const date  = document.getElementById('topicEditDate').value.trim();
+  const errEl = document.getElementById('topicEditErr');
+
+  if (!topic) {
+    errEl.textContent = '주제를 입력해주세요';
+    errEl.style.display = 'block';
+    return;
+  }
+  errEl.style.display = 'none';
+
+  try {
+    const body = { topic };
+    if (kw   !== undefined) body.keyword  = kw;
+    if (date)               body.date_str = date;
+
+    const res  = await apiFetch('/admin/topics/' + tid, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || data.success === false) {
+      errEl.textContent = data.error || '저장 실패';
+      errEl.style.display = 'block';
+      return;
+    }
+    // 로컬 업데이트
+    const t = GENERATED_TOPICS.find(x => x.id === tid);
+    if (t) {
+      t.topic = topic;
+      t.kw    = kw;
+      if (date) { t.dateStr = date; t.date = date; }
+    }
+    closeTopicEditModal();
+    renderTopicList();
+    showToast('주제 수정 완료', 'ok');
+  } catch (e) {
+    errEl.textContent = '네트워크 오류';
+    errEl.style.display = 'block';
+  }
 }
 
 function onTopicCheck(el) {
