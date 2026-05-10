@@ -769,7 +769,7 @@ body.light-mode .filter-pill.active { color:#fff; }
 <!-- SIDEBAR -->
 <aside class="sidebar">
   <div class="sb-logo">1DAYECO<small>Admin Dashboard</small>
-    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v113</span>
+    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v114</span>
   </div>
   <nav class="sb-nav">
     <div class="sb-group">운영</div>
@@ -5774,8 +5774,8 @@ function renderTopicList() {
       + '<td style="color:var(--muted);font-size:11px" id="topicKw_' + tid + '">' + (t.kw||'').replace(/</g,'&lt;') + '</td>'
       + '<td style="text-align:center">' + statusBadge + '</td>'
       + '<td style="text-align:center;white-space:nowrap">'
-      +   '<button class="topic-act-btn" onclick="openTopicEditModal(' + JSON.stringify(tid) + ')" title="수정">✏</button>'
-      +   '<button class="topic-act-btn topic-act-del" onclick="deleteSingleTopic(' + JSON.stringify(tid) + ')" title="삭제">🗑</button>'
+      +   '<button class="topic-act-btn" data-tid="' + tid + '" onclick="openTopicEditModal(this.dataset.tid)" title="수정">✏</button>'
+      +   '<button class="topic-act-btn topic-act-del" data-tid="' + tid + '" onclick="deleteSingleTopic(this.dataset.tid)" title="삭제">🗑</button>'
       + '</td>'
       + '</tr>';
   }).join('');
