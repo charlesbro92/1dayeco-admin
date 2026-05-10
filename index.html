@@ -759,7 +759,7 @@ body.light-mode .filter-pill.active { color:#fff; }
 <!-- SIDEBAR -->
 <aside class="sidebar">
   <div class="sb-logo">1DAYECO<small>Admin Dashboard</small>
-    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v110</span>
+    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v111</span>
   </div>
   <nav class="sb-nav">
     <div class="sb-group">운영</div>
@@ -5600,22 +5600,33 @@ function resetTopicListFilters() {
   renderTopicList();
 }
 
-// 주제 목록 카테고리 pill 동적 채움 (CATEGORIES_CACHE 기반)
+// 주제 목록 카테고리 pill 동적 채움
+// active + coming_soon 모두 포함, display_order 정렬, 예정 뱃지 표기
 function _renderTopicListCatPills() {
   const wrap = document.getElementById('topicListCatPills');
   if (!wrap) return;
-  const cats = (CATEGORIES_CACHE && CATEGORIES_CACHE.length)
-    ? CATEGORIES_CACHE.filter(c => (c.visibility || (c.active ? 'active' : 'hidden')) === 'active')
-    : [{id:'economy',name:'경제'},{id:'realestate',name:'부동산'},{id:'english',name:'영어'},{id:'trivia',name:'상식'}];
-  // 첫 child(label)와 첫 button(전체)는 유지, 그 뒤 동적 추가
-  // 기존 카테고리 pill 제거 후 재생성
+  const allCats = (CATEGORIES_CACHE && CATEGORIES_CACHE.length)
+    ? CATEGORIES_CACHE
+    : [{id:'economy',name:'경제',visibility:'active'},{id:'realestate',name:'부동산',visibility:'active'},{id:'english',name:'영어',visibility:'active'},{id:'trivia',name:'상식',visibility:'active'}];
+
+  // display_order 기준 정렬 후 active → coming_soon 순
+  const active     = [...allCats].filter(c => (c.visibility || (c.active ? 'active' : 'hidden')) === 'active').sort((a,b)=>(a.display_order||0)-(b.display_order||0));
+  const comingSoon = [...allCats].filter(c => (c.visibility||'') === 'coming_soon').sort((a,b)=>(a.display_order||0)-(b.display_order||0));
+  const sorted = [...active, ...comingSoon];
+
   Array.from(wrap.querySelectorAll('.cat-pill[data-cat]:not([data-cat=""])')).forEach(b => b.remove());
-  cats.forEach(c => {
+  sorted.forEach(c => {
+    const isComing = (c.visibility || '') === 'coming_soon';
     const btn = document.createElement('button');
-    btn.className = 'cat-pill';
+    btn.className = 'cat-pill' + (isComing ? ' coming-soon-pill' : '');
     btn.dataset.cat = c.id;
     btn.onclick = function() { selectTopicCatFilter(btn); };
-    btn.textContent = (c.emoji ? c.emoji + ' ' : '') + (c.name || c.id);
+    if (isComing) {
+      btn.innerHTML = (c.emoji ? c.emoji + ' ' : '') + (c.name || c.id)
+        + ' <span style="font-size:9px;opacity:.6;font-weight:400">예정</span>';
+    } else {
+      btn.textContent = (c.emoji ? c.emoji + ' ' : '') + (c.name || c.id);
+    }
     wrap.appendChild(btn);
   });
 }
@@ -8677,10 +8688,16 @@ function populateCategorySelects() {
   const pillFilter = document.getElementById('catPillFilter');
   if (pillFilter) {
     const currentActive = pillFilter.querySelector('.cat-pill.active')?.dataset.cat || '';
+    // display_order 기준 정렬 후 active → coming_soon 순
+    const activeSort     = cats.filter(c => (c.visibility||(c.active?'active':'hidden'))==='active').sort((a,b)=>(a.display_order||0)-(b.display_order||0));
+    const comingSoonSort = cats.filter(c => (c.visibility||'')==='coming_soon').sort((a,b)=>(a.display_order||0)-(b.display_order||0));
+    const sortedCats = [...activeSort, ...comingSoonSort];
     pillFilter.innerHTML = '<button class="cat-pill active" data-cat="" onclick="selectCatFilter(this)">전체</button>';
-    cats.forEach(c => {
+    sortedCats.forEach(c => {
       const isComing = (c.visibility || '') === 'coming_soon';
-      const label = isComing ? `${c.emoji || '📌'} ${c.name} <span style="font-size:9px;opacity:.6">예정</span>` : `${c.emoji || '📌'} ${c.name}`;
+      const label = isComing
+        ? `${c.emoji || '📌'} ${c.name} <span style="font-size:9px;opacity:.6">예정</span>`
+        : `${c.emoji || '📌'} ${c.name}`;
       pillFilter.innerHTML += `<button class="cat-pill" data-cat="${c.id}" onclick="selectCatFilter(this)">${label}</button>`;
     });
     // 이전 선택값 복원
@@ -9057,7 +9074,23 @@ async function saveSubtopicEdits() {
     if (_modalCurrentCategoryId) {
       _SUBTOPIC_CACHE[_modalCurrentCategoryId] = _modalSubtopics.slice();
     }
+    // 저장된 항목 ID 수집 (리렌더 후 자동 펼침용)
+    const savedIds = new Set(updates.map(u => u.id));
     _renderSubtopicList();
+    // 리렌더 후 저장된 항목의 description 자동 펼침
+    requestAnimationFrame(() => {
+      savedIds.forEach(sid => {
+        const wrap = document.querySelector(`[data-sid="${sid}"]`);
+        if (!wrap) return;
+        const btn = wrap.querySelector('button[onclick*="desc-arrow"]') || wrap.querySelector('.desc-arrow')?.parentElement;
+        const descWrap = btn ? btn.nextElementSibling : null;
+        if (descWrap && descWrap.style.display === 'none') {
+          descWrap.style.display = 'block';
+          const arrow = btn ? btn.querySelector('.desc-arrow') : null;
+          if (arrow) arrow.textContent = '▼';
+        }
+      });
+    });
     showToast(`${successCount}개 항목 저장 완료`, 'ok');
   }
 }
@@ -9981,22 +10014,42 @@ function saveSubChanges() {
 let sdCurrentId = null;
 
 // 구독자 편집 모달: 카테고리 드롭다운 채우기
+// active: 정상 표시 / coming_soon: (출시예정) 표기 포함
 function _renderSdCategoryChips(selectedCat) {
   const sel = document.getElementById('sdCategorySelect');
   if (!sel) return;
-  const cats = (CATEGORIES_CACHE && CATEGORIES_CACHE.length)
-    ? CATEGORIES_CACHE.filter(c => (c.visibility || (c.active ? 'active' : 'hidden')) === 'active')
-    : [{id:'economy',name:'경제'},{id:'realestate',name:'부동산'},{id:'english',name:'영어'},{id:'trivia',name:'상식'}];
-  if (cats.length === 0) {
-    sel.innerHTML = '<option value="">— 활성 카테고리 없음 —</option>';
+  const allCats = (CATEGORIES_CACHE && CATEGORIES_CACHE.length)
+    ? CATEGORIES_CACHE
+    : [{id:'economy',name:'경제',visibility:'active'},{id:'realestate',name:'부동산',visibility:'active'},{id:'english',name:'영어',visibility:'active'},{id:'trivia',name:'상식',visibility:'active'}];
+
+  // display_order 기준 정렬
+  const sorted = [...allCats].sort((a, b) => (a.display_order || 0) - (b.display_order || 0));
+  const active     = sorted.filter(c => (c.visibility || (c.active ? 'active' : 'hidden')) === 'active');
+  const comingSoon = sorted.filter(c => (c.visibility || '') === 'coming_soon');
+
+  if (active.length === 0 && comingSoon.length === 0) {
+    sel.innerHTML = '<option value="">— 카테고리 없음 —</option>';
     return;
   }
-  sel.innerHTML = '<option value="">— 선택 —</option>'
-    + cats.map(c => {
-        const isSel = c.id === selectedCat;
-        const name = (c.name || c.id).replace(/"/g,'&quot;');
-        return `<option value="${c.id}" ${isSel ? 'selected' : ''}>${name}</option>`;
-      }).join('');
+
+  let html = '<option value="">— 선택 —</option>';
+  if (active.length) {
+    html += '<optgroup label="── 운영중 ──────────────">';
+    active.forEach(c => {
+      const name = (c.name || c.id).replace(/"/g,'&quot;');
+      html += `<option value="${c.id}" ${c.id === selectedCat ? 'selected' : ''}>${c.emoji || '📌'} ${name}</option>`;
+    });
+    html += '</optgroup>';
+  }
+  if (comingSoon.length) {
+    html += '<optgroup label="── 출시예정 ─────────────">';
+    comingSoon.forEach(c => {
+      const name = (c.name || c.id).replace(/"/g,'&quot;');
+      html += `<option value="${c.id}" ${c.id === selectedCat ? 'selected' : ''}>${c.emoji || '📌'} ${name} (출시예정)</option>`;
+    });
+    html += '</optgroup>';
+  }
+  sel.innerHTML = html;
 }
 
 function _onSdCategorySelectChange(selEl) {
