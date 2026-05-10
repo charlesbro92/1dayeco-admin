@@ -1272,6 +1272,7 @@ body.light-mode .filter-pill.active { color:#fff; }
                      padding:10px;border-radius:6px;font-size:13px;outline:none;font-family:var(--sans)">
               <option value="">— 카테고리 선택 후 —</option>
             </select>
+            <div id="topicGenBuilderBadge" style="margin-top:6px;display:flex;align-items:center;min-height:20px"></div>
           </div>
           <div style="flex:.8;min-width:100px">
             <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:6px;letter-spacing:.5px">기간 (일) <span style="color:var(--gold);font-size:10px">권장 30</span></label>
@@ -1955,7 +1956,10 @@ body.light-mode .filter-pill.active { color:#fff; }
         <!-- ID (수정 시 readonly) -->
         <div>
           <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:4px">카테고리 ID <span style="color:var(--gold)">(영문 소문자, 변경 불가)</span></label>
-          <input type="text" id="catInputId" placeholder="예: stocks, medical" style="width:100%;background:var(--s3);border:1px solid var(--b);border-radius:6px;padding:9px 12px;font-size:13px;color:var(--text);font-family:var(--mono);outline:none">
+          <input type="text" id="catInputId" placeholder="예: stocks, medical"
+            oninput="_updateCatModalBuilderBadge()"
+            style="width:100%;background:var(--s3);border:1px solid var(--b);border-radius:6px;padding:9px 12px;font-size:13px;color:var(--text);font-family:var(--mono);outline:none">
+          <div id="catModalBuilderBadge" style="margin-top:6px;display:flex;align-items:center;gap:6px;min-height:20px"></div>
         </div>
         <!-- 이름 + 이모지 -->
         <div style="display:flex;gap:10px">
@@ -8690,6 +8694,42 @@ let CATEGORIES_CACHE = [];   // 캐시 (loadCategoryList에서 채워짐)
 // ── 부제목 캐시 (카테고리별로 메모리 캐시) ──
 const _SUBTOPIC_CACHE = {};
 
+// ── 전용 빌더 키 목록 (prompts_v7.py PROMPT_BUILDERS + subtopic 전용 키와 동기화) ──
+// 형식: "category" 또는 "category:부제목이름"
+const KNOWN_BUILDER_KEYS = new Set([
+  // 카테고리 전용 빌더
+  'economy', 'realestate', 'english', 'trivia',
+  'kr_stock', 'us_stock', 'it_news', 'vietnamese',
+  // 부제목 전용 빌더 (추가할 때마다 여기 등록)
+  // 예: 'english:영어회화 초급', 'english:비즈니스 영어'
+]);
+
+/**
+ * 카테고리+부제목 조합의 전용 빌더 유무 반환
+ * @param {string} catId   - 카테고리 ID (예: 'english')
+ * @param {string} subName - 부제목 이름 (없으면 '')
+ * @returns {'dedicated'|'category'|'generic'}
+ *   dedicated : category:subtopic 전용 빌더 있음
+ *   category  : category 전용 빌더만 있음 (subtopic 무시)
+ *   generic   : 전용 빌더 없음 → build_generic_prompt 사용
+ */
+function getBuilderStatus(catId, subName) {
+  if (subName && KNOWN_BUILDER_KEYS.has(catId + ':' + subName)) return 'dedicated';
+  if (KNOWN_BUILDER_KEYS.has(catId)) return 'category';
+  return 'generic';
+}
+
+/** 빌더 상태를 읽기 좋은 뱃지 HTML로 변환 */
+function builderBadgeHtml(status) {
+  if (status === 'dedicated') {
+    return '<span style="display:inline-flex;align-items:center;gap:3px;background:rgba(74,222,128,.12);border:1px solid rgba(74,222,128,.35);color:#4ADE80;font-size:10px;padding:2px 7px;border-radius:10px;white-space:nowrap;font-weight:600">⚡ 전용 빌더</span>';
+  }
+  if (status === 'category') {
+    return '<span style="display:inline-flex;align-items:center;gap:3px;background:rgba(96,165,250,.1);border:1px solid rgba(96,165,250,.3);color:#60A5FA;font-size:10px;padding:2px 7px;border-radius:10px;white-space:nowrap;font-weight:600">🔵 카테고리 빌더</span>';
+  }
+  return '<span style="display:inline-flex;align-items:center;gap:3px;background:rgba(251,191,36,.1);border:1px solid rgba(251,191,36,.3);color:#FBBF24;font-size:10px;padding:2px 7px;border-radius:10px;white-space:nowrap;font-weight:600">⚠ 기본 빌더</span>';
+}
+
 async function _fetchSubtopics(catId, force) {
   if (!catId) return [];
   if (!force && _SUBTOPIC_CACHE[catId]) return _SUBTOPIC_CACHE[catId];
@@ -8716,10 +8756,33 @@ async function onTopicGenCategoryChange() {
   const list = await _fetchSubtopics(cat, true);
   if (list.length === 0) {
     subtopicEl.innerHTML = '<option value="">— 부제목 없음 (카테고리 관리에서 추가) —</option>';
+    _updateTopicBuilderBadge(cat, '');
     return;
   }
   subtopicEl.innerHTML = '<option value="">— 선택 —</option>'
-    + list.map(s => `<option value="${s.id}">${(s.name || '').replace(/"/g,'&quot;')}</option>`).join('');
+    + list.map(s => `<option value="${s.id}" data-name="${(s.name || '').replace(/"/g,'&quot;')}">${(s.name || '').replace(/"/g,'&quot;')}</option>`).join('');
+  subtopicEl.onchange = () => {
+    const sel = subtopicEl.options[subtopicEl.selectedIndex];
+    _updateTopicBuilderBadge(cat, sel?.dataset?.name || '');
+  };
+  _updateTopicBuilderBadge(cat, '');
+}
+
+function _updateTopicBuilderBadge(catId, subName) {
+  let badgeEl = document.getElementById('topicGenBuilderBadge');
+  if (!badgeEl) return;
+  if (!catId) { badgeEl.innerHTML = ''; return; }
+  const status = getBuilderStatus(catId, subName);
+  const badge  = builderBadgeHtml(status);
+  let hint = '';
+  if (status === 'generic') {
+    hint = '<span style="font-size:10px;color:var(--amber);margin-left:6px">— 부제목 설명을 입력하면 품질이 올라갑니다</span>';
+  } else if (status === 'category') {
+    hint = '<span style="font-size:10px;color:var(--muted);margin-left:6px">— 카테고리 전용 빌더 사용</span>';
+  } else {
+    hint = '<span style="font-size:10px;color:var(--green);margin-left:6px">— 부제목 전용 빌더 사용</span>';
+  }
+  badgeEl.innerHTML = badge + hint;
 }
 
 // 페이지 로드 후 카테고리 select 채워지면 부제목도 자동 로드
@@ -8743,19 +8806,40 @@ function _renderSubtopicList() {
     return;
   }
   if (hint) hint.style.display = 'none';
+  const catId = _modalCurrentCategoryId || '';
   wrap.innerHTML = _modalSubtopics.map((s, idx) => {
+    const status = getBuilderStatus(catId, s.name || '');
+    const badge  = builderBadgeHtml(status);
+    // 기본 빌더일 때만 설명 필드 노출
+    const descBlock = status === 'generic' ? `
+      <div style="margin-top:6px;padding-top:6px;border-top:1px dashed rgba(251,191,36,.2)">
+        <label style="font-size:10px;color:var(--amber);display:block;margin-bottom:4px">
+          ⚠ 전용 빌더 없음 — 부제목 설명을 입력하면 AI 품질이 올라갑니다
+        </label>
+        <textarea
+          id="subDesc_${s.id}"
+          rows="2"
+          placeholder="예: 영어를 처음 배우는 입문자 대상. 짧고 쉬운 일상 표현 위주. 어려운 단어 금지."
+          onblur="_saveSubtopicDesc(${s.id}, this.value)"
+          style="width:100%;background:var(--s2);border:1px solid rgba(251,191,36,.25);border-radius:4px;padding:6px 8px;font-size:11px;color:var(--text);font-family:var(--sans);outline:none;resize:vertical"
+        >${(s.description || '').replace(/</g,'&lt;')}</textarea>
+      </div>` : '';
     return `
-      <div style="display:flex;gap:6px;align-items:center;background:var(--s3);border:1px solid var(--b);border-radius:6px;padding:6px 8px" data-sid="${s.id}">
-        <span style="color:var(--muted);font-size:11px;font-family:var(--mono);width:18px;text-align:center">${idx+1}</span>
-        <input type="text" value="${(s.name || '').replace(/"/g, '&quot;')}"
-          onblur="_renameSubtopic(${s.id}, this.value)"
-          onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}"
-          placeholder="부제목 이름"
-          style="flex:1;background:transparent;border:none;color:var(--text);font-size:13px;outline:none;padding:4px 0">
-        <button type="button" onclick="_deleteSubtopic(${s.id}, '${(s.name || '').replace(/'/g, "\\'")}')"
-          title="삭제 (즉시)"
-          style="background:transparent;border:none;color:var(--muted);cursor:pointer;font-size:14px;padding:2px 6px;line-height:1"
-          onmouseover="this.style.color='#ff7676'" onmouseout="this.style.color='var(--muted)'">✕</button>
+      <div style="background:var(--s3);border:1px solid var(--b);border-radius:6px;padding:8px 10px" data-sid="${s.id}">
+        <div style="display:flex;gap:6px;align-items:center">
+          <span style="color:var(--muted);font-size:11px;font-family:var(--mono);width:18px;text-align:center;flex-shrink:0">${idx+1}</span>
+          <input type="text" value="${(s.name || '').replace(/"/g, '&quot;')}"
+            onblur="_renameSubtopic(${s.id}, this.value)"
+            onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}"
+            placeholder="부제목 이름"
+            style="flex:1;background:transparent;border:none;color:var(--text);font-size:13px;outline:none;padding:4px 0">
+          ${badge}
+          <button type="button" onclick="_deleteSubtopic(${s.id}, '${(s.name || '').replace(/'/g, "\\'")}')"
+            title="삭제 (즉시)"
+            style="background:transparent;border:none;color:var(--muted);cursor:pointer;font-size:14px;padding:2px 6px;line-height:1;flex-shrink:0"
+            onmouseover="this.style.color='#ff7676'" onmouseout="this.style.color='var(--muted)'">✕</button>
+        </div>
+        ${descBlock}
       </div>`;
   }).join('');
 }
@@ -8853,6 +8937,34 @@ async function _renameSubtopic(subtopicId, newName) {
     console.warn('[subtopics] 수정 실패:', e);
     showToast('네트워크 오류', 'ng');
     _renderSubtopicList();
+  }
+}
+
+// 부제목 설명 저장 (기본 빌더 폴백용 컨텍스트)
+async function _saveSubtopicDesc(subtopicId, desc) {
+  desc = (desc || '').trim();
+  const item = _modalSubtopics.find(s => s.id === subtopicId);
+  if (!item) return;
+  if ((item.description || '') === desc) return;  // 변경 없음
+  try {
+    const res = await fetch(API_BASE + '/admin/subtopics/' + subtopicId, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ description: desc })
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || data.success === false) {
+      showToast(data.error || '설명 저장 실패', 'ng');
+      return;
+    }
+    item.description = desc;
+    if (_modalCurrentCategoryId) {
+      _SUBTOPIC_CACHE[_modalCurrentCategoryId] = _modalSubtopics.slice();
+    }
+    showToast('부제목 설명 저장됨', 'ok');
+  } catch (e) {
+    console.warn('[subtopics] 설명 저장 실패:', e);
+    showToast('네트워크 오류', 'ng');
   }
 }
 
@@ -9165,9 +9277,27 @@ function openCategoryEdit(catId) {
   // 저장 버튼 초기화 (이전 모달에서 disabled 잔존 방지)
   const btn = document.getElementById('catSaveBtn');
   if (btn) { btn.disabled = false; btn.textContent = '💾 저장'; }
+  // 빌더 상태 뱃지 갱신
+  _updateCatModalBuilderBadge();
   document.getElementById('categoryEditOverlay').classList.add('open');
   attachPriceChangeListeners();
   setTimeout(() => document.getElementById('catInputName').focus(), 100);
+}
+
+function _updateCatModalBuilderBadge() {
+  const badgeEl = document.getElementById('catModalBuilderBadge');
+  if (!badgeEl) return;
+  const catId = (document.getElementById('catInputId')?.value || '').trim();
+  if (!catId) { badgeEl.innerHTML = ''; return; }
+  const status = getBuilderStatus(catId, '');
+  const badge  = builderBadgeHtml(status);
+  let hint = '';
+  if (status === 'generic') {
+    hint = '<span style="font-size:10px;color:var(--amber)">이 카테고리는 기본 빌더를 사용합니다. 부제목 설명을 잘 작성해주세요.</span>';
+  } else {
+    hint = '<span style="font-size:10px;color:var(--muted)">전용 프롬프트 빌더가 등록되어 있습니다.</span>';
+  }
+  badgeEl.innerHTML = badge + '<span style="margin-left:6px">' + hint + '</span>';
 }
 
 // 가격 input 변경 시 할인율 자동 갱신
