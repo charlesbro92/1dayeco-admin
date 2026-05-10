@@ -759,7 +759,7 @@ body.light-mode .filter-pill.active { color:#fff; }
 <!-- SIDEBAR -->
 <aside class="sidebar">
   <div class="sb-logo">1DAYECO<small>Admin Dashboard</small>
-    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v104</span>
+    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v105</span>
   </div>
   <nav class="sb-nav">
     <div class="sb-group">운영</div>
@@ -5229,6 +5229,47 @@ function initTopicGenerator() {
     startEl.value = yr + '-' + mo + '-' + day;
   }
   updateTopicEndDate();
+  // 백엔드에서 주제 동기화 (백엔드가 진실 소스)
+  syncTopicsFromBackend();
+}
+
+// 백엔드 topics 테이블에서 주제 목록 받아 GENERATED_TOPICS 채우기
+async function syncTopicsFromBackend() {
+  if (!API_BASE) return;
+  try {
+    const params = new URLSearchParams();
+    // 기본: 최근 60일치만 (너무 많으면 부담)
+    const kstNow = new Date(new Date().getTime() + 9*60*60*1000);
+    const past = new Date(kstNow.getTime() - 60*86400000);
+    params.set('date_from', past.toISOString().slice(0,10));
+    const res = await fetch(API_BASE + '/admin/topics?' + params.toString());
+    if (!res.ok) return;
+    const json = await res.json();
+    const rows = json.data || [];
+    // GENERATED_TOPICS 형식으로 변환
+    GENERATED_TOPICS = rows.map(function(r) {
+      const dateStr = r.date_str;
+      const dispDate = new Date(dateStr + 'T00:00:00+09:00').toLocaleDateString('ko-KR');
+      return {
+        id:           'db_' + r.id,         // 어드민 내부 ID (DB id 식별)
+        db_id:        r.id,                  // 진짜 DB id (콘텐츠 생성 시 백엔드로 전달)
+        date:         dispDate,
+        dateStr:      dateStr,
+        cat:          r.category,
+        subtopic_id:  r.subtopic_id || null,
+        subtopic_name: r.subtopic_name || '',
+        topic:        r.topic || '',
+        kw:           r.keyword || '',
+        tags:         r.tags || [],
+        status:       r.status || 'pending',
+        content_id:   r.content_id || null,
+        selected:     false,
+      };
+    });
+    renderTopicList();
+  } catch (e) {
+    console.warn('[topics] 동기화 실패:', e);
+  }
 }
 
 // 종료일 자동 계산 (시작일 + 기간)
@@ -5496,10 +5537,12 @@ async function generateTopics() {
     return (a.cat || '').localeCompare(b.cat || '');
   });
 
-  // ⭐ v49: localStorage에 저장 (배포/새로고침 후에도 유지)
-  _saveTopicsToStorage();
-
   renderTopicList();
+
+  // 백엔드에 저장됐으니 DB에서 다시 가져와서 db_id 포함된 데이터로 갱신
+  // (콘텐츠 생성 시 db_id 필요)
+  syncTopicsFromBackend();
+
   toggleTopicWorkPanel(true); // 자동 펼침
   let msg = '';
   if (addedCount > 0 && replacedCount > 0) {
@@ -5680,18 +5723,38 @@ function updateTopicWorkBadge() {
 }
 
 // 주제 목록 전체 비우기
-function clearAllTopics() {
+async function clearAllTopics() {
   if (!GENERATED_TOPICS || GENERATED_TOPICS.length === 0) return;
   const generatedCount = GENERATED_TOPICS.filter(t => t.status === 'generated').length;
-  let msg = '주제 목록 ' + GENERATED_TOPICS.length + '개를 모두 비우시겠습니까?';
+  const pendingCount   = GENERATED_TOPICS.length - generatedCount;
+  if (pendingCount === 0) {
+    showToast('비울 미생성 주제가 없습니다 (생성된 주제는 아카이브에서 관리)', 'ok');
+    return;
+  }
+  let msg = '미생성 주제 ' + pendingCount + '개를 삭제하시겠습니까?';
   if (generatedCount > 0) {
-    msg += '\n\n⚠️ 이미 콘텐츠가 생성된 ' + generatedCount + '개 항목도 목록에서 제거됩니다.\n(아카이브의 콘텐츠는 그대로 유지됩니다)';
+    msg += '\n\n⚠️ 이미 콘텐츠가 생성된 ' + generatedCount + '개 주제는 보존됩니다.';
   }
   if (!confirm(msg)) return;
-  GENERATED_TOPICS = [];
-  _saveTopicsToStorage();  // ⭐ v49
-  renderTopicList();
-  showToast('주제 목록을 비웠습니다', 'ok');
+
+  // 백엔드에서 미생성(pending+failed) 주제 일괄 삭제
+  if (API_BASE) {
+    try {
+      const res = await apiPost('/admin/topics/clear', { keep_generated: true });
+      if (res && res.success) {
+        showToast('미생성 주제 ' + (res.deleted || pendingCount) + '개 삭제됨', 'ok');
+      } else {
+        showToast('주제 삭제 실패: ' + (res?.error || ''), 'ng');
+        return;
+      }
+    } catch (e) {
+      showToast('주제 삭제 실패: ' + e.message, 'ng');
+      return;
+    }
+  }
+
+  // 백엔드에서 다시 받아오기 (생성된 것만 남음)
+  await syncTopicsFromBackend();
 }
 
 // 주제 작업 패널 — 접히기 기능 제거됨, 항상 표시
@@ -6337,11 +6400,12 @@ async function _executeGenerate(items) {
         if (API_BASE) {
           const signal = _progressState.abortCtrl ? _progressState.abortCtrl.signal : undefined;
           result = await apiPost('/admin/content/generate-from-topic', {
-            date:     t.date,
+            date:     t.dateStr || t.date,   // ISO 우선
             category: t.cat,
             subtopic_id: t.subtopic_id || null,
             topic:    t.topic,
             keywords: t.kw,
+            topic_id: t.db_id || null,        // 새: topics 테이블 row id
             overwrite: true,
           }, { signal: signal });
 
