@@ -769,7 +769,7 @@ body.light-mode .filter-pill.active { color:#fff; }
 <!-- SIDEBAR -->
 <aside class="sidebar">
   <div class="sb-logo">1DAYECO<small>Admin Dashboard</small>
-    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v128</span>
+    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v129</span>
   </div>
   <nav class="sb-nav">
     <div class="sb-group">운영</div>
@@ -6072,7 +6072,9 @@ async function deleteSingleTopic(tid) {
 
 /** 선택된 주제 일괄 삭제 */
 async function deleteSelectedTopics() {
-  const selected = GENERATED_TOPICS.filter(t => t.selected);
+  // v129: 현재 필터 통과한 것 중 selected 만
+  const visible = _getFilteredTopics();
+  const selected = visible.filter(t => t.selected);
   if (selected.length === 0) {
     showToast('삭제할 주제를 먼저 선택해주세요', 'ng'); return;
   }
@@ -6200,16 +6202,39 @@ function onTopicCheck(el) {
   updateTopicSelectedCount();
 }
 
+// v129: 현재 필터(카테고리/부제목/날짜)에 맞는 topic만 반환
+function _getFilteredTopics() {
+  let filtered = GENERATED_TOPICS.slice();
+  if (_topicListCatFilter) {
+    filtered = filtered.filter(t => t.cat === _topicListCatFilter);
+  }
+  if (_topicListSubtopicFilter) {
+    filtered = filtered.filter(t => String(t.subtopic_id) === String(_topicListSubtopicFilter));
+  }
+  const fromEl = document.getElementById('topicListDateFrom');
+  const toEl   = document.getElementById('topicListDateTo');
+  const fromVal = fromEl ? fromEl.value : '';
+  const toVal   = toEl   ? toEl.value   : '';
+  if (fromVal) filtered = filtered.filter(t => (t.dateStr || t.date) >= fromVal);
+  if (toVal)   filtered = filtered.filter(t => (t.dateStr || t.date) <= toVal);
+  return filtered;
+}
+
 function toggleAllTopics() {
-  const allSelected = GENERATED_TOPICS.every(t => t.selected);
-  GENERATED_TOPICS.forEach(t => t.selected = !allSelected);
+  // v129: 현재 화면(필터 통과한 것)만 전체 토글
+  const visible = _getFilteredTopics();
+  if (visible.length === 0) return;
+  const allSelected = visible.every(t => t.selected);
+  visible.forEach(t => t.selected = !allSelected);
   document.querySelectorAll('#topicListBody input[type=checkbox]').forEach(cb => cb.checked = !allSelected);
   document.getElementById('topicSelectAll').checked = !allSelected;
   updateTopicSelectedCount();
 }
 
 function updateTopicSelectedCount() {
-  const cnt = GENERATED_TOPICS.filter(t => t.selected).length;
+  // v129: 현재 화면에 보이는 것 중 체크된 것만 카운트
+  const visible = _getFilteredTopics();
+  const cnt = visible.filter(t => t.selected).length;
   const el = document.getElementById('topicSelectedCount');
   if (el) el.textContent = cnt + '개 선택';
 }
@@ -6261,8 +6286,10 @@ function closeContentConflict() {
 
 // === 1단계: 진입점 — 충돌 검사 ===
 async function generateContentFromTopics() {
-  // 체크된 모든 주제 (이미 생성된 것 포함)
-  const allChecked = GENERATED_TOPICS.filter(t => t.selected);
+  // v129: 현재 화면(필터 통과)에 보이는 체크된 주제만 대상
+  // 옛: GENERATED_TOPICS 전체에서 selected — 다른 카테고리/부제목의 selected 누적되어 의도치 않게 포함됨
+  const visible = _getFilteredTopics();
+  const allChecked = visible.filter(t => t.selected);
   if (allChecked.length === 0) {
     showToast('생성할 주제를 선택해주세요', 'ng');
     return;
