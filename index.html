@@ -769,7 +769,7 @@ body.light-mode .filter-pill.active { color:#fff; }
 <!-- SIDEBAR -->
 <aside class="sidebar">
   <div class="sb-logo">1DAYECO<small>Admin Dashboard</small>
-    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v127</span>
+    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v128</span>
   </div>
   <nav class="sb-nav">
     <div class="sb-group">운영</div>
@@ -5762,10 +5762,19 @@ async function _renderTopicListSubtopicPills(catId) {
   function _build(list) {
     if (list.length === 0) { wrap.style.display = 'none'; return; }
     wrap.style.display = 'flex';
+    // v97: 활성 부제목 먼저, 비활성은 뒤로
+    const sortedList = _sortSubtopicsForFilter(list);
     let html = '<button class="cat-pill ' + (_topicListSubtopicFilter ? '' : 'active') + '" data-subtopic="" onclick="selectTopicSubtopicFilter(this)">전체</button>';
-    list.forEach(s => {
+    sortedList.forEach(s => {
       const isActive = String(_topicListSubtopicFilter) === String(s.id);
-      html += `<button class="cat-pill${isActive ? ' active' : ''}" data-subtopic="${s.id}" onclick="selectTopicSubtopicFilter(this)">${(s.name||'').replace(/"/g,'&quot;')}</button>`;
+      const isInactive = s.active === false;
+      const classNames = ['cat-pill'];
+      if (isActive) classNames.push('active');
+      if (isInactive) classNames.push('disabled');
+      const styleStr = isInactive ? 'opacity:.45;text-decoration:line-through;cursor:not-allowed' : '';
+      const titleStr = isInactive ? '비활성 부제목 (신규 가입 차단)' : '';
+      const onclickStr = isInactive ? '' : 'onclick="selectTopicSubtopicFilter(this)"';
+      html += `<button class="${classNames.join(' ')}" data-subtopic="${s.id}" style="${styleStr}" title="${titleStr}" ${onclickStr}${isInactive ? ' disabled' : ''}>${(s.name||'').replace(/"/g,'&quot;')}${isInactive ? ' (OFF)' : ''}</button>`;
     });
     pills.innerHTML = html;
   }
@@ -6002,9 +6011,15 @@ async function _renderArchiveSubtopicPills(catId) {
   function _buildSubPills(list) {
     if (list.length === 0) { wrap.style.display = 'none'; return; }
     wrap.style.display = 'flex';
+    // v97: 활성 부제목 먼저, 비활성은 뒤로
+    const sortedList = _sortSubtopicsForFilter(list);
     let html = '<button class="cat-pill active" data-subtopic="" onclick="selectSubtopicFilter(this)">전체</button>';
-    list.forEach(s => {
-      html += `<button class="cat-pill" data-subtopic="${s.id}" onclick="selectSubtopicFilter(this)">${(s.name||'').replace(/"/g,'&quot;')}</button>`;
+    sortedList.forEach(s => {
+      const isInactive = s.active === false;
+      const styleStr = isInactive ? 'opacity:.45;text-decoration:line-through;cursor:not-allowed' : '';
+      const titleStr = isInactive ? '비활성 부제목 (신규 가입 차단)' : '';
+      const onclickStr = isInactive ? '' : 'onclick="selectSubtopicFilter(this)"';
+      html += `<button class="cat-pill${isInactive ? ' disabled' : ''}" data-subtopic="${s.id}" style="${styleStr}" title="${titleStr}" ${onclickStr}${isInactive ? ' disabled' : ''}>${(s.name||'').replace(/"/g,'&quot;')}${isInactive ? ' (OFF)' : ''}</button>`;
     });
     pills.innerHTML = html;
   }
@@ -9158,6 +9173,15 @@ async function _fetchSubtopics(catId, force) {
   return [];
 }
 
+// v97: 필터 pill 정렬용 — 활성 부제목 먼저, 비활성은 뒤로
+//      각 그룹 안에서는 display_order 유지
+function _sortSubtopicsForFilter(list) {
+  if (!Array.isArray(list)) return [];
+  const active   = list.filter(s => s.active !== false);
+  const inactive = list.filter(s => s.active === false);
+  return active.concat(inactive);
+}
+
 // 주제 생성 폼: 카테고리 변경 시 해당 카테고리의 부제목 로드
 async function onTopicGenCategoryChange() {
   const cat = document.getElementById('topicGenCategory').value;
@@ -9170,8 +9194,14 @@ async function onTopicGenCategoryChange() {
     _updateTopicBuilderBadge(cat, '');
     return;
   }
+  // v97: 활성 부제목 먼저, 비활성은 뒤에 + (OFF) 표시 + disabled
+  const sortedList = _sortSubtopicsForFilter(list);
   subtopicEl.innerHTML = '<option value="">— 선택 —</option>'
-    + list.map(s => `<option value="${s.id}" data-name="${(s.name || '').replace(/"/g,'&quot;')}">${(s.name || '').replace(/"/g,'&quot;')}</option>`).join('');
+    + sortedList.map(s => {
+        const isInactive = s.active === false;
+        const label = (s.name || '').replace(/"/g,'&quot;') + (isInactive ? ' (OFF)' : '');
+        return `<option value="${s.id}" data-name="${(s.name || '').replace(/"/g,'&quot;')}"${isInactive ? ' disabled' : ''}>${label}</option>`;
+      }).join('');
   subtopicEl.onchange = () => {
     const sel = subtopicEl.options[subtopicEl.selectedIndex];
     _updateTopicBuilderBadge(cat, sel?.dataset?.name || '');
