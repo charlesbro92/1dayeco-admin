@@ -769,7 +769,7 @@ body.light-mode .filter-pill.active { color:#fff; }
 <!-- SIDEBAR -->
 <aside class="sidebar">
   <div class="sb-logo">1DAYECO<small>Admin Dashboard</small>
-    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v130</span>
+    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v142</span>
   </div>
   <nav class="sb-nav">
     <div class="sb-group">운영</div>
@@ -1712,41 +1712,65 @@ body.light-mode .filter-pill.active { color:#fff; }
 
   <!-- ── PAGE: 결제 이력 ── -->
   <div class="content" id="page-payments">
-    <!-- 필터 바 -->
-    <div class="panel" style="margin-bottom:14px">
-      <div class="panel-body" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
-        <span style="font-size:12px;color:var(--muted)">상태 필터:</span>
+    <!-- 필터 바 (1줄: 상태) -->
+    <div class="panel" style="margin-bottom:10px">
+      <div class="panel-body" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <span style="font-size:12px;color:var(--muted);min-width:60px">상태:</span>
         <button class="filter-pill active" data-pay-status="" onclick="filterPayments('')">전체</button>
+        <button class="filter-pill" data-pay-status="pending" onclick="filterPayments('pending')">⏳ 결제대기</button>
         <button class="filter-pill" data-pay-status="paid" onclick="filterPayments('paid')">✅ 결제완료</button>
         <button class="filter-pill" data-pay-status="refunded" onclick="filterPayments('refunded')">↩️ 환불</button>
-        <button class="filter-pill" data-pay-status="partial_refunded" onclick="filterPayments('partial_refunded')">↩️ 부분환불</button>
         <button class="filter-pill" data-pay-status="failed" onclick="filterPayments('failed')">❌ 실패</button>
-        <button class="filter-pill" data-pay-status="pending" onclick="filterPayments('pending')">⏳ 대기</button>
         <span style="flex:1"></span>
         <span style="font-size:12px;color:var(--muted)" id="payCountLabel">0건</span>
         <span class="panel-act" onclick="loadPayments()">🔄 새로고침</span>
       </div>
     </div>
+    <!-- 필터 바 (2줄: 검색 + 날짜) -->
+    <div class="panel" style="margin-bottom:14px">
+      <div class="panel-body" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <input type="text" id="paySearchName" placeholder="이름 검색" oninput="onPayFilterChange()"
+          style="background:var(--s3);border:1px solid var(--b);color:var(--text);padding:7px 10px;border-radius:6px;font-size:12px;width:120px;font-family:var(--sans)">
+        <input type="text" id="paySearchPhone" placeholder="전화번호 검색" oninput="onPayFilterChange()"
+          style="background:var(--s3);border:1px solid var(--b);color:var(--text);padding:7px 10px;border-radius:6px;font-size:12px;width:140px;font-family:var(--sans)">
+        <span style="color:var(--muted);font-size:11px;margin-left:8px">기간:</span>
+        <select id="paySearchDateField" onchange="onPayFilterChange()"
+          style="background:var(--s3);border:1px solid var(--b);color:var(--text);padding:7px 8px;border-radius:6px;font-size:12px;font-family:var(--sans);cursor:pointer">
+          <option value="paid_at">결제일</option>
+          <option value="refunded_at">환불일</option>
+          <option value="subscribed_at">구독신청일</option>
+        </select>
+        <input type="date" id="paySearchDateFrom" onchange="onPayFilterChange()"
+          style="background:var(--s3);border:1px solid var(--b);color:var(--text);padding:7px 10px;border-radius:6px;font-size:12px;font-family:var(--sans);color-scheme:dark">
+        <span style="color:var(--muted);font-size:11px">~</span>
+        <input type="date" id="paySearchDateTo" onchange="onPayFilterChange()"
+          style="background:var(--s3);border:1px solid var(--b);color:var(--text);padding:7px 10px;border-radius:6px;font-size:12px;font-family:var(--sans);color-scheme:dark">
+        <button onclick="resetPayFilters()" style="background:none;border:1px solid var(--b);color:var(--muted);padding:6px 12px;border-radius:6px;font-size:11px;cursor:pointer">초기화</button>
+      </div>
+    </div>
 
     <!-- 결제 이력 테이블 -->
     <div class="panel">
-      <div class="panel-body">
+      <div class="panel-body" style="overflow-x:auto">
         <table>
           <thead>
             <tr>
-              <th>결제일시</th>
-              <th>구독자</th>
+              <th style="font-size:11px">주문번호</th>
+              <th>이름</th>
+              <th>전화번호</th>
+              <th>상태</th>
               <th>플랜</th>
               <th style="text-align:right">금액</th>
-              <th style="text-align:right">환불</th>
-              <th>상태</th>
+              <th style="text-align:right">환불금액</th>
+              <th>구독신청일</th>
+              <th>결제일시</th>
+              <th>환불일시</th>
               <th>PG</th>
-              <th>주문번호</th>
               <th style="text-align:center">작업</th>
             </tr>
           </thead>
           <tbody id="payBody">
-            <tr><td colspan="9"><div class="empty"><span class="empty-ico">💳</span>결제 이력이 없습니다</div></td></tr>
+            <tr><td colspan="12"><div class="empty"><span class="empty-ico">💳</span>결제 이력이 없습니다</div></td></tr>
           </tbody>
         </table>
       </div>
@@ -8748,7 +8772,7 @@ async function loadPayments() {
   const tbody = document.getElementById('payBody');
   if (!tbody) return;
 
-  tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;color:var(--muted);padding:30px">결제 이력 로딩 중...</td></tr>';
+  tbody.innerHTML = '<tr><td colspan="12" style="text-align:center;color:var(--muted);padding:30px">결제 이력 로딩 중...</td></tr>';
 
   let payments = [];
   try {
@@ -8761,7 +8785,39 @@ async function loadPayments() {
     console.warn('[loadPayments] 실패:', e);
   }
 
-  // 폴백: payments 테이블 비어있으면 subscribers 베이스로 추정
+  // v131: pending 상태 결제 후보 추가 — subscribers 중 pending_charge/trial(billing_key 있음) 인 row를 결제 대기로 노출
+  try {
+    const subs = STATE.subscribers || [];
+    const PLAN_AMOUNT = { monthly: 9900, pkg3m: 14900, pkg6m: 24900, pkg1y: 41900, yearly: 79000 };
+    const existingSubIds = new Set(payments.filter(p => p.status === 'paid' || p.status === 'refunded').map(p => p.subscriber_id));
+    subs.forEach(s => {
+      const isPending = (s.status === 'pending_charge') ||
+                       (s.status === 'trial' && s.billing_key && s.payment_status !== 'completed');
+      if (isPending && !existingSubIds.has(s.id)) {
+        // pending 결제 가상 행으로 추가
+        payments.push({
+          id: 'pending_' + s.id,
+          subscriber_id: s.id,
+          subscriber_name: s.name,
+          subscriber_phone: s.phone,
+          subscriber_plan: s.plan,
+          subscribed_at: s.created_at,
+          amount: PLAN_AMOUNT[s.plan] || 0,
+          refund_amount: 0,
+          status: 'pending',
+          paid_at: null,
+          refunded_at: null,
+          pg_provider: s.pg_provider || '-',
+          pay_method: s.payment_method || '-',
+          merchant_uid: 'pending_' + (s.id || '').slice(-8),
+          trial_end_date: s.trial_end_date,
+          _isPending: true,
+        });
+      }
+    });
+  } catch (_) {}
+
+  // 폴백: payments 비어있으면 subscribers 베이스로 추정 (옛 환경 호환)
   if (payments.length === 0) {
     const subs = (STATE.subscribers || []).filter(s => {
       const ps = s.payment_status;
@@ -8772,6 +8828,7 @@ async function loadPayments() {
       id: 'fb_' + (s.id || ''),
       paid_at: s.trial_end_date || s.created_at,
       created_at: s.created_at,
+      subscribed_at: s.created_at,
       subscriber_id: s.id,
       subscriber_name: s.name,
       subscriber_phone: s.phone,
@@ -8784,6 +8841,15 @@ async function loadPayments() {
       _isFallback: true,
     }));
   }
+
+  // v131: payments에 subscribed_at 채워넣기 (subscribers에서 매핑)
+  const subById = {};
+  (STATE.subscribers || []).forEach(s => { subById[s.id] = s; });
+  payments.forEach(p => {
+    if (!p.subscribed_at && p.subscriber_id && subById[p.subscriber_id]) {
+      p.subscribed_at = subById[p.subscriber_id].created_at;
+    }
+  });
 
   _allPayments = payments;
   STATE.payments = payments;  // KPI 집계용
@@ -8798,70 +8864,130 @@ function filterPayments(status) {
   renderPayments();
 }
 
+// v131: 신규 필터 (이름/전화/날짜)
+function onPayFilterChange() {
+  renderPayments();
+}
+
+function resetPayFilters() {
+  document.getElementById('paySearchName').value = '';
+  document.getElementById('paySearchPhone').value = '';
+  document.getElementById('paySearchDateFrom').value = '';
+  document.getElementById('paySearchDateTo').value = '';
+  document.getElementById('paySearchDateField').value = 'paid_at';
+  _payFilter = '';
+  document.querySelectorAll('[data-pay-status]').forEach(el => {
+    el.classList.toggle('active', (el.getAttribute('data-pay-status') || '') === '');
+  });
+  renderPayments();
+}
+
 function renderPayments() {
   const tbody = document.getElementById('payBody');
   if (!tbody) return;
 
-  const filtered = _payFilter
-    ? _allPayments.filter(p => p.status === _payFilter)
+  // 상태 필터 (refunded는 부분/전액 모두 포함)
+  let filtered = _payFilter
+    ? _allPayments.filter(p => {
+        if (_payFilter === 'refunded') return p.status === 'refunded';
+        return p.status === _payFilter;
+      })
     : _allPayments;
+
+  // v131: 이름/전화/날짜 필터
+  const nameQ = (document.getElementById('paySearchName')?.value || '').trim().toLowerCase();
+  const phoneQ = (document.getElementById('paySearchPhone')?.value || '').trim().replace(/\D/g, '');
+  const dateField = document.getElementById('paySearchDateField')?.value || 'paid_at';
+  const dateFrom = document.getElementById('paySearchDateFrom')?.value || '';
+  const dateTo   = document.getElementById('paySearchDateTo')?.value || '';
+
+  if (nameQ) {
+    filtered = filtered.filter(p => (p.subscriber_name || '').toLowerCase().includes(nameQ));
+  }
+  if (phoneQ) {
+    filtered = filtered.filter(p => (p.subscriber_phone || '').replace(/\D/g, '').includes(phoneQ));
+  }
+  if (dateFrom || dateTo) {
+    filtered = filtered.filter(p => {
+      const v = p[dateField] || '';
+      const d = v ? v.slice(0, 10) : '';
+      if (!d) return false;
+      if (dateFrom && d < dateFrom) return false;
+      if (dateTo && d > dateTo) return false;
+      return true;
+    });
+  }
 
   document.getElementById('payCountLabel').textContent = `${filtered.length}건`;
 
   if (filtered.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="9"><div class="empty"><span class="empty-ico">💳</span>${_payFilter ? '해당 상태의 결제 이력이 없습니다' : '결제 이력이 없습니다'}</div></td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="12"><div class="empty"><span class="empty-ico">💳</span>${(_payFilter || nameQ || phoneQ || dateFrom || dateTo) ? '조건에 맞는 결제 이력이 없습니다' : '결제 이력이 없습니다'}</div></td></tr>`;
     return;
   }
 
-  // 최신 순 정렬
+  // 최신 순 정렬 (paid_at 우선, 없으면 subscribed_at)
   const sorted = [...filtered].sort((a, b) => {
-    const da = a.paid_at || a.created_at || '';
-    const db = b.paid_at || b.created_at || '';
+    const da = a.paid_at || a.subscribed_at || a.created_at || '';
+    const db = b.paid_at || b.subscribed_at || b.created_at || '';
     return db.localeCompare(da);
   });
 
   // status 라벨 매핑
-  const statusBadge = (s) => {
+  const statusBadge = (s, refundAmount, paidAmount) => {
+    // refunded 중에서 부분 환불 표시
+    if (s === 'refunded' && refundAmount && paidAmount && refundAmount < paidAmount) {
+      return `<span class="pay-badge pay-badge-partial">↩ 부분환불</span>`;
+    }
     const map = {
+      pending:          { cls: 'pay-badge-pending',  txt: '⏳ 결제대기' },
       paid:             { cls: 'pay-badge-paid',     txt: '✓ 결제완료' },
       refunded:         { cls: 'pay-badge-refunded', txt: '↩ 환불완료' },
-      partial_refunded: { cls: 'pay-badge-partial',  txt: '↩ 부분환불' },
       refund_pending:   { cls: 'pay-badge-partial',  txt: '⏳ 환불대기' },
       failed:           { cls: 'pay-badge-failed',   txt: '✗ 실패' },
       cancelled:        { cls: 'pay-badge-failed',   txt: '✗ 취소' },
-      pending:          { cls: 'pay-badge-pending',  txt: '⏳ 대기' },
     };
     const m = map[s] || { cls: 'pay-badge-pending', txt: s };
     return `<span class="pay-badge ${m.cls}">${m.txt}</span>`;
   };
 
+  const fmtDt = (s) => {
+    if (!s) return '<span style="color:var(--muted)">—</span>';
+    return `<span style="font-family:var(--mono);font-size:11px">${s.slice(0, 16).replace('T', ' ')}</span>`;
+  };
+  const fmtDate = (s) => {
+    if (!s) return '<span style="color:var(--muted)">—</span>';
+    return `<span style="font-family:var(--mono);font-size:11px">${s.slice(0, 10)}</span>`;
+  };
+
   tbody.innerHTML = sorted.map(p => {
-    const dt = p.paid_at || p.created_at || '';
-    const dateStr = dt.slice(0, 19).replace('T', ' ');
     const planTxt = planLabel ? planLabel(p.subscriber_plan) : (p.subscriber_plan || '—');
-    const orderShort = (p.merchant_uid || '').length > 16
-      ? p.merchant_uid.slice(0, 12) + '…'
+    const orderShort = (p.merchant_uid || '').length > 18
+      ? p.merchant_uid.slice(0, 14) + '…'
       : (p.merchant_uid || '—');
     const refundCell = (p.refund_amount && p.refund_amount > 0)
       ? `<span style="color:var(--error)">-₩${(p.refund_amount).toLocaleString()}</span>`
       : '<span style="color:var(--muted)">—</span>';
 
-    // 환불 가능: paid 상태이고 _isFallback이 아님
-    const canRefund = (p.status === 'paid') && !p._isFallback && p.id;
+    // 환불 가능: paid 상태이고 fallback/pending이 아님
+    const canRefund = (p.status === 'paid') && !p._isFallback && !p._isPending && p.id;
     const actionBtn = canRefund
-      ? `<button onclick="showRefund('${p.id}', '${p.subscriber_name || ''}')" style="background:rgba(248,113,113,.08);border:1px solid rgba(248,113,113,.3);color:#f87171;padding:5px 10px;font-size:11px;font-weight:600;border-radius:4px;cursor:pointer">환불</button>`
-      : (p._isFallback ? '<span style="color:var(--muted);font-size:10px">데이터 마이그레이션 필요</span>' : '');
+      ? `<button onclick="showRefund('${p.id}', '${(p.subscriber_name || '').replace(/'/g, "\\'")}')" style="background:rgba(248,113,113,.08);border:1px solid rgba(248,113,113,.3);color:#f87171;padding:5px 10px;font-size:11px;font-weight:600;border-radius:4px;cursor:pointer">환불</button>`
+      : (p._isPending ? '<span style="color:var(--muted);font-size:10px">결제 대기</span>'
+                       : (p._isFallback ? '<span style="color:var(--muted);font-size:10px">옛 데이터</span>' : ''));
 
     return `
       <tr>
-        <td style="font-family:var(--mono);font-size:11px">${dateStr}</td>
-        <td><strong>${p.subscriber_name || '—'}</strong>${p.subscriber_phone ? `<br><span style="font-size:10px;color:var(--muted)">${p.subscriber_phone}</span>` : ''}</td>
+        <td style="font-family:var(--mono);font-size:10.5px;color:var(--muted)" title="${p.merchant_uid || ''}">${orderShort}</td>
+        <td><strong>${p.subscriber_name || '—'}</strong></td>
+        <td style="font-family:var(--mono);font-size:11px">${p.subscriber_phone || '—'}</td>
+        <td>${statusBadge(p.status, p.refund_amount, p.amount)}</td>
         <td><span class="badge ${p.subscriber_plan || ''}">${planTxt}</span></td>
         <td style="text-align:right;font-family:var(--mono)">₩${(p.amount || 0).toLocaleString()}</td>
         <td style="text-align:right;font-family:var(--mono)">${refundCell}</td>
-        <td>${statusBadge(p.status)}</td>
+        <td>${fmtDate(p.subscribed_at)}</td>
+        <td>${fmtDt(p.paid_at)}</td>
+        <td>${fmtDt(p.refunded_at)}</td>
         <td style="font-size:10px;color:var(--muted)">${p.pg_provider || '—'}</td>
-        <td style="font-family:var(--mono);font-size:10px;color:var(--muted)" title="${p.merchant_uid || ''}">${orderShort}</td>
         <td style="text-align:center">${actionBtn}</td>
       </tr>`;
   }).join('');
