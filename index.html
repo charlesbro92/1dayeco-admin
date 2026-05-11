@@ -769,7 +769,7 @@ body.light-mode .filter-pill.active { color:#fff; }
 <!-- SIDEBAR -->
 <aside class="sidebar">
   <div class="sb-logo">1DAYECO<small>Admin Dashboard</small>
-    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v129</span>
+    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v130</span>
   </div>
   <nav class="sb-nav">
     <div class="sb-group">운영</div>
@@ -1329,6 +1329,11 @@ body.light-mode .filter-pill.active { color:#fff; }
             <div style="font-size:12px;font-weight:700;color:var(--text);letter-spacing:.3px">📋 생성된 주제 목록 <span id="topicListCatBreakdown" style="color:var(--muted);font-weight:400;font-size:10px;margin-left:6px"></span></div>
             <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
               <span id="topicSelectedCount" style="font-size:11px;color:var(--muted);letter-spacing:.5px">0개 선택</span>
+              <button id="hideGeneratedToggleBtn" onclick="toggleHideGenerated()" 
+                style="background:none;border:1px solid var(--b);color:var(--muted);padding:6px 12px;border-radius:6px;font-size:11px;cursor:pointer"
+                title="생성 완료된 주제 숨기기/표시">
+                👁 생성됨 숨김: <span id="hideGeneratedState">OFF</span>
+              </button>
               <button onclick="toggleAllTopics()" style="background:none;border:1px solid var(--b);color:var(--muted);padding:6px 12px;border-radius:6px;font-size:11px;cursor:pointer">전체 선택</button>
               <button onclick="clearAllTopics()" style="background:none;border:1px solid var(--b);color:var(--muted);padding:6px 10px;border-radius:6px;font-size:11px;cursor:pointer" title="목록 전체 비우기">🗑 비우기</button>
               <button onclick="deleteSelectedTopics()" style="background:rgba(248,113,113,.1);border:1px solid rgba(248,113,113,.3);color:#F87171;padding:6px 12px;border-radius:6px;font-size:11px;cursor:pointer" title="선택한 주제 삭제">🗑 선택 삭제</button>
@@ -2980,6 +2985,11 @@ function toggleTheme() {
     document.addEventListener('DOMContentLoaded', () => applyTheme(saved));
   }
 })();
+
+// v130: 생성됨 숨김 토글 상태 페이지 로드 시 복원
+document.addEventListener('DOMContentLoaded', () => {
+  if (typeof _updateHideGeneratedBtn === 'function') _updateHideGeneratedBtn();
+});
 let currentPage = 'overview';
 let subPage = 1;
 
@@ -5829,6 +5839,10 @@ function renderTopicList() {
   const toVal   = toEl   ? toEl.value   : '';
   if (fromVal) filtered = filtered.filter(t => (t.dateStr || t.date) >= fromVal);
   if (toVal)   filtered = filtered.filter(t => (t.dateStr || t.date) <= toVal);
+  // v130: 생성됨 숨김 토글
+  if (_hideGeneratedTopics) {
+    filtered = filtered.filter(t => t.status !== 'generated');
+  }
 
   // 가까운 날짜 오름차순 정렬 (오늘과 가까운 것이 위)
   const todayStr = new Date().toISOString().slice(0,10);
@@ -6202,7 +6216,38 @@ function onTopicCheck(el) {
   updateTopicSelectedCount();
 }
 
+// v130: "생성됨 숨김" 토글 상태 (localStorage 영속)
+let _hideGeneratedTopics = (function(){
+  try { return localStorage.getItem('topicList_hideGenerated') === '1'; } catch(_) { return false; }
+})();
+
+function toggleHideGenerated() {
+  _hideGeneratedTopics = !_hideGeneratedTopics;
+  try { localStorage.setItem('topicList_hideGenerated', _hideGeneratedTopics ? '1' : '0'); } catch(_){}
+  _updateHideGeneratedBtn();
+  renderTopicList();
+  updateTopicSelectedCount();
+}
+
+function _updateHideGeneratedBtn() {
+  const stateEl = document.getElementById('hideGeneratedState');
+  const btn = document.getElementById('hideGeneratedToggleBtn');
+  if (stateEl) stateEl.textContent = _hideGeneratedTopics ? 'ON' : 'OFF';
+  if (btn) {
+    if (_hideGeneratedTopics) {
+      btn.style.background = 'rgba(74,222,128,.12)';
+      btn.style.borderColor = 'rgba(74,222,128,.3)';
+      btn.style.color = 'var(--green)';
+    } else {
+      btn.style.background = 'none';
+      btn.style.borderColor = 'var(--b)';
+      btn.style.color = 'var(--muted)';
+    }
+  }
+}
+
 // v129: 현재 필터(카테고리/부제목/날짜)에 맞는 topic만 반환
+// v130: "생성됨 숨김" 토글 반영
 function _getFilteredTopics() {
   let filtered = GENERATED_TOPICS.slice();
   if (_topicListCatFilter) {
@@ -6217,6 +6262,10 @@ function _getFilteredTopics() {
   const toVal   = toEl   ? toEl.value   : '';
   if (fromVal) filtered = filtered.filter(t => (t.dateStr || t.date) >= fromVal);
   if (toVal)   filtered = filtered.filter(t => (t.dateStr || t.date) <= toVal);
+  // v130: 생성된 주제 숨김
+  if (_hideGeneratedTopics) {
+    filtered = filtered.filter(t => t.status !== 'generated');
+  }
   return filtered;
 }
 
