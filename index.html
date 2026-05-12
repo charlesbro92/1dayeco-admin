@@ -769,7 +769,7 @@ body.light-mode .filter-pill.active { color:#fff; }
 <!-- SIDEBAR -->
 <aside class="sidebar">
   <div class="sb-logo">1DAYECO<small>Admin Dashboard</small>
-    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v153</span>
+    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v154</span>
   </div>
   <nav class="sb-nav">
     <div class="sb-group">운영</div>
@@ -10583,7 +10583,7 @@ function updateAddSubEndDate() {
   if (!start) return;
   const plan = document.getElementById('addSubPlan').value;
   // 백엔드 /api/signup과 동일한 계산: 첫 발송일(시작일+1) + plan_total_days
-  const PLAN_DAYS = { free: 5, monthly: 30, pkg3m: 90, pkg6m: 180, pkg1y: 365, yearly: 365 };
+  const PLAN_DAYS = { free: 5, monthly: 30, pkg3m: 90, pkg6m: 180, pkg1y: 364, yearly: 364 };
   const days = PLAN_DAYS[plan] || 30;
   const startDt     = new Date(start + 'T00:00:00');
   const firstSendDt = new Date(startDt.getTime() + 86400000);
@@ -10638,7 +10638,7 @@ async function confirmAddSubscriber() {
 
   // ⭐ v121: plan 기반 end_date + trial_end_date 무조건 재계산 (입력값 무시)
   // 이유: 사용자가 플랜 변경 후 end_date를 수동으로 안 고치면 잘못된 값이 들어가는 버그 방지
-  const PLAN_DAYS_MS = { free: 5, monthly: 30, pkg3m: 90, pkg6m: 180, pkg1y: 365, yearly: 365 };
+  const PLAN_DAYS_MS = { free: 5, monthly: 30, pkg3m: 90, pkg6m: 180, pkg1y: 364, yearly: 364 };
   const totalDays = PLAN_DAYS_MS[plan] || 30;
 
   // 체험일수 (기본 3일)
