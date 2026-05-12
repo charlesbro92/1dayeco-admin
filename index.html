@@ -769,7 +769,7 @@ body.light-mode .filter-pill.active { color:#fff; }
 <!-- SIDEBAR -->
 <aside class="sidebar">
   <div class="sb-logo">1DAYECO<small>Admin Dashboard</small>
-    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v150</span>
+    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v151</span>
   </div>
   <nav class="sb-nav">
     <div class="sb-group">운영</div>
@@ -1028,12 +1028,11 @@ body.light-mode .filter-pill.active { color:#fff; }
             <th style="text-align:center;white-space:nowrap;width:75px;min-width:60px;position:relative" class="resizable-col">카테고리<span class="col-resizer"></span></th>
             <th style="text-align:center;white-space:nowrap;width:110px;min-width:80px;position:relative" class="resizable-col">부제목<span class="col-resizer"></span></th>
             <th style="text-align:center;white-space:nowrap;width:90px;min-width:70px;position:relative" class="resizable-col">시작일<span class="col-resizer"></span></th>
-            <th style="text-align:center;white-space:nowrap;width:90px;min-width:70px;position:relative" class="resizable-col">체험종료<span class="col-resizer"></span></th>
             <th style="text-align:center;white-space:nowrap;width:90px;min-width:70px;position:relative" class="resizable-col">종료일<span class="col-resizer"></span></th>
             <th style="text-align:center;white-space:nowrap;width:90px;min-width:60px;position:relative" class="resizable-col">메모<span class="col-resizer"></span></th>
             <th style="text-align:center;white-space:nowrap;width:120px;position:relative">작업</th>
           </tr></thead>
-          <tbody id="subTableBody"><tr><td colspan="15"><div class="empty"><span class="empty-ico">👥</span>구독자가 없습니다</div></td></tr></tbody>
+          <tbody id="subTableBody"><tr><td colspan="14"><div class="empty"><span class="empty-ico">👥</span>구독자가 없습니다</div></td></tr></tbody>
         </table>
       </div>
     </div>
@@ -2945,14 +2944,19 @@ function fmtPhone(phone) {
 }
 
 const PAYMENT_STATUS_LABELS = {
-  pending:              { text: '대기중',     color: '#94a3b8', bg: 'rgba(148,163,184,.12)' },
-  billing_registered:   { text: '카드등록', color: '#f59e0b', bg: 'rgba(245,158,11,.12)'  },
-  completed:            { text: '결제완료', color: '#10b981', bg: 'rgba(16,185,129,.12)'  },
-  cancelled:            { text: '취소',       color: '#f59e0b', bg: 'rgba(245,158,11,.12)'  },
-  failed:               { text: '결제오류', color: '#ef4444', bg: 'rgba(239,68,68,.12)'   },
-  pending_payment:      { text: '결제대기',   color: '#f59e0b', bg: 'rgba(245,158,11,.12)'  },
-  refunded:             { text: '환불',    color: '#8b5cf6', bg: 'rgba(139,92,246,.12)'  },
-  payment_failed:       { text: '결제실패', color: '#ef4444', bg: 'rgba(239,68,68,.12)'   },
+  // [v151] 옵션 B 새 정책
+  paid:                 { text: '결제완료', color: '#10b981', bg: 'rgba(16,185,129,.12)'  },
+  refund_requested:     { text: '환불요청', color: '#f59e0b', bg: 'rgba(245,158,11,.12)'  },
+  refunded:             { text: '환불완료', color: '#8b5cf6', bg: 'rgba(139,92,246,.12)'  },
+  failed:               { text: '결제실패', color: '#ef4444', bg: 'rgba(239,68,68,.12)'   },
+  // 옛 값 호환 (혹시 남은 데이터)
+  completed:            { text: '결제완료(옛)', color: '#10b981', bg: 'rgba(16,185,129,.12)'  },
+  pending:              { text: '대기(옛)',     color: '#94a3b8', bg: 'rgba(148,163,184,.12)' },
+  billing_registered:   { text: '카드등록(옛)', color: '#f59e0b', bg: 'rgba(245,158,11,.12)'  },
+  cancelled:            { text: '취소(옛)',     color: '#f59e0b', bg: 'rgba(245,158,11,.12)'  },
+  pending_payment:      { text: '결제대기(옛)', color: '#f59e0b', bg: 'rgba(245,158,11,.12)'  },
+  payment_failed:       { text: '결제실패(옛)', color: '#ef4444', bg: 'rgba(239,68,68,.12)'   },
+  refund_pending:       { text: '환불요청(옛)', color: '#f59e0b', bg: 'rgba(245,158,11,.12)'  },
 };
 
 function paymentStatusLabel(status) {
@@ -3991,39 +3995,25 @@ function renderSubscribersRows(filtered) {
         <span class="badge ${s.plan}">${planLabel(s.plan)}</span>
       </td>
       <td style="text-align:center"><span class="badge ${s.status}">${{
-  active:'유료',
-  trial:'체험중',
-  cancelled:'체험취소',
-  expired:'만료',
-  pending_payment:'가입중',
-  pending_charge:'결제대기',
-  payment_failed:'결제오류',
-  refund_requested:'환불요청',
+  // [v151] 옵션 B 새 정책
+  active:                  '구독중',
+  expired:                 '구독종료',
+  refund_protected_ended:  '환불보장종료',
+  refund_requested:        '환불요청',
+  refunded:                '환불완료',
+  // 옛 값 (혹시 남은 데이터 호환)
+  trial:                   '체험중(옛)',
+  cancelled:               '취소(옛)',
+  pending_payment:         '가입중',
+  pending_charge:          '결제대기',
+  payment_failed:          '결제오류',
 }[s.status]||s.status}</span></td>
       <td style="text-align:center">${paymentStatusLabel(s.payment_status)}</td>
       <td style="text-align:center">${renderKakaoChannelCell(s)}</td>
-      <td style="text-align:center;white-space:nowrap">${renderSubCategoryName(s.categories)}</td>
+      <td style="text-align:center;white-space:nowrap;max-width:90px;overflow:hidden;text-overflow:ellipsis" title="${renderSubCategoryName(s.categories)}">${renderSubCategoryName(s.categories)}</td>
       <td style="text-align:center;white-space:nowrap;max-width:110px;overflow:hidden">${renderSubSubtopicName(s.subtopic_id, (Array.isArray(s.categories) ? s.categories[0] : ''), s.subtopic_name)}</td>
       <td style="font-family:var(--mono);font-size:11px;color:var(--muted);text-align:center;white-space:nowrap">
         <div style="line-height:1.3">${startDate || '—'}${joinTimeStr ? `<br><span style="font-size:9px;opacity:.6">가입 ${joinTimeStr}</span>` : ''}</div>
-      </td>
-      <td style="font-family:var(--mono);font-size:11px;text-align:center;white-space:nowrap;color:var(--muted)">
-        ${(() => {
-          if (!s.trial_end_date) return '—';
-          const dateStr = new Date(s.trial_end_date).toLocaleDateString('ko-KR',{year:'numeric',month:'2-digit',day:'2-digit'});
-          // trial 상태일 때만 D-N 카운트다운 추가
-          if (s.status === 'trial') {
-            const diffDays = Math.ceil((new Date(s.trial_end_date) - new Date()) / 86400000);
-            if (diffDays > 0) {
-              return `<div style="line-height:1.3"><strong style="color:#5eea91">D-${diffDays}일</strong><br><span style="font-size:9px;opacity:.7">${dateStr}</span></div>`;
-            } else if (diffDays === 0) {
-              return `<div style="line-height:1.3"><strong style="color:var(--amber)">오늘 종료</strong><br><span style="font-size:9px;opacity:.7">${dateStr}</span></div>`;
-            } else {
-              return `<div style="line-height:1.3"><strong style="color:var(--red)">${Math.abs(diffDays)}일 초과</strong><br><span style="font-size:9px;opacity:.7">${dateStr}</span></div>`;
-            }
-          }
-          return dateStr;
-        })()}
       </td>
       <td style="font-family:var(--mono);font-size:11px;color:${endColor};text-align:center;white-space:nowrap">${endDateStr}</td>
       <td onclick="event.stopPropagation()" style="text-align:center">
