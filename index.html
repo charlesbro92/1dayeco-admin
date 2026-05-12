@@ -769,7 +769,7 @@ body.light-mode .filter-pill.active { color:#fff; }
 <!-- SIDEBAR -->
 <aside class="sidebar">
   <div class="sb-logo">1DAYECO<small>Admin Dashboard</small>
-    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v146</span>
+    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v148</span>
   </div>
   <nav class="sb-nav">
     <div class="sb-group">운영</div>
@@ -5463,9 +5463,8 @@ async function generateTopics() {
   }
 
   if (!startStr) {
-    // 시작일 미입력 시 오늘 날짜
-    const today = new Date();
-    startStr = today.toISOString().slice(0, 10);
+    // [v148] 시작일 미입력 시 KST 기준 오늘 날짜 (UTC 변환 버그 fix)
+    startStr = getKSTDateStr();
     document.getElementById('topicGenStart').value = startStr;
     updateTopicEndDate();
   }
@@ -5556,6 +5555,7 @@ async function generateTopics() {
       try {
         // exclude는 1000개로 제한 (1년치 365개 부제목 단위 운영 + 중복 5% 미만 목표)
         const excludeForChunk = runningExclude.slice(0, 1000);
+        // [v147] start_date 명시 전달 — KST 기준 today (서버 TZ 의존 제거)
         const res = await apiPost('/admin/topics/generate', {
           category: cat,
           count: chunkCount,
@@ -5563,6 +5563,7 @@ async function generateTopics() {
           exclude_topics: excludeForChunk,
           subtopic_id: subtopicId ? Number(subtopicId) : null,
           subtopic_name: subtopicName || '',
+          start_date: getKSTDateStr(),
         }, { signal: ctrl.signal });
 
         if (res && res.success && Array.isArray(res.topics) && res.topics.length > 0) {
@@ -5887,7 +5888,7 @@ function renderTopicList() {
   }
 
   // 가까운 날짜 오름차순 정렬 (오늘과 가까운 것이 위)
-  const todayStr = new Date().toISOString().slice(0,10);
+  const todayStr = getKSTDateStr();
   filtered.sort((a, b) => {
     const da = a.dateStr || a.date || '';
     const db = b.dateStr || b.date || '';
@@ -6885,8 +6886,11 @@ async function _executeGenerate(items) {
       try {
         if (API_BASE) {
           const signal = _progressState.abortCtrl ? _progressState.abortCtrl.signal : undefined;
+          // [v148] 콘텐츠 생성 디버그 로그 — 날짜 추적
+          const payloadDate = t.dateStr || t.date;
+          console.log(`[content-gen] 주제: "${t.topic}" | t.dateStr="${t.dateStr}" | t.date="${t.date}" | 전송할 date="${payloadDate}" | cat=${t.cat} | subtopic=${t.subtopic_id}`);
           result = await apiPost('/admin/content/generate-from-topic', {
-            date:     t.dateStr || t.date,   // ISO 우선
+            date:     payloadDate,
             category: t.cat,
             subtopic_id: t.subtopic_id || null,
             topic:    t.topic,
@@ -11465,14 +11469,14 @@ async function generateContent() {
     }
     // API 응답을 아카이브에 저장
     if (result && result.success) {
-      const todayStr = new Date().toISOString().split('T')[0];
+      const todayStr = getKSTDateStr();
       saveToArchive(result.date || todayStr, result);
     }
     showToast('오늘의 콘텐츠가 생성되었습니다', 'ok');
     loadContentArchive();
     loadTodayContent(); loadContentSummary();
     showPage('content');
-    const todayKey = new Date().toISOString().split('T')[0];
+    const todayKey = getKSTDateStr();
     setTimeout(() => openContentPopupByDate(todayKey), 300);
   } catch(e) { showToast(e.message, 'ng'); }
   finally { if (btn) { btn.disabled=false; btn.innerHTML=origHTML; } }
