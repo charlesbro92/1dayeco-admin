@@ -769,7 +769,7 @@ body.light-mode .filter-pill.active { color:#fff; }
 <!-- SIDEBAR -->
 <aside class="sidebar">
   <div class="sb-logo">1DAYECO<small>Admin Dashboard</small>
-    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v145</span>
+    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v146</span>
   </div>
   <nav class="sb-nav">
     <div class="sb-group">운영</div>
@@ -3162,7 +3162,18 @@ async function apiPost(path, body={}, opts={}) {
   // AbortController signal 전달 (취소 가능한 요청용)
   if (opts.signal) fetchOpts.signal = opts.signal;
   const r = await fetch(API_BASE + path, fetchOpts);
-  if (!r.ok) throw new Error(`HTTP ${r.status}`);
+  if (!r.ok) {
+    // [v145] 응답 본문 같이 throw — 디버깅용
+    let errBody = '';
+    try {
+      const j = await r.json();
+      errBody = j.message || j.error || JSON.stringify(j);
+    } catch (_) {
+      try { errBody = await r.text(); } catch (_2) {}
+    }
+    console.error(`[apiPost] HTTP ${r.status} — ${path}:`, errBody);
+    throw new Error(`HTTP ${r.status}: ${errBody}`);
+  }
   return r.json();
 }
 
@@ -10457,15 +10468,25 @@ async function executeBulkSend() {
       }
     }
 
-    // 실패 상세 토스트
-    if (failCount > 0 && rawRes?.results) {
+    // 실패/스킵 상세 토스트
+    const skipCountFinal = rawRes?.skipped || 0;
+    if ((failCount > 0 || skipCountFinal > 0) && rawRes?.results) {
       const failDetails = rawRes.results
         .filter(r => r.success === false || r.skipped)
         .map(r => r.error || r.reason || '오류')
         .filter((v,i,a) => a.indexOf(v) === i)
         .join(' / ');
-      console.error('[발송실패 상세]', failDetails);
-      showToast('실패/스킵 ' + failCount + '건: ' + failDetails, 'ng');
+      console.error('[발송실패/스킵 상세]', failDetails);
+      // [v145] sent=0 + skipped>0 은 명백한 실패 → 빨간 토스트
+      if (sentCount === 0 && skipCountFinal > 0) {
+        showToast(`⚠️ 발송 실패 ${skipCountFinal}건: ${failDetails}`, 'ng');
+      } else if (failCount > 0) {
+        showToast('실패/스킵 ' + (failCount + skipCountFinal) + '건: ' + failDetails, 'ng');
+      } else if (skipCountFinal > 0 && sentCount > 0) {
+        showToast(`발송 ${sentCount}건 / 스킵 ${skipCountFinal}건: ${failDetails}`, 'ok');
+      }
+    } else if (sentCount > 0) {
+      showToast(`✅ 발송 완료 ${sentCount}건`, 'ok');
     }
 
     // ── 발송 이력 기록 ──────────────────────────────────────
