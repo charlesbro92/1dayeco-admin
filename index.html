@@ -769,7 +769,7 @@ body.light-mode .filter-pill.active { color:#fff; }
 <!-- SIDEBAR -->
 <aside class="sidebar">
   <div class="sb-logo">1DAYECO<small>Admin Dashboard</small>
-    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v142</span>
+    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v145</span>
   </div>
   <nav class="sb-nav">
     <div class="sb-group">운영</div>
@@ -2710,6 +2710,13 @@ body.light-mode .filter-pill.active { color:#fff; }
       <div style="font-size:10px;color:var(--muted);margin-top:4px">
         ⚠️ 커스텀 텍스트는 BMS_FREE로 발송됩니다 (단가 100원/건)
       </div>
+    </div>
+
+    <div style="padding:0 22px 8px">
+      <label style="display:flex;align-items:center;gap:8px;font-size:11px;color:var(--muted);cursor:pointer;padding:8px 10px;background:rgba(255,193,7,.08);border:1px dashed rgba(255,193,7,.3);border-radius:6px">
+        <input type="checkbox" id="bulkForceSend" style="accent-color:#ffc107">
+        <span>⚡ <strong style="color:#ffc107">강제 발송</strong> (paid_at 당일 가입자도 발송 — 테스트용)</span>
+      </label>
     </div>
 
     <div style="display:flex;gap:8px;padding:14px 22px;border-top:1px solid var(--b);margin-top:14px">
@@ -10323,6 +10330,12 @@ async function executeBulkSend() {
   const txt  = document.getElementById('bulkSendTxt');
   const spin = document.getElementById('bulkSendSpin');
 
+  // [v144] 더블 클릭 방지 - 이미 진행 중이면 즉시 return
+  if (btn.disabled) {
+    console.warn('[BulkSend] 이미 발송 진행 중 — 중복 클릭 무시');
+    return;
+  }
+
   // 발송 모드 확인
   const modeEl = document.querySelector('input[name="bulkSendMode"]:checked');
   const mode = modeEl ? modeEl.value : 'auto';
@@ -10333,12 +10346,24 @@ async function executeBulkSend() {
   const recipients= ids.map(id => STATE.subscribers.find(s=>s.id===id)).filter(Boolean);
   if (!recipients.length) { showToast('구독자를 선택해 주세요', 'ng'); return; }
 
+  // [v144] 디버그 — 수신자 명단 콘솔 출력
+  console.log(`[BulkSend] 모드=${mode}, 수신자 ${recipients.length}명:`,
+              recipients.map(r => `${r.name}(${r.phone})`).join(', '));
+
+  // [v144] 더블 클릭 방지 - 비용 안내 confirm 전에 즉시 비활성화
+  btn.disabled = true; txt.style.display='none'; spin.style.display='inline';
+
   // 커스텀 모드: 텍스트 검증
   let customMsg = '';
   if (mode === 'custom') {
     customMsg = document.getElementById('bulkMsgEditor').value.trim();
-    if (!customMsg) { showToast('발송할 내용을 입력해 주세요', 'ng'); return; }
+    if (!customMsg) {
+      showToast('발송할 내용을 입력해 주세요', 'ng');
+      btn.disabled=false; txt.style.display='inline'; spin.style.display='none';
+      return;
+    }
     if (!confirm(`커스텀 텍스트는 BMS_FREE로 발송됩니다 (단가 100원/건).\n${recipients.length}명에게 발송하시겠습니까?\n예상 비용: 약 ${recipients.length * 100}원`)) {
+      btn.disabled=false; txt.style.display='inline'; spin.style.display='none';
       return;
     }
   }
@@ -10347,6 +10372,7 @@ async function executeBulkSend() {
     const expectedCost = (_bulkOverrideCat === 'economy') ? recipients.length * 13 : recipients.length * 100;
     const channelLabel = (_bulkOverrideCat === 'economy') ? '알림톡(13원)' : 'BMS_FREE(100원)';
     if (!confirm(`강제 카테고리: ${_bulkOverrideCat}\n채널: ${channelLabel}\n수신자: ${recipients.length}명\n예상 비용: 약 ${expectedCost}원\n\n발송하시겠습니까?`)) {
+      btn.disabled=false; txt.style.display='inline'; spin.style.display='none';
       return;
     }
   }
@@ -10360,11 +10386,10 @@ async function executeBulkSend() {
       });
     });
     if (!confirm(`자동 매칭 발송\n수신자: ${recipients.length}명\n예상 비용: 약 ${estimatedCost}원\n(경제: 알림톡 13원/건, 그 외: BMS_FREE 100원/건)\n\n발송하시겠습니까?`)) {
+      btn.disabled=false; txt.style.display='inline'; spin.style.display='none';
       return;
     }
   }
-
-  btn.disabled = true; txt.style.display='none'; spin.style.display='inline';
 
   try {
     const phones = recipients.map(s => s.phone.replace(/-/g,''));
@@ -10399,6 +10424,12 @@ async function executeBulkSend() {
       const payload = { test_phones: phones };
       if (mode === 'override') {
         payload.override_category = _bulkOverrideCat;
+      }
+      // [v145] 어드민 강제 발송 (paid_at 당일 가입자도 발송)
+      const forceSend = document.getElementById('bulkForceSend')?.checked;
+      if (forceSend) {
+        payload.force_send = true;
+        console.log('[BulkSend] force_send=true (paid_at 당일 차단 우회)');
       }
       rawRes = await apiPost('/admin/send-daily-content', payload);
       console.log('[일일발송] 응답:', rawRes);
