@@ -769,7 +769,7 @@ body.light-mode .filter-pill.active { color:#fff; }
 <!-- SIDEBAR -->
 <aside class="sidebar">
   <div class="sb-logo">1DAYECO<small>Admin Dashboard</small>
-    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v148</span>
+    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v150</span>
   </div>
   <nav class="sb-nav">
     <div class="sb-group">운영</div>
@@ -4096,7 +4096,7 @@ function buildMonthHistory(fromStr, toStr) {
     if (total > 0 || hasContent || isToday) {
       result.push({
         dateStr: cur,
-        date: new Date(cur + 'T12:00:00+09:00').toLocaleDateString('ko-KR'),
+        date: new Date(cur + 'T12:00:00+09:00').toLocaleDateString('ko-KR', { timeZone: 'Asia/Seoul' }),
         total, sent, failed, rate,
         hasContent,
       });
@@ -4242,7 +4242,7 @@ async function loadSendPreview() {
     // 1. 오늘 KST 날짜
     const todayStr = getKSTDateStr ? getKSTDateStr() : new Date(new Date().getTime()+9*3600000).toISOString().slice(0,10);
     const todayDisplay = new Date(todayStr + 'T12:00:00+09:00').toLocaleDateString('ko-KR', {
-      year: 'numeric', month: 'long', day: 'numeric', weekday: 'short'
+      year: 'numeric', month: 'long', day: 'numeric', weekday: 'short', timeZone: 'Asia/Seoul'
     });
 
     // 2. 활성 구독자 카테고리별 분류 (1인이 여러 카테고리 구독 시 모두 카운트)
@@ -4536,7 +4536,7 @@ async function loadSendHistory() {
         const hasContent = !!(typeof CONTENT_ARCHIVE !== 'undefined' && hasArchiveAtDate(ds));
         return {
           dateStr: ds,
-          date: new Date(ds + 'T12:00:00+09:00').toLocaleDateString('ko-KR'),
+          date: new Date(ds + 'T12:00:00+09:00').toLocaleDateString('ko-KR', { timeZone: 'Asia/Seoul' }),
           total, sent: v.sent, failed: v.failed, rate, hasContent,
         };
       });
@@ -4547,7 +4547,7 @@ async function loadSendHistory() {
         if (hasContent) {
           allRows.push({
             dateStr: todayKST,
-            date: new Date(todayKST + 'T12:00:00+09:00').toLocaleDateString('ko-KR'),
+            date: new Date(todayKST + 'T12:00:00+09:00').toLocaleDateString('ko-KR', { timeZone: 'Asia/Seoul' }),
             total: 0, sent: 0, failed: 0, rate: null, hasContent,
           });
         }
@@ -5388,7 +5388,8 @@ async function syncTopicsFromBackend() {
     // GENERATED_TOPICS 형식으로 변환
     GENERATED_TOPICS = rows.map(function(r) {
       const dateStr = r.date_str;
-      const dispDate = new Date(dateStr + 'T00:00:00+09:00').toLocaleDateString('ko-KR');
+      // [v149] timeZone 명시 — 사용자 로컬 타임존이 KST 아닐 때 발생하던 ±1일 버그 fix
+      const dispDate = new Date(dateStr + 'T00:00:00+09:00').toLocaleDateString('ko-KR', { timeZone: 'Asia/Seoul' });
       return {
         id:           'db_' + r.id,         // 어드민 내부 ID (DB id 식별)
         db_id:        r.id,                  // 진짜 DB id (콘텐츠 생성 시 백엔드로 전달)
@@ -5555,7 +5556,7 @@ async function generateTopics() {
       try {
         // exclude는 1000개로 제한 (1년치 365개 부제목 단위 운영 + 중복 5% 미만 목표)
         const excludeForChunk = runningExclude.slice(0, 1000);
-        // [v147] start_date 명시 전달 — KST 기준 today (서버 TZ 의존 제거)
+        // [v150] 본인이 입력한 시작 날짜 사용 (서버 시간 의존 X, 사용자 명시 X)
         const res = await apiPost('/admin/topics/generate', {
           category: cat,
           count: chunkCount,
@@ -5563,7 +5564,7 @@ async function generateTopics() {
           exclude_topics: excludeForChunk,
           subtopic_id: subtopicId ? Number(subtopicId) : null,
           subtopic_name: subtopicName || '',
-          start_date: getKSTDateStr(),
+          start_date: startStr,
         }, { signal: ctrl.signal });
 
         if (res && res.success && Array.isArray(res.topics) && res.topics.length > 0) {
@@ -5660,9 +5661,10 @@ async function generateTopics() {
     });
 
     // 날짜를 일관된 형식 (예: 2026. 5. 11.) 으로 표시
+    // [v149] timeZone 명시 — 사용자 로컬 타임존이 KST 아닐 때 발생하던 ±1일 버그 fix
     const dispDate = (function() {
       try {
-        return new Date(dateStr + 'T00:00:00+09:00').toLocaleDateString('ko-KR');
+        return new Date(dateStr + 'T00:00:00+09:00').toLocaleDateString('ko-KR', { timeZone: 'Asia/Seoul' });
       } catch(e) { return dateStr; }
     })();
 
@@ -7607,7 +7609,7 @@ function getArchiveList() {
       ...c,
       cat: c.cat || parts.category,
       dateStr: parts.dateStr,
-      date: new Date(parts.dateStr + 'T12:00:00+09:00').toLocaleDateString('ko-KR'),
+      date: new Date(parts.dateStr + 'T12:00:00+09:00').toLocaleDateString('ko-KR', { timeZone: 'Asia/Seoul' }),
       source: 'generated',
     });
   }
@@ -7622,7 +7624,7 @@ function getArchiveList() {
     .filter(c => c.dateStr && !archivedKeys.has(archKey(c.dateStr, c.cat || 'economy', c.subtopic_id)))
     .map(c => ({
       ...c,
-      date: new Date(c.dateStr + 'T12:00:00+09:00').toLocaleDateString('ko-KR'),
+      date: new Date(c.dateStr + 'T12:00:00+09:00').toLocaleDateString('ko-KR', { timeZone: 'Asia/Seoul' }),
       source: 'mock',
     }));
 
@@ -8336,7 +8338,7 @@ function openContentPopupByDate(dateStr, category, subtopicId) {
   }
   if (archived) {
     // MOCK_CONTENT 앞에 임시 삽입 후 0번 팝업 열기
-    MOCK_CONTENT.unshift({ ...archived, date: new Date(dateStr + 'T00:00:00+09:00').toLocaleDateString('ko-KR'), dateStr });
+    MOCK_CONTENT.unshift({ ...archived, date: new Date(dateStr + 'T00:00:00+09:00').toLocaleDateString('ko-KR', { timeZone: 'Asia/Seoul' }), dateStr });
     openContentPopup(0);
   } else {
     // mock 데이터에서 날짜 매칭
