@@ -769,7 +769,7 @@ body.light-mode .filter-pill.active { color:#fff; }
 <!-- SIDEBAR -->
 <aside class="sidebar">
   <div class="sb-logo">1DAYECO<small>Admin Dashboard</small>
-    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v151</span>
+    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v152</span>
   </div>
   <nav class="sb-nav">
     <div class="sb-group">운영</div>
@@ -3740,6 +3740,21 @@ function renderSubCategoryName(categories) {
   return '<span style="font-size:11px;color:var(--text)">' + name + '</span>';
 }
 
+// [v152] title 속성용 plain text 카테고리 이름 (HTML 태그 없음, 따옴표 안전)
+function getSubCategoryNameText(categories) {
+  let arr = categories;
+  if (typeof arr === 'string') {
+    arr = arr.split(',').map(s => s.trim()).filter(Boolean);
+  }
+  if (!Array.isArray(arr) || arr.length === 0) return '';
+  const catId = arr[0];
+  if (CATEGORIES_CACHE && CATEGORIES_CACHE.length) {
+    const found = CATEGORIES_CACHE.find(c => c.id === catId);
+    if (found) return found.name || catId;
+  }
+  return getCatShortName(catId) || catId;
+}
+
 // 부제목 이름 표시 (백엔드에서 join해서 내려주는 subtopic_name 우선 사용)
 function renderSubSubtopicName(subtopicId, catId, subtopicName) {
   if (!subtopicId) return '<span style="color:var(--muted);font-size:11px">—</span>';
@@ -4010,7 +4025,7 @@ function renderSubscribersRows(filtered) {
 }[s.status]||s.status}</span></td>
       <td style="text-align:center">${paymentStatusLabel(s.payment_status)}</td>
       <td style="text-align:center">${renderKakaoChannelCell(s)}</td>
-      <td style="text-align:center;white-space:nowrap;max-width:90px;overflow:hidden;text-overflow:ellipsis" title="${renderSubCategoryName(s.categories)}">${renderSubCategoryName(s.categories)}</td>
+      <td style="text-align:center;white-space:nowrap;max-width:90px;overflow:hidden;text-overflow:ellipsis" title="${getSubCategoryNameText(s.categories)}">${renderSubCategoryName(s.categories)}</td>
       <td style="text-align:center;white-space:nowrap;max-width:110px;overflow:hidden">${renderSubSubtopicName(s.subtopic_id, (Array.isArray(s.categories) ? s.categories[0] : ''), s.subtopic_name)}</td>
       <td style="font-family:var(--mono);font-size:11px;color:var(--muted);text-align:center;white-space:nowrap">
         <div style="line-height:1.3">${startDate || '—'}${joinTimeStr ? `<br><span style="font-size:9px;opacity:.6">가입 ${joinTimeStr}</span>` : ''}</div>
