@@ -769,7 +769,7 @@ body.light-mode .filter-pill.active { color:#fff; }
 <!-- SIDEBAR -->
 <aside class="sidebar">
   <div class="sb-logo">1DAYECO<small>Admin Dashboard</small>
-    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v155</span>
+    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v156</span>
   </div>
   <nav class="sb-nav">
     <div class="sb-group">운영</div>
@@ -1944,23 +1944,20 @@ body.light-mode .filter-pill.active { color:#fff; }
             <input type="hidden" id="cfgHour" value="8">
           </div>
 
-          <!-- [v155] 자동 발송 토글 -->
-          <div style="border-top:1px solid var(--b);padding-top:16px">
-            <label style="font-size:12px;color:var(--muted);display:block;margin-bottom:8px">
+          <!-- [v155] 자동 발송 토글 — v156에서 스케줄러 패널의 daily_send로 통합됨, hidden -->
+          <div style="display:none">
+            <label>
               📬 자동 발송 (매일 KST 08:00)
-              <span style="font-size:11px;color:var(--gold);margin-left:6px">외부 cron이 호출 시 적용</span>
+              <span>외부 cron이 호출 시 적용</span>
             </label>
-            <div style="display:flex;gap:10px;align-items:center;justify-content:space-between;padding:10px 12px;background:var(--s3);border:1px solid var(--b);border-radius:8px">
-              <div style="flex:1">
-                <div id="autoSendStatusLabel" style="font-size:14px;font-weight:700;color:var(--text)">로딩 중...</div>
-                <div style="font-size:11px;color:var(--muted);margin-top:2px;line-height:1.4">
-                  ON: 매일 가입자에게 카카오톡 콘텐츠 자동 발송 / OFF: 어드민 수동 발송만 작동
-                </div>
+            <div>
+              <div>
+                <div id="autoSendStatusLabel">로딩 중...</div>
               </div>
-              <label style="position:relative;display:inline-block;width:52px;height:28px;flex-shrink:0">
-                <input type="checkbox" id="cfgAutoSend" onchange="toggleAutoSend(this.checked)" style="opacity:0;width:0;height:0">
-                <span id="cfgAutoSendSlider" style="position:absolute;cursor:pointer;top:0;left:0;right:0;bottom:0;background:#555;transition:.3s;border-radius:28px"></span>
-                <span style="position:absolute;content:'';height:22px;width:22px;left:3px;bottom:3px;background:white;transition:.3s;border-radius:50%;pointer-events:none;box-shadow:0 1px 3px rgba(0,0,0,.3)" id="cfgAutoSendKnob"></span>
+              <label>
+                <input type="checkbox" id="cfgAutoSend" onchange="toggleAutoSend(this.checked)">
+                <span id="cfgAutoSendSlider"></span>
+                <span id="cfgAutoSendKnob"></span>
               </label>
             </div>
           </div>
@@ -1989,7 +1986,96 @@ body.light-mode .filter-pill.active { color:#fff; }
           <!-- legacy: 무료 체험 기간 (옵션 B에서 미사용, hidden) -->
           <input type="hidden" id="cfgTrialDays" value="0">
 
-          <button onclick="saveSettings()" style="background:var(--gold);color:var(--bg);border:none;padding:12px;border-radius:8px;font-size:14px;font-weight:700;font-family:var(--sans);cursor:pointer;transition:all .2s" onmouseover="this.style.background='#e8c97a'" onmouseout="this.style.background='var(--gold)'">설정 저장</button>
+          <!-- [v156] 스케줄러 설정 — 4개 단일 시간 job -->
+          <div style="border-top:2px solid var(--gold);padding-top:18px;margin-top:6px">
+            <div style="font-size:13px;font-weight:700;color:var(--gold);margin-bottom:4px;letter-spacing:.5px">⏰ 스케줄러 (자동 작업)</div>
+            <div style="font-size:11px;color:var(--muted);margin-bottom:14px;line-height:1.5">
+              각 작업의 활성 여부와 시간을 설정합니다. 변경 즉시 적용됩니다 (백엔드 재시작 불필요).<br>
+              📌 카테고리별 콘텐츠 생성 스케줄은 우측 카테고리 관리에서 별도 설정.
+            </div>
+
+            <!-- 1) 매일 발송 -->
+            <div style="background:var(--s3);border:1px solid var(--b);border-radius:8px;padding:12px;margin-bottom:10px">
+              <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+                <div style="font-size:13px;font-weight:700;color:var(--text);flex:1">📬 매일 콘텐츠 발송</div>
+                <label style="position:relative;display:inline-block;width:46px;height:24px;flex-shrink:0">
+                  <input type="checkbox" id="schedDailySend" onchange="toggleScheduler('daily_send_enabled', this.checked)" style="opacity:0;width:0;height:0">
+                  <span id="schedDailySendSlider" style="position:absolute;cursor:pointer;top:0;left:0;right:0;bottom:0;background:#555;transition:.3s;border-radius:24px"></span>
+                  <span id="schedDailySendKnob" style="position:absolute;height:18px;width:18px;left:3px;top:3px;background:white;transition:.3s;border-radius:50%;pointer-events:none;box-shadow:0 1px 2px rgba(0,0,0,.3)"></span>
+                </label>
+              </div>
+              <div style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted)">
+                <span>매일</span>
+                <input type="number" id="schedDailySendHour" min="0" max="23" value="8" onchange="saveSchedulerTime('daily_send_hour', this.value)" style="width:50px;background:var(--s3);border:1px solid var(--b);border-radius:4px;padding:4px 6px;font-size:12px;color:var(--text);font-family:var(--mono);text-align:center;outline:none">
+                <span>:</span>
+                <input type="number" id="schedDailySendMinute" min="0" max="59" value="0" onchange="saveSchedulerTime('daily_send_minute', this.value)" style="width:50px;background:var(--s3);border:1px solid var(--b);border-radius:4px;padding:4px 6px;font-size:12px;color:var(--text);font-family:var(--mono);text-align:center;outline:none">
+                <span>KST에 가입자에게 카카오톡 발송</span>
+              </div>
+            </div>
+
+            <!-- 2) 만료 처리 -->
+            <div style="background:var(--s3);border:1px solid var(--b);border-radius:8px;padding:12px;margin-bottom:10px">
+              <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+                <div style="font-size:13px;font-weight:700;color:var(--text);flex:1">⏳ 구독 만료 처리</div>
+                <label style="position:relative;display:inline-block;width:46px;height:24px;flex-shrink:0">
+                  <input type="checkbox" id="schedExpireSubs" onchange="toggleScheduler('expire_subscriptions_enabled', this.checked)" style="opacity:0;width:0;height:0">
+                  <span id="schedExpireSubsSlider" style="position:absolute;cursor:pointer;top:0;left:0;right:0;bottom:0;background:#555;transition:.3s;border-radius:24px"></span>
+                  <span id="schedExpireSubsKnob" style="position:absolute;height:18px;width:18px;left:3px;top:3px;background:white;transition:.3s;border-radius:50%;pointer-events:none;box-shadow:0 1px 2px rgba(0,0,0,.3)"></span>
+                </label>
+              </div>
+              <div style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted)">
+                <span>매일</span>
+                <input type="number" id="schedExpireSubsHour" min="0" max="23" value="0" onchange="saveSchedulerTime('expire_subscriptions_hour', this.value)" style="width:50px;background:var(--s3);border:1px solid var(--b);border-radius:4px;padding:4px 6px;font-size:12px;color:var(--text);font-family:var(--mono);text-align:center;outline:none">
+                <span>:</span>
+                <input type="number" id="schedExpireSubsMinute" min="0" max="59" value="10" onchange="saveSchedulerTime('expire_subscriptions_minute', this.value)" style="width:50px;background:var(--s3);border:1px solid var(--b);border-radius:4px;padding:4px 6px;font-size:12px;color:var(--text);font-family:var(--mono);text-align:center;outline:none">
+                <span>KST에 만료된 구독자 status 변경</span>
+              </div>
+            </div>
+
+            <!-- 3) D-1 만료 알림 -->
+            <div style="background:var(--s3);border:1px solid var(--b);border-radius:8px;padding:12px;margin-bottom:10px">
+              <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+                <div style="font-size:13px;font-weight:700;color:var(--text);flex:1">🔔 D-1 만료 알림</div>
+                <label style="position:relative;display:inline-block;width:46px;height:24px;flex-shrink:0">
+                  <input type="checkbox" id="schedExpiryD1" onchange="toggleScheduler('send_expiry_d1_enabled', this.checked)" style="opacity:0;width:0;height:0">
+                  <span id="schedExpiryD1Slider" style="position:absolute;cursor:pointer;top:0;left:0;right:0;bottom:0;background:#555;transition:.3s;border-radius:24px"></span>
+                  <span id="schedExpiryD1Knob" style="position:absolute;height:18px;width:18px;left:3px;top:3px;background:white;transition:.3s;border-radius:50%;pointer-events:none;box-shadow:0 1px 2px rgba(0,0,0,.3)"></span>
+                </label>
+              </div>
+              <div style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted)">
+                <span>매일</span>
+                <input type="number" id="schedExpiryD1Hour" min="0" max="23" value="9" onchange="saveSchedulerTime('send_expiry_d1_hour', this.value)" style="width:50px;background:var(--s3);border:1px solid var(--b);border-radius:4px;padding:4px 6px;font-size:12px;color:var(--text);font-family:var(--mono);text-align:center;outline:none">
+                <span>:</span>
+                <input type="number" id="schedExpiryD1Minute" min="0" max="59" value="0" onchange="saveSchedulerTime('send_expiry_d1_minute', this.value)" style="width:50px;background:var(--s3);border:1px solid var(--b);border-radius:4px;padding:4px 6px;font-size:12px;color:var(--text);font-family:var(--mono);text-align:center;outline:none">
+                <span>KST에 만료 1일 전 알림톡 발송</span>
+              </div>
+            </div>
+
+            <!-- 4) 환불 재시도 -->
+            <div style="background:var(--s3);border:1px solid var(--b);border-radius:8px;padding:12px;margin-bottom:6px">
+              <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+                <div style="font-size:13px;font-weight:700;color:var(--text);flex:1">🔄 환불 자동 재시도</div>
+                <label style="position:relative;display:inline-block;width:46px;height:24px;flex-shrink:0">
+                  <input type="checkbox" id="schedRetryRefunds" onchange="toggleScheduler('retry_failed_refunds_enabled', this.checked)" style="opacity:0;width:0;height:0">
+                  <span id="schedRetryRefundsSlider" style="position:absolute;cursor:pointer;top:0;left:0;right:0;bottom:0;background:#555;transition:.3s;border-radius:24px"></span>
+                  <span id="schedRetryRefundsKnob" style="position:absolute;height:18px;width:18px;left:3px;top:3px;background:white;transition:.3s;border-radius:50%;pointer-events:none;box-shadow:0 1px 2px rgba(0,0,0,.3)"></span>
+                </label>
+              </div>
+              <div style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted)">
+                <span>매시간</span>
+                <input type="number" id="schedRetryRefundsMinute" min="0" max="59" value="15" onchange="saveSchedulerTime('retry_failed_refunds_minute', this.value)" style="width:50px;background:var(--s3);border:1px solid var(--b);border-radius:4px;padding:4px 6px;font-size:12px;color:var(--text);font-family:var(--mono);text-align:center;outline:none">
+                <span>분 KST에 실패 환불 row 재시도</span>
+              </div>
+            </div>
+
+            <!-- 스케줄러 현황 (next_run) -->
+            <div id="schedulerStatusPanel" style="margin-top:10px;padding:10px 12px;background:rgba(201,168,76,.05);border:1px dashed rgba(201,168,76,.3);border-radius:6px;font-size:11px;color:var(--muted);line-height:1.6">
+              <div style="font-weight:700;color:var(--gold);margin-bottom:4px">📊 등록 상태 (실시간)</div>
+              <div id="schedulerJobsList">로딩 중...</div>
+            </div>
+          </div>
+
+          <button onclick="saveSettings()" style="background:var(--gold);color:var(--bg);border:none;padding:12px;border-radius:8px;font-size:14px;font-weight:700;font-family:var(--sans);cursor:pointer;transition:all .2s;margin-top:14px" onmouseover="this.style.background='#e8c97a'" onmouseout="this.style.background='var(--gold)'">API 설정 저장</button>
         </div>
       </div>
 
@@ -9239,6 +9325,55 @@ async function loadSystemSettings() {
       _updateAutoRefundUI(autoRefund);
     }
 
+    // [v156] 스케줄러 4개 토글 + 시간 로딩
+    // 옛 키 auto_send_enabled를 daily_send_enabled로 호환
+    const dailySendEnabled = String(data.daily_send_enabled?.value || data.auto_send_enabled?.value || 'false').toLowerCase() === 'true';
+    const dailySendHour    = parseInt(data.daily_send_hour?.value     || '8', 10);
+    const dailySendMinute  = parseInt(data.daily_send_minute?.value   || '0', 10);
+
+    const expireEnabled = String(data.expire_subscriptions_enabled?.value || 'true').toLowerCase() === 'true';
+    const expireHour    = parseInt(data.expire_subscriptions_hour?.value     || '0', 10);
+    const expireMinute  = parseInt(data.expire_subscriptions_minute?.value   || '10', 10);
+
+    const d1Enabled = String(data.send_expiry_d1_enabled?.value || 'true').toLowerCase() === 'true';
+    const d1Hour    = parseInt(data.send_expiry_d1_hour?.value     || '9', 10);
+    const d1Minute  = parseInt(data.send_expiry_d1_minute?.value   || '0', 10);
+
+    const retryEnabled = String(data.retry_failed_refunds_enabled?.value || 'true').toLowerCase() === 'true';
+    const retryMinute  = parseInt(data.retry_failed_refunds_minute?.value || '15', 10);
+
+    const _setField = (id, value) => { const el = document.getElementById(id); if (el) el.value = value; };
+    const _setCheckbox = (id, checked) => { const el = document.getElementById(id); if (el) el.checked = checked; };
+
+    _setCheckbox('schedDailySend', dailySendEnabled);
+    _setField('schedDailySendHour', dailySendHour);
+    _setField('schedDailySendMinute', dailySendMinute);
+    _updateSchedToggleUI('daily_send_enabled', dailySendEnabled);
+
+    _setCheckbox('schedExpireSubs', expireEnabled);
+    _setField('schedExpireSubsHour', expireHour);
+    _setField('schedExpireSubsMinute', expireMinute);
+    _updateSchedToggleUI('expire_subscriptions_enabled', expireEnabled);
+
+    _setCheckbox('schedExpiryD1', d1Enabled);
+    _setField('schedExpiryD1Hour', d1Hour);
+    _setField('schedExpiryD1Minute', d1Minute);
+    _updateSchedToggleUI('send_expiry_d1_enabled', d1Enabled);
+
+    _setCheckbox('schedRetryRefunds', retryEnabled);
+    _setField('schedRetryRefundsMinute', retryMinute);
+    _updateSchedToggleUI('retry_failed_refunds_enabled', retryEnabled);
+
+    // 호환: 옛 자동 발송 토글 (cfgAutoSend)도 daily_send_enabled와 동기화
+    const cfgAutoSendCb = document.getElementById('cfgAutoSend');
+    if (cfgAutoSendCb) {
+      cfgAutoSendCb.checked = dailySendEnabled;
+      _updateAutoSendUI(dailySendEnabled);
+    }
+
+    // 스케줄러 현황 비동기 로드
+    loadSchedulerStatus();
+
     // 최근 저장 시간 표시 (모든 settings 중 가장 최신 updated_at)
     let latestUpdated = null;
     for (const key in data) {
@@ -9323,6 +9458,133 @@ async function toggleAutoRefund(enabled) {
     showToast('저장 실패: ' + (e?.message || e), 'ng');
     document.getElementById('cfgAutoRefund').checked = !enabled;
     _updateAutoRefundUI(!enabled);
+  }
+}
+
+// ════════════════════════════════════════════════════════════
+// [v156] 스케줄러 (4개 단일 시간 job) — 토글 + 시간 설정
+// ════════════════════════════════════════════════════════════
+const _SCHED_UI_MAP = {
+  daily_send_enabled:           { knob: 'schedDailySendKnob',     slider: 'schedDailySendSlider' },
+  expire_subscriptions_enabled: { knob: 'schedExpireSubsKnob',    slider: 'schedExpireSubsSlider' },
+  send_expiry_d1_enabled:       { knob: 'schedExpiryD1Knob',      slider: 'schedExpiryD1Slider' },
+  retry_failed_refunds_enabled: { knob: 'schedRetryRefundsKnob',  slider: 'schedRetryRefundsSlider' },
+};
+
+function _updateSchedToggleUI(key, enabled) {
+  const ui = _SCHED_UI_MAP[key];
+  if (!ui) return;
+  const slider = document.getElementById(ui.slider);
+  const knob = document.getElementById(ui.knob);
+  if (slider) slider.style.background = enabled ? '#10b981' : '#555';
+  if (knob) knob.style.transform = enabled ? 'translateX(22px)' : 'translateX(0)';
+}
+
+async function toggleScheduler(key, enabled) {
+  _updateSchedToggleUI(key, enabled);
+  try {
+    const r = await apiFetch('/admin/settings/' + key, { method:'PUT', body:JSON.stringify({value: enabled ? 'true' : 'false'}) });
+    const res = r && r.ok ? await r.json() : null;
+    if (res && res.success) {
+      showToast((enabled ? '활성화됨: ' : '비활성화됨: ') + key, 'ok');
+      updateServiceSettingsLastSaved();
+      // 1초 후 현황 새로고침
+      setTimeout(loadSchedulerStatus, 1000);
+    } else {
+      showToast('저장 실패: ' + (res?.message || 'unknown'), 'ng');
+      // 롤백
+      const checkboxIdMap = {
+        daily_send_enabled: 'schedDailySend',
+        expire_subscriptions_enabled: 'schedExpireSubs',
+        send_expiry_d1_enabled: 'schedExpiryD1',
+        retry_failed_refunds_enabled: 'schedRetryRefunds',
+      };
+      const cbId = checkboxIdMap[key];
+      if (cbId) {
+        const cb = document.getElementById(cbId);
+        if (cb) cb.checked = !enabled;
+      }
+      _updateSchedToggleUI(key, !enabled);
+    }
+  } catch (e) {
+    showToast('저장 실패: ' + (e?.message || e), 'ng');
+    _updateSchedToggleUI(key, !enabled);
+  }
+}
+
+let _saveSchedTimeDebounce = null;
+async function saveSchedulerTime(key, value) {
+  // 디바운싱 (1초)
+  clearTimeout(_saveSchedTimeDebounce);
+  _saveSchedTimeDebounce = setTimeout(async () => {
+    const n = parseInt(value, 10);
+    if (isNaN(n) || n < 0) {
+      showToast('잘못된 숫자: ' + value, 'ng');
+      return;
+    }
+    // hour는 0-23, minute은 0-59
+    if (key.endsWith('_hour') && n > 23) {
+      showToast('시간은 0~23 사이여야 합니다', 'ng');
+      return;
+    }
+    if (key.endsWith('_minute') && n > 59) {
+      showToast('분은 0~59 사이여야 합니다', 'ng');
+      return;
+    }
+    try {
+      const r = await apiFetch('/admin/settings/' + key, { method:'PUT', body:JSON.stringify({value: String(n)}) });
+      const res = r && r.ok ? await r.json() : null;
+      if (res && res.success) {
+        showToast('시간 변경 저장: ' + key + ' = ' + n, 'ok');
+        updateServiceSettingsLastSaved();
+        setTimeout(loadSchedulerStatus, 1000);
+      } else {
+        showToast('저장 실패: ' + (res?.message || 'unknown'), 'ng');
+      }
+    } catch (e) {
+      showToast('저장 실패: ' + (e?.message || e), 'ng');
+    }
+  }, 800);
+}
+
+// 스케줄러 현황 조회 (next_run_time)
+async function loadSchedulerStatus() {
+  try {
+    const r = await apiFetch('/admin/scheduler/status');
+    const data = r || {};
+    const jobs = data.jobs || [];
+    const running = data.running;
+    const container = document.getElementById('schedulerJobsList');
+    if (!container) return;
+
+    if (!running) {
+      container.innerHTML = '<span style="color:#ef4444">⚠️ 스케줄러 미실행</span>';
+      return;
+    }
+
+    // 단일 시간 4개 job만 표시 (카테고리별 콘텐츠 생성은 제외)
+    const filtered = jobs.filter(j => ['daily_send', 'expire_subscriptions', 'send_expiry_d1', 'retry_failed_refunds'].includes(j.id));
+    const _labelMap = {
+      daily_send: '📬 매일 발송',
+      expire_subscriptions: '⏳ 만료 처리',
+      send_expiry_d1: '🔔 D-1 알림',
+      retry_failed_refunds: '🔄 환불 재시도',
+    };
+    if (filtered.length === 0) {
+      container.innerHTML = '<span style="color:#f59e0b">⚠️ 등록된 단일 시간 job 없음 (모두 비활성화 상태)</span>';
+      return;
+    }
+    container.innerHTML = filtered.map(j => {
+      const label = _labelMap[j.id] || j.id;
+      const nextRun = j.next_run ? new Date(j.next_run).toLocaleString('ko-KR', {
+        timeZone: 'Asia/Seoul', month: '2-digit', day: '2-digit',
+        hour: '2-digit', minute: '2-digit', hour12: false
+      }) : '—';
+      return `<div>${label}: <span style="color:var(--gold);font-family:var(--mono)">다음 ${nextRun}</span></div>`;
+    }).join('');
+  } catch (e) {
+    const container = document.getElementById('schedulerJobsList');
+    if (container) container.innerHTML = '<span style="color:#ef4444">조회 실패: ' + (e?.message || e) + '</span>';
   }
 }
 
