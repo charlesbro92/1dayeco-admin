@@ -779,7 +779,7 @@ body.light-mode .filter-pill.active { color:#fff; }
 <!-- SIDEBAR -->
 <aside class="sidebar">
   <div class="sb-logo">1DAYECO<small>Admin Dashboard</small>
-    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v160</span>
+    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v161</span>
   </div>
   <nav class="sb-nav">
     <div class="sb-group">운영</div>
@@ -2941,9 +2941,10 @@ body.light-mode .filter-pill.active { color:#fff; }
 </div>
 HIDDEN_HOUR_PICKER_END -->
 
-  <!-- ── [v158] PAGE: 알림 관리 — 솔라피 스타일 (좌측 목록 + 우측 미리보기/설정) ── -->
+  <!-- ── [v160] PAGE: 알림 관리 — 솔라피 스타일 (좌측 목록 + 우측 미리보기/설정) ── -->
   <div class="content" id="page-notify">
-    <div style="max-width:1400px;display:flex;gap:18px;align-items:flex-start;flex-wrap:wrap">
+    <div style="max-width:1400px;display:flex;flex-direction:column;gap:18px">
+      <div style="display:flex;gap:18px;align-items:flex-start;flex-wrap:wrap;width:100%">
 
     <!-- 좌측: 템플릿 목록 -->
     <div class="panel" style="flex:0 0 380px;max-width:380px">
@@ -3014,7 +3015,7 @@ HIDDEN_HOUR_PICKER_END -->
               <span>알림톡 도착</span>
             </div>
             <!-- 본문 (부드러운 머스타드) -->
-            <div id="notifyDetailPreview" style="background:var(--preview-bg);color:var(--preview-text);padding:14px;font-size:12px;line-height:1.7;white-space:pre-wrap;min-height:120px;font-family:'Apple SD Gothic Neo','Malgun Gothic',sans-serif"></div>
+            <div id="notifyDetailPreview" style="background:var(--preview-bg);color:var(--preview-text);padding:14px;font-size:12px;line-height:1.7;white-space:pre-wrap;height:380px;overflow-y:auto;font-family:'Apple SD Gothic Neo','Malgun Gothic',sans-serif"></div>
           </div>
           <div style="font-size:10px;color:var(--muted);margin-top:6px;text-align:right">※ 본문 수정은 솔라피 콘솔에서만 가능합니다.</div>
         </div>
@@ -3027,8 +3028,9 @@ HIDDEN_HOUR_PICKER_END -->
       </div>
     </div>
 
+      </div>
+    </div>
   </div>
-</div>
 
 <!-- 발송 확인 모달 -->
 <div class="overlay" id="sendConfirm">
