@@ -985,7 +985,7 @@ body:not(.light-mode) .np-time { color:#9b9eaa; }
 <!-- SIDEBAR -->
 <aside class="sidebar">
   <div class="sb-logo">1DAYECO<small>Admin Dashboard</small>
-    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v175</span>
+    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v176</span>
   </div>
   <nav class="sb-nav">
     <div class="sb-group">운영</div>
@@ -2440,36 +2440,37 @@ body:not(.light-mode) .np-time { color:#9b9eaa; }
 </div>
 
   <!-- ── [v172] PAGE: 알림 관리 — grid로 명확한 좌(360px) + 우(나머지) 배치 ── -->
-  <div class="content" id="page-notify">
-    <div style="display:grid;grid-template-columns:360px minmax(0, 1fr);gap:18px;align-items:start;width:100%;max-width:1400px">
+  <div class="content" id="page-notify" style="overflow:hidden">
+    <!-- [v176] 좌측 540px (150% 확대) / 양 패널 동일 높이 고정 / 페이지 스크롤 X · 패널 내부 스크롤 -->
+    <div style="display:grid;grid-template-columns:540px minmax(0, 1fr);gap:18px;align-items:stretch;width:100%;max-width:1400px;height:calc(100vh - var(--topbar-h) - 60px)">
 
     <!-- 좌측: 템플릿 목록 -->
-    <div class="panel" style="min-width:0">
-      <div class="panel-head" style="display:flex;justify-content:space-between;align-items:center">
+    <div class="panel" style="min-width:0;display:flex;flex-direction:column;height:100%;overflow:hidden">
+      <div class="panel-head" style="display:flex;justify-content:space-between;align-items:center;flex-shrink:0">
         <div class="panel-title">알림톡 템플릿</div>
         <span id="notifyLastSaved" style="font-size:10px;color:var(--muted)">-</span>
       </div>
-      <div style="padding:12px">
-        <div style="font-size:11px;color:var(--muted);margin-bottom:10px;line-height:1.5;padding:8px 10px;background:rgba(201,168,76,.05);border-radius:6px">
+      <div style="padding:12px;flex:1 1 auto;min-height:0;display:flex;flex-direction:column">
+        <div style="font-size:11px;color:var(--muted);margin-bottom:10px;line-height:1.5;padding:8px 10px;background:rgba(201,168,76,.05);border-radius:6px;flex-shrink:0">
           💡 템플릿 클릭 시 우측에서 발송 ON/OFF + 솔라피 ID를 설정합니다.<br>
           본문 수정은 <strong>솔라피 콘솔</strong>에서 진행하세요.
         </div>
-        <div id="notifyTemplateList" style="display:flex;flex-direction:column;gap:4px;max-height:calc(100vh - 240px);overflow-y:auto"></div>
+        <div id="notifyTemplateList" style="display:flex;flex-direction:column;gap:4px;flex:1 1 auto;min-height:0;overflow-y:auto"></div>
       </div>
     </div>
 
-    <!-- 우측: 선택된 템플릿 상세 + 미리보기 [v172] grid 환경에 맞춤 -->
-    <div class="panel" style="min-width:0;max-width:520px">
-      <div class="panel-head">
+    <!-- 우측: 선택된 템플릿 상세 + 미리보기 [v176] 좌측과 동일 높이 + 내부 스크롤 -->
+    <div class="panel" style="min-width:0;max-width:520px;display:flex;flex-direction:column;height:100%;overflow:hidden">
+      <div class="panel-head" style="flex-shrink:0">
         <div class="panel-title" id="notifyDetailTitle">📋 템플릿 선택</div>
         <div id="notifyDetailStatus" style="font-size:11px"></div>
       </div>
-      <div style="padding:18px" id="notifyDetailEmpty">
+      <div style="padding:18px;flex:1 1 auto;min-height:0;overflow-y:auto" id="notifyDetailEmpty">
         <div style="text-align:center;color:var(--muted);padding:60px 0;font-size:13px">
           좌측에서 템플릿을 선택해주세요.
         </div>
       </div>
-      <div style="padding:18px;display:none" id="notifyDetailBody">
+      <div style="padding:18px;display:none;flex:1 1 auto;min-height:0;overflow-y:auto;flex-direction:column" id="notifyDetailBody">
         <!-- 발송 ON/OFF -->
         <div style="display:flex;align-items:center;justify-content:space-between;padding:14px;background:var(--s3);border:1px solid var(--b);border-radius:8px;margin-bottom:12px">
           <div style="flex:1">
