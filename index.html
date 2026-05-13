@@ -769,7 +769,7 @@ body.light-mode .filter-pill.active { color:#fff; }
 <!-- SIDEBAR -->
 <aside class="sidebar">
   <div class="sb-logo">1DAYECO<small>Admin Dashboard</small>
-    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v156</span>
+    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v157</span>
   </div>
   <nav class="sb-nav">
     <div class="sb-group">운영</div>
@@ -784,7 +784,8 @@ body.light-mode .filter-pill.active { color:#fff; }
     <a class="sb-item" onclick="showPage('payments')"><span class="ico">💳</span>결제 이력</a>
     <div class="sb-group">설정</div>
     <a class="sb-item" onclick="showPage('scheduler')"><span class="ico">⏰</span>스케줄러</a>
-    <a class="sb-item" onclick="showPage('settings')"><span class="ico">⚙️</span>설정</a>
+    <a class="sb-item" onclick="showPage('settings')"><span class="ico">🗂️</span>카테고리 관리</a>
+    <a class="sb-item" onclick="showPage('notify')"><span class="ico">🔔</span>알림 관리</a>
   </nav>
   <div class="sb-bottom">
     <div class="sb-status"><span class="status-dot"></span>서버 정상 운영중</div>
@@ -1903,184 +1904,135 @@ body.light-mode .filter-pill.active { color:#fff; }
           </div>
         </div>
       </div>
+      <!-- ── [v157] 단일 시간 스케줄러 4개 + 자동 환불 (설정 페이지에서 이동) ── -->
       <div class="panel" style="grid-column:1/-1">
         <div class="panel-head">
-          <div class="panel-title">📋 실행 이력</div>
-          <span onclick="document.getElementById('schedulerLog').innerHTML=''" style="font-size:11px;color:var(--muted);cursor:pointer">지우기</span>
+          <div class="panel-title">🛎️ 단일 시간 스케줄러</div>
+          <span id="schedSingleLastSaved" style="font-size:11px;color:var(--muted)">최근 저장: -</span>
         </div>
-        <div id="schedulerLog" style="padding:16px;font-family:var(--mono);font-size:11px;color:var(--muted);min-height:80px;max-height:200px;overflow-y:auto">
-          <div>실행 기록이 여기에 표시됩니다</div>
+        <div style="padding:20px;display:flex;flex-direction:column;gap:12px;max-width:760px">
+          <div style="font-size:12px;color:var(--muted);line-height:1.5;margin-bottom:4px">
+            각 자동 작업의 활성 여부와 시간을 설정합니다. 변경 즉시 적용됩니다.
+          </div>
+
+          <!-- 매일 발송 -->
+          <div style="background:var(--s3);border:1px solid var(--b);border-radius:8px;padding:14px">
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+              <div style="font-size:13px;font-weight:700;color:var(--text);flex:1">📬 매일 콘텐츠 발송</div>
+              <label style="position:relative;display:inline-block;width:46px;height:24px;flex-shrink:0">
+                <input type="checkbox" id="schedDailySend" onchange="toggleScheduler('daily_send_enabled', this.checked)" style="opacity:0;width:0;height:0">
+                <span id="schedDailySendSlider" style="position:absolute;cursor:pointer;top:0;left:0;right:0;bottom:0;background:#555;transition:.3s;border-radius:24px"></span>
+                <span id="schedDailySendKnob" style="position:absolute;height:18px;width:18px;left:3px;top:3px;background:white;transition:.3s;border-radius:50%;pointer-events:none;box-shadow:0 1px 2px rgba(0,0,0,.3)"></span>
+              </label>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted)">
+              <span>매일</span>
+              <input type="number" id="schedDailySendHour" min="0" max="23" value="8" onchange="saveSchedulerTime('daily_send_hour', this.value)" style="width:55px;background:var(--s3);border:1px solid var(--b);border-radius:4px;padding:5px 6px;font-size:12px;color:var(--text);font-family:var(--mono);text-align:center;outline:none">
+              <span>:</span>
+              <input type="number" id="schedDailySendMinute" min="0" max="59" value="0" onchange="saveSchedulerTime('daily_send_minute', this.value)" style="width:55px;background:var(--s3);border:1px solid var(--b);border-radius:4px;padding:5px 6px;font-size:12px;color:var(--text);font-family:var(--mono);text-align:center;outline:none">
+              <span>KST에 가입자에게 카카오톡 콘텐츠 발송</span>
+            </div>
+          </div>
+
+          <!-- 만료 처리 -->
+          <div style="background:var(--s3);border:1px solid var(--b);border-radius:8px;padding:14px">
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+              <div style="font-size:13px;font-weight:700;color:var(--text);flex:1">⏳ 구독 만료 처리</div>
+              <label style="position:relative;display:inline-block;width:46px;height:24px;flex-shrink:0">
+                <input type="checkbox" id="schedExpireSubs" onchange="toggleScheduler('expire_subscriptions_enabled', this.checked)" style="opacity:0;width:0;height:0">
+                <span id="schedExpireSubsSlider" style="position:absolute;cursor:pointer;top:0;left:0;right:0;bottom:0;background:#555;transition:.3s;border-radius:24px"></span>
+                <span id="schedExpireSubsKnob" style="position:absolute;height:18px;width:18px;left:3px;top:3px;background:white;transition:.3s;border-radius:50%;pointer-events:none;box-shadow:0 1px 2px rgba(0,0,0,.3)"></span>
+              </label>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted)">
+              <span>매일</span>
+              <input type="number" id="schedExpireSubsHour" min="0" max="23" value="0" onchange="saveSchedulerTime('expire_subscriptions_hour', this.value)" style="width:55px;background:var(--s3);border:1px solid var(--b);border-radius:4px;padding:5px 6px;font-size:12px;color:var(--text);font-family:var(--mono);text-align:center;outline:none">
+              <span>:</span>
+              <input type="number" id="schedExpireSubsMinute" min="0" max="59" value="10" onchange="saveSchedulerTime('expire_subscriptions_minute', this.value)" style="width:55px;background:var(--s3);border:1px solid var(--b);border-radius:4px;padding:5px 6px;font-size:12px;color:var(--text);font-family:var(--mono);text-align:center;outline:none">
+              <span>KST에 만료된 구독자 status 변경</span>
+            </div>
+          </div>
+
+          <!-- D-1 만료 알림 -->
+          <div style="background:var(--s3);border:1px solid var(--b);border-radius:8px;padding:14px">
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+              <div style="font-size:13px;font-weight:700;color:var(--text);flex:1">🔔 D-1 만료 알림</div>
+              <label style="position:relative;display:inline-block;width:46px;height:24px;flex-shrink:0">
+                <input type="checkbox" id="schedExpiryD1" onchange="toggleScheduler('send_expiry_d1_enabled', this.checked)" style="opacity:0;width:0;height:0">
+                <span id="schedExpiryD1Slider" style="position:absolute;cursor:pointer;top:0;left:0;right:0;bottom:0;background:#555;transition:.3s;border-radius:24px"></span>
+                <span id="schedExpiryD1Knob" style="position:absolute;height:18px;width:18px;left:3px;top:3px;background:white;transition:.3s;border-radius:50%;pointer-events:none;box-shadow:0 1px 2px rgba(0,0,0,.3)"></span>
+              </label>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted)">
+              <span>매일</span>
+              <input type="number" id="schedExpiryD1Hour" min="0" max="23" value="9" onchange="saveSchedulerTime('send_expiry_d1_hour', this.value)" style="width:55px;background:var(--s3);border:1px solid var(--b);border-radius:4px;padding:5px 6px;font-size:12px;color:var(--text);font-family:var(--mono);text-align:center;outline:none">
+              <span>:</span>
+              <input type="number" id="schedExpiryD1Minute" min="0" max="59" value="0" onchange="saveSchedulerTime('send_expiry_d1_minute', this.value)" style="width:55px;background:var(--s3);border:1px solid var(--b);border-radius:4px;padding:5px 6px;font-size:12px;color:var(--text);font-family:var(--mono);text-align:center;outline:none">
+              <span>KST에 만료 1일 전 알림톡 발송</span>
+            </div>
+          </div>
+
+          <!-- 환불 재시도 -->
+          <div style="background:var(--s3);border:1px solid var(--b);border-radius:8px;padding:14px">
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+              <div style="font-size:13px;font-weight:700;color:var(--text);flex:1">🔄 환불 자동 재시도</div>
+              <label style="position:relative;display:inline-block;width:46px;height:24px;flex-shrink:0">
+                <input type="checkbox" id="schedRetryRefunds" onchange="toggleScheduler('retry_failed_refunds_enabled', this.checked)" style="opacity:0;width:0;height:0">
+                <span id="schedRetryRefundsSlider" style="position:absolute;cursor:pointer;top:0;left:0;right:0;bottom:0;background:#555;transition:.3s;border-radius:24px"></span>
+                <span id="schedRetryRefundsKnob" style="position:absolute;height:18px;width:18px;left:3px;top:3px;background:white;transition:.3s;border-radius:50%;pointer-events:none;box-shadow:0 1px 2px rgba(0,0,0,.3)"></span>
+              </label>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted)">
+              <span>매시간</span>
+              <input type="number" id="schedRetryRefundsMinute" min="0" max="59" value="15" onchange="saveSchedulerTime('retry_failed_refunds_minute', this.value)" style="width:55px;background:var(--s3);border:1px solid var(--b);border-radius:4px;padding:5px 6px;font-size:12px;color:var(--text);font-family:var(--mono);text-align:center;outline:none">
+              <span>분 KST에 실패 환불 row 재시도</span>
+            </div>
+          </div>
+
+          <!-- 자동 환불 처리 (스케줄러 아니지만 자동 작업이라 여기 묶음) -->
+          <div style="background:var(--s3);border:1px solid var(--b);border-radius:8px;padding:14px;border-left:3px solid var(--gold)">
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
+              <div style="font-size:13px;font-weight:700;color:var(--text);flex:1">💸 자동 환불 처리</div>
+              <label style="position:relative;display:inline-block;width:46px;height:24px;flex-shrink:0">
+                <input type="checkbox" id="cfgAutoRefund" onchange="toggleAutoRefund(this.checked)" style="opacity:0;width:0;height:0">
+                <span id="cfgAutoRefundSlider" style="position:absolute;cursor:pointer;top:0;left:0;right:0;bottom:0;background:#555;transition:.3s;border-radius:24px"></span>
+                <span id="cfgAutoRefundKnob" style="position:absolute;height:18px;width:18px;left:3px;top:3px;background:white;transition:.3s;border-radius:50%;pointer-events:none;box-shadow:0 1px 2px rgba(0,0,0,.3)"></span>
+              </label>
+            </div>
+            <div id="autoRefundStatusLabel" style="font-size:12px;color:var(--muted);line-height:1.5">로딩 중...</div>
+            <div style="font-size:11px;color:var(--muted);margin-top:4px;line-height:1.4">
+              ON: 환불 요청 즉시 자동 완료 처리 (테스트용) / OFF: 어드민에서 수동 검토 후 처리 (실 운영)
+            </div>
+          </div>
+
+          <!-- 스케줄러 현황 -->
+          <div id="schedulerStatusPanel" style="margin-top:6px;padding:12px;background:rgba(201,168,76,.05);border:1px dashed rgba(201,168,76,.3);border-radius:6px;font-size:11px;color:var(--muted);line-height:1.7">
+            <div style="font-weight:700;color:var(--gold);margin-bottom:6px">📊 등록 상태 (실시간)</div>
+            <div id="schedulerJobsList">로딩 중...</div>
+          </div>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- ── PAGE: 설정 ── -->
+  <!-- ── PAGE: 카테고리 관리 (옛 settings 탭) ── -->
   <div class="content" id="page-settings">
     <div style="max-width:1400px;display:flex;flex-direction:column;gap:18px">
 
-      <!-- 카테고리 관리(좌) + 서비스 기본 설정(우) 좌우 배치 (row-reverse로 swap) -->
-      <div style="display:flex;gap:18px;flex-wrap:wrap;align-items:flex-start;flex-direction:row-reverse">
-
-        <!-- 좌측: 서비스 기본 설정 -->
-        <div class="panel" style="flex:0 0 460px;max-width:460px">
-        <div class="panel-head" style="display:flex;justify-content:space-between;align-items:center">
-          <div class="panel-title">⚙️ 서비스 설정</div>
-          <span id="serviceSettingsLastSaved" style="font-size:11px;color:var(--muted);font-weight:400">최근 저장: -</span>
-        </div>
-        <div style="padding:24px;display:flex;flex-direction:column;gap:18px">
-          <div>
-            <label style="font-size:12px;color:var(--muted);display:block;margin-bottom:6px">API 서버 URL</label>
-            <input type="text" id="cfgApi" placeholder="https://your-api.railway.app" style="width:100%;background:var(--s3);border:1px solid var(--b);border-radius:8px;padding:10px 14px;font-size:14px;color:var(--text);font-family:var(--mono);outline:none">
-          </div>
-          <div>
-            <label style="font-size:12px;color:var(--muted);display:block;margin-bottom:6px">기본 발송 시간 (KST)</label>
-            <div style="background:var(--s3);border:1px solid var(--b);border-radius:8px;padding:10px 14px;font-size:14px;color:var(--text);display:flex;align-items:center;gap:10px">
-              <span style="font-weight:600">오전 8시 고정</span>
-              <span style="font-size:11px;color:var(--muted)">·</span>
-              <span style="font-size:11px;color:var(--muted)">카카오톡 알림톡 정책상 8시 예약 발송으로 고정</span>
-            </div>
-            <!-- legacy 호환: cfgHour 값은 유지하되 사용자 변경 불가 -->
-            <input type="hidden" id="cfgHour" value="8">
-          </div>
-
-          <!-- [v155] 자동 발송 토글 — v156에서 스케줄러 패널의 daily_send로 통합됨, hidden -->
-          <div style="display:none">
-            <label>
-              📬 자동 발송 (매일 KST 08:00)
-              <span>외부 cron이 호출 시 적용</span>
-            </label>
-            <div>
-              <div>
-                <div id="autoSendStatusLabel">로딩 중...</div>
-              </div>
-              <label>
-                <input type="checkbox" id="cfgAutoSend" onchange="toggleAutoSend(this.checked)">
-                <span id="cfgAutoSendSlider"></span>
-                <span id="cfgAutoSendKnob"></span>
-              </label>
-            </div>
-          </div>
-
-          <!-- [v155] 자동 환불 토글 -->
-          <div style="border-top:1px solid var(--b);padding-top:16px">
-            <label style="font-size:12px;color:var(--muted);display:block;margin-bottom:8px">
-              💸 자동 환불 처리
-              <span style="font-size:11px;color:var(--gold);margin-left:6px">랜딩에서 환불 요청 시</span>
-            </label>
-            <div style="display:flex;gap:10px;align-items:center;justify-content:space-between;padding:10px 12px;background:var(--s3);border:1px solid var(--b);border-radius:8px">
-              <div style="flex:1">
-                <div id="autoRefundStatusLabel" style="font-size:14px;font-weight:700;color:var(--text)">로딩 중...</div>
-                <div style="font-size:11px;color:var(--muted);margin-top:2px;line-height:1.4">
-                  ON: 환불 요청 즉시 자동 완료 처리 (테스트용) / OFF: 어드민에서 수동 검토 후 처리 (실 운영)
-                </div>
-              </div>
-              <label style="position:relative;display:inline-block;width:52px;height:28px;flex-shrink:0">
-                <input type="checkbox" id="cfgAutoRefund" onchange="toggleAutoRefund(this.checked)" style="opacity:0;width:0;height:0">
-                <span id="cfgAutoRefundSlider" style="position:absolute;cursor:pointer;top:0;left:0;right:0;bottom:0;background:#555;transition:.3s;border-radius:28px"></span>
-                <span style="position:absolute;content:'';height:22px;width:22px;left:3px;bottom:3px;background:white;transition:.3s;border-radius:50%;pointer-events:none;box-shadow:0 1px 3px rgba(0,0,0,.3)" id="cfgAutoRefundKnob"></span>
-              </label>
-            </div>
-          </div>
-
-          <!-- legacy: 무료 체험 기간 (옵션 B에서 미사용, hidden) -->
-          <input type="hidden" id="cfgTrialDays" value="0">
-
-          <!-- [v156] 스케줄러 설정 — 4개 단일 시간 job -->
-          <div style="border-top:2px solid var(--gold);padding-top:18px;margin-top:6px">
-            <div style="font-size:13px;font-weight:700;color:var(--gold);margin-bottom:4px;letter-spacing:.5px">⏰ 스케줄러 (자동 작업)</div>
-            <div style="font-size:11px;color:var(--muted);margin-bottom:14px;line-height:1.5">
-              각 작업의 활성 여부와 시간을 설정합니다. 변경 즉시 적용됩니다 (백엔드 재시작 불필요).<br>
-              📌 카테고리별 콘텐츠 생성 스케줄은 우측 카테고리 관리에서 별도 설정.
-            </div>
-
-            <!-- 1) 매일 발송 -->
-            <div style="background:var(--s3);border:1px solid var(--b);border-radius:8px;padding:12px;margin-bottom:10px">
-              <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
-                <div style="font-size:13px;font-weight:700;color:var(--text);flex:1">📬 매일 콘텐츠 발송</div>
-                <label style="position:relative;display:inline-block;width:46px;height:24px;flex-shrink:0">
-                  <input type="checkbox" id="schedDailySend" onchange="toggleScheduler('daily_send_enabled', this.checked)" style="opacity:0;width:0;height:0">
-                  <span id="schedDailySendSlider" style="position:absolute;cursor:pointer;top:0;left:0;right:0;bottom:0;background:#555;transition:.3s;border-radius:24px"></span>
-                  <span id="schedDailySendKnob" style="position:absolute;height:18px;width:18px;left:3px;top:3px;background:white;transition:.3s;border-radius:50%;pointer-events:none;box-shadow:0 1px 2px rgba(0,0,0,.3)"></span>
-                </label>
-              </div>
-              <div style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted)">
-                <span>매일</span>
-                <input type="number" id="schedDailySendHour" min="0" max="23" value="8" onchange="saveSchedulerTime('daily_send_hour', this.value)" style="width:50px;background:var(--s3);border:1px solid var(--b);border-radius:4px;padding:4px 6px;font-size:12px;color:var(--text);font-family:var(--mono);text-align:center;outline:none">
-                <span>:</span>
-                <input type="number" id="schedDailySendMinute" min="0" max="59" value="0" onchange="saveSchedulerTime('daily_send_minute', this.value)" style="width:50px;background:var(--s3);border:1px solid var(--b);border-radius:4px;padding:4px 6px;font-size:12px;color:var(--text);font-family:var(--mono);text-align:center;outline:none">
-                <span>KST에 가입자에게 카카오톡 발송</span>
-              </div>
-            </div>
-
-            <!-- 2) 만료 처리 -->
-            <div style="background:var(--s3);border:1px solid var(--b);border-radius:8px;padding:12px;margin-bottom:10px">
-              <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
-                <div style="font-size:13px;font-weight:700;color:var(--text);flex:1">⏳ 구독 만료 처리</div>
-                <label style="position:relative;display:inline-block;width:46px;height:24px;flex-shrink:0">
-                  <input type="checkbox" id="schedExpireSubs" onchange="toggleScheduler('expire_subscriptions_enabled', this.checked)" style="opacity:0;width:0;height:0">
-                  <span id="schedExpireSubsSlider" style="position:absolute;cursor:pointer;top:0;left:0;right:0;bottom:0;background:#555;transition:.3s;border-radius:24px"></span>
-                  <span id="schedExpireSubsKnob" style="position:absolute;height:18px;width:18px;left:3px;top:3px;background:white;transition:.3s;border-radius:50%;pointer-events:none;box-shadow:0 1px 2px rgba(0,0,0,.3)"></span>
-                </label>
-              </div>
-              <div style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted)">
-                <span>매일</span>
-                <input type="number" id="schedExpireSubsHour" min="0" max="23" value="0" onchange="saveSchedulerTime('expire_subscriptions_hour', this.value)" style="width:50px;background:var(--s3);border:1px solid var(--b);border-radius:4px;padding:4px 6px;font-size:12px;color:var(--text);font-family:var(--mono);text-align:center;outline:none">
-                <span>:</span>
-                <input type="number" id="schedExpireSubsMinute" min="0" max="59" value="10" onchange="saveSchedulerTime('expire_subscriptions_minute', this.value)" style="width:50px;background:var(--s3);border:1px solid var(--b);border-radius:4px;padding:4px 6px;font-size:12px;color:var(--text);font-family:var(--mono);text-align:center;outline:none">
-                <span>KST에 만료된 구독자 status 변경</span>
-              </div>
-            </div>
-
-            <!-- 3) D-1 만료 알림 -->
-            <div style="background:var(--s3);border:1px solid var(--b);border-radius:8px;padding:12px;margin-bottom:10px">
-              <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
-                <div style="font-size:13px;font-weight:700;color:var(--text);flex:1">🔔 D-1 만료 알림</div>
-                <label style="position:relative;display:inline-block;width:46px;height:24px;flex-shrink:0">
-                  <input type="checkbox" id="schedExpiryD1" onchange="toggleScheduler('send_expiry_d1_enabled', this.checked)" style="opacity:0;width:0;height:0">
-                  <span id="schedExpiryD1Slider" style="position:absolute;cursor:pointer;top:0;left:0;right:0;bottom:0;background:#555;transition:.3s;border-radius:24px"></span>
-                  <span id="schedExpiryD1Knob" style="position:absolute;height:18px;width:18px;left:3px;top:3px;background:white;transition:.3s;border-radius:50%;pointer-events:none;box-shadow:0 1px 2px rgba(0,0,0,.3)"></span>
-                </label>
-              </div>
-              <div style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted)">
-                <span>매일</span>
-                <input type="number" id="schedExpiryD1Hour" min="0" max="23" value="9" onchange="saveSchedulerTime('send_expiry_d1_hour', this.value)" style="width:50px;background:var(--s3);border:1px solid var(--b);border-radius:4px;padding:4px 6px;font-size:12px;color:var(--text);font-family:var(--mono);text-align:center;outline:none">
-                <span>:</span>
-                <input type="number" id="schedExpiryD1Minute" min="0" max="59" value="0" onchange="saveSchedulerTime('send_expiry_d1_minute', this.value)" style="width:50px;background:var(--s3);border:1px solid var(--b);border-radius:4px;padding:4px 6px;font-size:12px;color:var(--text);font-family:var(--mono);text-align:center;outline:none">
-                <span>KST에 만료 1일 전 알림톡 발송</span>
-              </div>
-            </div>
-
-            <!-- 4) 환불 재시도 -->
-            <div style="background:var(--s3);border:1px solid var(--b);border-radius:8px;padding:12px;margin-bottom:6px">
-              <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
-                <div style="font-size:13px;font-weight:700;color:var(--text);flex:1">🔄 환불 자동 재시도</div>
-                <label style="position:relative;display:inline-block;width:46px;height:24px;flex-shrink:0">
-                  <input type="checkbox" id="schedRetryRefunds" onchange="toggleScheduler('retry_failed_refunds_enabled', this.checked)" style="opacity:0;width:0;height:0">
-                  <span id="schedRetryRefundsSlider" style="position:absolute;cursor:pointer;top:0;left:0;right:0;bottom:0;background:#555;transition:.3s;border-radius:24px"></span>
-                  <span id="schedRetryRefundsKnob" style="position:absolute;height:18px;width:18px;left:3px;top:3px;background:white;transition:.3s;border-radius:50%;pointer-events:none;box-shadow:0 1px 2px rgba(0,0,0,.3)"></span>
-                </label>
-              </div>
-              <div style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted)">
-                <span>매시간</span>
-                <input type="number" id="schedRetryRefundsMinute" min="0" max="59" value="15" onchange="saveSchedulerTime('retry_failed_refunds_minute', this.value)" style="width:50px;background:var(--s3);border:1px solid var(--b);border-radius:4px;padding:4px 6px;font-size:12px;color:var(--text);font-family:var(--mono);text-align:center;outline:none">
-                <span>분 KST에 실패 환불 row 재시도</span>
-              </div>
-            </div>
-
-            <!-- 스케줄러 현황 (next_run) -->
-            <div id="schedulerStatusPanel" style="margin-top:10px;padding:10px 12px;background:rgba(201,168,76,.05);border:1px dashed rgba(201,168,76,.3);border-radius:6px;font-size:11px;color:var(--muted);line-height:1.6">
-              <div style="font-weight:700;color:var(--gold);margin-bottom:4px">📊 등록 상태 (실시간)</div>
-              <div id="schedulerJobsList">로딩 중...</div>
-            </div>
-          </div>
-
-          <button onclick="saveSettings()" style="background:var(--gold);color:var(--bg);border:none;padding:12px;border-radius:8px;font-size:14px;font-weight:700;font-family:var(--sans);cursor:pointer;transition:all .2s;margin-top:14px" onmouseover="this.style.background='#e8c97a'" onmouseout="this.style.background='var(--gold)'">API 설정 저장</button>
-        </div>
+      <!-- [v157] 옛 hidden 입력들 (legacy 호환 — JS가 참조함, 사라지면 에러) -->
+      <div style="display:none">
+        <input type="text" id="cfgApi">
+        <input type="hidden" id="cfgHour" value="8">
+        <input type="hidden" id="cfgTrialDays" value="0">
+        <input type="checkbox" id="cfgAutoSend">
+        <span id="cfgAutoSendSlider"></span>
+        <span id="cfgAutoSendKnob"></span>
+        <div id="autoSendStatusLabel"></div>
+        <span id="serviceSettingsLastSaved"></span>
       </div>
 
-      <!-- 우측: 카테고리 관리 -->
-      <div class="panel" style="flex:1;min-width:600px">
+      <!-- 카테고리 관리 (전체 폭) -->
+      <div class="panel" style="width:100%">
         <div class="panel-head" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px">
           <div style="display:flex;align-items:center;gap:12px">
             <div class="panel-title">🗂️ 카테고리 관리</div>
@@ -2979,6 +2931,192 @@ body.light-mode .filter-pill.active { color:#fff; }
 </div>
 HIDDEN_HOUR_PICKER_END -->
 
+<!-- ── [v157] PAGE: 알림 관리 ── -->
+<div class="content" id="page-notify">
+  <div style="max-width:1100px;display:flex;flex-direction:column;gap:18px">
+    <div class="panel">
+      <div class="panel-head" style="display:flex;justify-content:space-between;align-items:center">
+        <div class="panel-title">🔔 알림톡 발송 관리</div>
+        <span id="notifyLastSaved" style="font-size:11px;color:var(--muted)">최근 저장: -</span>
+      </div>
+      <div style="padding:20px">
+        <div style="font-size:12px;color:var(--muted);margin-bottom:18px;line-height:1.6">
+          각 종류별 알림톡 발송 ON/OFF 및 솔라피 템플릿 ID를 관리합니다. 변경 즉시 적용됩니다.<br>
+          <span style="color:var(--gold)">💡 템플릿 ID는 32자 (KA01TP로 시작). 환경변수 우선 → DB값 fallback.</span>
+        </div>
+
+        <!-- 라이프사이클 알림 (4개) -->
+        <div style="margin-bottom:24px">
+          <div style="font-size:13px;font-weight:700;color:var(--gold);margin-bottom:10px;letter-spacing:.5px;padding-bottom:6px;border-bottom:1px solid rgba(201,168,76,.2)">📋 라이프사이클 알림</div>
+
+          <!-- 가입+결제 완료 -->
+          <div class="notify-row" data-key="signup_complete" style="background:var(--s3);border:1px solid var(--b);border-radius:8px;padding:14px;margin-bottom:10px">
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+              <div style="font-size:13px;font-weight:700;color:var(--text);flex:1">📥 가입+결제 완료 알림</div>
+              <label style="position:relative;display:inline-block;width:46px;height:24px;flex-shrink:0">
+                <input type="checkbox" class="notify-toggle" data-key="notify_signup_complete_enabled" onchange="toggleNotify('notify_signup_complete_enabled', this.checked)" style="opacity:0;width:0;height:0">
+                <span class="notify-slider" style="position:absolute;cursor:pointer;top:0;left:0;right:0;bottom:0;background:#555;transition:.3s;border-radius:24px"></span>
+                <span class="notify-knob" style="position:absolute;height:18px;width:18px;left:3px;top:3px;background:white;transition:.3s;border-radius:50%;pointer-events:none;box-shadow:0 1px 2px rgba(0,0,0,.3)"></span>
+              </label>
+            </div>
+            <div style="display:flex;gap:8px;align-items:center;font-size:11px;color:var(--muted)">
+              <span style="width:70px;flex-shrink:0">템플릿 ID</span>
+              <input type="text" class="notify-tpl" data-key="kakao_tpl_signup_complete" placeholder="KA01TP..." onchange="saveNotifyTemplate('kakao_tpl_signup_complete', this.value)" style="flex:1;background:var(--s3);border:1px solid var(--b);border-radius:4px;padding:6px 8px;font-size:11px;color:var(--text);font-family:var(--mono);outline:none">
+            </div>
+            <div style="font-size:11px;color:var(--muted);margin-top:6px;line-height:1.4">payment/verify 성공 직후 발송. 변수: name, amount, paid_at, category, subtopic, plan, first_send_date, plan_end_date</div>
+          </div>
+
+          <!-- 결제 실패 -->
+          <div class="notify-row" data-key="payment_failed" style="background:var(--s3);border:1px solid var(--b);border-radius:8px;padding:14px;margin-bottom:10px">
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+              <div style="font-size:13px;font-weight:700;color:var(--text);flex:1">❌ 결제 실패 알림</div>
+              <label style="position:relative;display:inline-block;width:46px;height:24px;flex-shrink:0">
+                <input type="checkbox" class="notify-toggle" data-key="notify_payment_failed_enabled" onchange="toggleNotify('notify_payment_failed_enabled', this.checked)" style="opacity:0;width:0;height:0">
+                <span class="notify-slider" style="position:absolute;cursor:pointer;top:0;left:0;right:0;bottom:0;background:#555;transition:.3s;border-radius:24px"></span>
+                <span class="notify-knob" style="position:absolute;height:18px;width:18px;left:3px;top:3px;background:white;transition:.3s;border-radius:50%;pointer-events:none;box-shadow:0 1px 2px rgba(0,0,0,.3)"></span>
+              </label>
+            </div>
+            <div style="display:flex;gap:8px;align-items:center;font-size:11px;color:var(--muted)">
+              <span style="width:70px;flex-shrink:0">템플릿 ID</span>
+              <input type="text" class="notify-tpl" data-key="kakao_tpl_payment_failed" placeholder="KA01TP..." onchange="saveNotifyTemplate('kakao_tpl_payment_failed', this.value)" style="flex:1;background:var(--s3);border:1px solid var(--b);border-radius:4px;padding:6px 8px;font-size:11px;color:var(--text);font-family:var(--mono);outline:none">
+            </div>
+            <div style="font-size:11px;color:var(--muted);margin-top:6px;line-height:1.4">결제 실패 또는 중단 시 발송. 변수: name, plan, amount, reason</div>
+          </div>
+
+          <!-- D-1 만료 알림 -->
+          <div class="notify-row" data-key="expiry_d1" style="background:var(--s3);border:1px solid var(--b);border-radius:8px;padding:14px;margin-bottom:10px">
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+              <div style="font-size:13px;font-weight:700;color:var(--text);flex:1">🔔 D-1 만료 알림</div>
+              <label style="position:relative;display:inline-block;width:46px;height:24px;flex-shrink:0">
+                <input type="checkbox" class="notify-toggle" data-key="notify_expiry_d1_enabled" onchange="toggleNotify('notify_expiry_d1_enabled', this.checked)" style="opacity:0;width:0;height:0">
+                <span class="notify-slider" style="position:absolute;cursor:pointer;top:0;left:0;right:0;bottom:0;background:#555;transition:.3s;border-radius:24px"></span>
+                <span class="notify-knob" style="position:absolute;height:18px;width:18px;left:3px;top:3px;background:white;transition:.3s;border-radius:50%;pointer-events:none;box-shadow:0 1px 2px rgba(0,0,0,.3)"></span>
+              </label>
+            </div>
+            <div style="display:flex;gap:8px;align-items:center;font-size:11px;color:var(--muted)">
+              <span style="width:70px;flex-shrink:0">템플릿 ID</span>
+              <input type="text" class="notify-tpl" data-key="kakao_tpl_expiry_d1" placeholder="KA01TP..." onchange="saveNotifyTemplate('kakao_tpl_expiry_d1', this.value)" style="flex:1;background:var(--s3);border:1px solid var(--b);border-radius:4px;padding:6px 8px;font-size:11px;color:var(--text);font-family:var(--mono);outline:none">
+            </div>
+            <div style="font-size:11px;color:var(--muted);margin-top:6px;line-height:1.4">매일 09:00 KST 스케줄러가 만료 1일 전 구독자에게 발송</div>
+          </div>
+
+          <!-- 환불 완료 -->
+          <div class="notify-row" data-key="refund_complete" style="background:var(--s3);border:1px solid var(--b);border-radius:8px;padding:14px;margin-bottom:10px">
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+              <div style="font-size:13px;font-weight:700;color:var(--text);flex:1">💰 환불 완료 알림</div>
+              <label style="position:relative;display:inline-block;width:46px;height:24px;flex-shrink:0">
+                <input type="checkbox" class="notify-toggle" data-key="notify_refund_complete_enabled" onchange="toggleNotify('notify_refund_complete_enabled', this.checked)" style="opacity:0;width:0;height:0">
+                <span class="notify-slider" style="position:absolute;cursor:pointer;top:0;left:0;right:0;bottom:0;background:#555;transition:.3s;border-radius:24px"></span>
+                <span class="notify-knob" style="position:absolute;height:18px;width:18px;left:3px;top:3px;background:white;transition:.3s;border-radius:50%;pointer-events:none;box-shadow:0 1px 2px rgba(0,0,0,.3)"></span>
+              </label>
+            </div>
+            <div style="display:flex;gap:8px;align-items:center;font-size:11px;color:var(--muted)">
+              <span style="width:70px;flex-shrink:0">템플릿 ID</span>
+              <input type="text" class="notify-tpl" data-key="kakao_tpl_refund_complete" placeholder="KA01TP..." onchange="saveNotifyTemplate('kakao_tpl_refund_complete', this.value)" style="flex:1;background:var(--s3);border:1px solid var(--b);border-radius:4px;padding:6px 8px;font-size:11px;color:var(--text);font-family:var(--mono);outline:none">
+            </div>
+            <div style="font-size:11px;color:var(--muted);margin-top:6px;line-height:1.4">환불 완료 처리 시 발송. 변수: name, refund_amount, reason, refunded_at</div>
+          </div>
+        </div>
+
+        <!-- 일일 콘텐츠 알림 (6개 그룹) -->
+        <div>
+          <div style="font-size:13px;font-weight:700;color:var(--gold);margin-bottom:10px;letter-spacing:.5px;padding-bottom:6px;border-bottom:1px solid rgba(201,168,76,.2)">📚 일일 콘텐츠 (6개 그룹)</div>
+          <div style="font-size:11px;color:var(--muted);margin-bottom:12px">매일 08:00 KST 가입자에게 카테고리 그룹별 다른 템플릿으로 발송</div>
+
+          <!-- 6개 그룹 반복 -->
+          <div id="contentNotifyGrid" style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+            <!-- 일·업무 -->
+            <div class="notify-row" data-key="content_work" style="background:var(--s3);border:1px solid var(--b);border-radius:8px;padding:12px">
+              <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+                <div style="font-size:12px;font-weight:700;color:var(--text);flex:1">💼 일·업무</div>
+                <label style="position:relative;display:inline-block;width:40px;height:22px;flex-shrink:0">
+                  <input type="checkbox" class="notify-toggle" data-key="notify_content_work_enabled" onchange="toggleNotify('notify_content_work_enabled', this.checked)" style="opacity:0;width:0;height:0">
+                  <span class="notify-slider" style="position:absolute;cursor:pointer;top:0;left:0;right:0;bottom:0;background:#555;transition:.3s;border-radius:22px"></span>
+                  <span class="notify-knob" style="position:absolute;height:16px;width:16px;left:3px;top:3px;background:white;transition:.3s;border-radius:50%;pointer-events:none;box-shadow:0 1px 2px rgba(0,0,0,.3)"></span>
+                </label>
+              </div>
+              <input type="text" class="notify-tpl" data-key="alimtalk_tpl_work" placeholder="KA01TP..." onchange="saveNotifyTemplate('alimtalk_tpl_work', this.value)" style="width:100%;background:var(--s3);border:1px solid var(--b);border-radius:4px;padding:6px 8px;font-size:10px;color:var(--text);font-family:var(--mono);outline:none">
+            </div>
+
+            <!-- 외국어 -->
+            <div class="notify-row" data-key="content_language" style="background:var(--s3);border:1px solid var(--b);border-radius:8px;padding:12px">
+              <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+                <div style="font-size:12px;font-weight:700;color:var(--text);flex:1">🌐 외국어</div>
+                <label style="position:relative;display:inline-block;width:40px;height:22px;flex-shrink:0">
+                  <input type="checkbox" class="notify-toggle" data-key="notify_content_language_enabled" onchange="toggleNotify('notify_content_language_enabled', this.checked)" style="opacity:0;width:0;height:0">
+                  <span class="notify-slider" style="position:absolute;cursor:pointer;top:0;left:0;right:0;bottom:0;background:#555;transition:.3s;border-radius:22px"></span>
+                  <span class="notify-knob" style="position:absolute;height:16px;width:16px;left:3px;top:3px;background:white;transition:.3s;border-radius:50%;pointer-events:none;box-shadow:0 1px 2px rgba(0,0,0,.3)"></span>
+                </label>
+              </div>
+              <input type="text" class="notify-tpl" data-key="alimtalk_tpl_language" placeholder="KA01TP..." onchange="saveNotifyTemplate('alimtalk_tpl_language', this.value)" style="width:100%;background:var(--s3);border:1px solid var(--b);border-radius:4px;padding:6px 8px;font-size:10px;color:var(--text);font-family:var(--mono);outline:none">
+            </div>
+
+            <!-- 테크·디지털 -->
+            <div class="notify-row" data-key="content_tech" style="background:var(--s3);border:1px solid var(--b);border-radius:8px;padding:12px">
+              <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+                <div style="font-size:12px;font-weight:700;color:var(--text);flex:1">💻 테크·디지털</div>
+                <label style="position:relative;display:inline-block;width:40px;height:22px;flex-shrink:0">
+                  <input type="checkbox" class="notify-toggle" data-key="notify_content_tech_enabled" onchange="toggleNotify('notify_content_tech_enabled', this.checked)" style="opacity:0;width:0;height:0">
+                  <span class="notify-slider" style="position:absolute;cursor:pointer;top:0;left:0;right:0;bottom:0;background:#555;transition:.3s;border-radius:22px"></span>
+                  <span class="notify-knob" style="position:absolute;height:16px;width:16px;left:3px;top:3px;background:white;transition:.3s;border-radius:50%;pointer-events:none;box-shadow:0 1px 2px rgba(0,0,0,.3)"></span>
+                </label>
+              </div>
+              <input type="text" class="notify-tpl" data-key="alimtalk_tpl_tech" placeholder="KA01TP..." onchange="saveNotifyTemplate('alimtalk_tpl_tech', this.value)" style="width:100%;background:var(--s3);border:1px solid var(--b);border-radius:4px;padding:6px 8px;font-size:10px;color:var(--text);font-family:var(--mono);outline:none">
+            </div>
+
+            <!-- 금융·투자 -->
+            <div class="notify-row" data-key="content_finance" style="background:var(--s3);border:1px solid var(--b);border-radius:8px;padding:12px">
+              <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+                <div style="font-size:12px;font-weight:700;color:var(--text);flex:1">💰 금융·투자</div>
+                <label style="position:relative;display:inline-block;width:40px;height:22px;flex-shrink:0">
+                  <input type="checkbox" class="notify-toggle" data-key="notify_content_finance_enabled" onchange="toggleNotify('notify_content_finance_enabled', this.checked)" style="opacity:0;width:0;height:0">
+                  <span class="notify-slider" style="position:absolute;cursor:pointer;top:0;left:0;right:0;bottom:0;background:#555;transition:.3s;border-radius:22px"></span>
+                  <span class="notify-knob" style="position:absolute;height:16px;width:16px;left:3px;top:3px;background:white;transition:.3s;border-radius:50%;pointer-events:none;box-shadow:0 1px 2px rgba(0,0,0,.3)"></span>
+                </label>
+              </div>
+              <input type="text" class="notify-tpl" data-key="alimtalk_tpl_finance" placeholder="KA01TP..." onchange="saveNotifyTemplate('alimtalk_tpl_finance', this.value)" style="width:100%;background:var(--s3);border:1px solid var(--b);border-radius:4px;padding:6px 8px;font-size:10px;color:var(--text);font-family:var(--mono);outline:none">
+            </div>
+
+            <!-- 건강·일상 -->
+            <div class="notify-row" data-key="content_health" style="background:var(--s3);border:1px solid var(--b);border-radius:8px;padding:12px">
+              <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+                <div style="font-size:12px;font-weight:700;color:var(--text);flex:1">🌱 건강·일상</div>
+                <label style="position:relative;display:inline-block;width:40px;height:22px;flex-shrink:0">
+                  <input type="checkbox" class="notify-toggle" data-key="notify_content_health_enabled" onchange="toggleNotify('notify_content_health_enabled', this.checked)" style="opacity:0;width:0;height:0">
+                  <span class="notify-slider" style="position:absolute;cursor:pointer;top:0;left:0;right:0;bottom:0;background:#555;transition:.3s;border-radius:22px"></span>
+                  <span class="notify-knob" style="position:absolute;height:16px;width:16px;left:3px;top:3px;background:white;transition:.3s;border-radius:50%;pointer-events:none;box-shadow:0 1px 2px rgba(0,0,0,.3)"></span>
+                </label>
+              </div>
+              <input type="text" class="notify-tpl" data-key="alimtalk_tpl_health" placeholder="KA01TP..." onchange="saveNotifyTemplate('alimtalk_tpl_health', this.value)" style="width:100%;background:var(--s3);border:1px solid var(--b);border-radius:4px;padding:6px 8px;font-size:10px;color:var(--text);font-family:var(--mono);outline:none">
+            </div>
+
+            <!-- 교양·지식 -->
+            <div class="notify-row" data-key="content_knowledge" style="background:var(--s3);border:1px solid var(--b);border-radius:8px;padding:12px">
+              <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+                <div style="font-size:12px;font-weight:700;color:var(--text);flex:1">📚 교양·지식</div>
+                <label style="position:relative;display:inline-block;width:40px;height:22px;flex-shrink:0">
+                  <input type="checkbox" class="notify-toggle" data-key="notify_content_knowledge_enabled" onchange="toggleNotify('notify_content_knowledge_enabled', this.checked)" style="opacity:0;width:0;height:0">
+                  <span class="notify-slider" style="position:absolute;cursor:pointer;top:0;left:0;right:0;bottom:0;background:#555;transition:.3s;border-radius:22px"></span>
+                  <span class="notify-knob" style="position:absolute;height:16px;width:16px;left:3px;top:3px;background:white;transition:.3s;border-radius:50%;pointer-events:none;box-shadow:0 1px 2px rgba(0,0,0,.3)"></span>
+                </label>
+              </div>
+              <input type="text" class="notify-tpl" data-key="alimtalk_tpl_knowledge" placeholder="KA01TP..." onchange="saveNotifyTemplate('alimtalk_tpl_knowledge', this.value)" style="width:100%;background:var(--s3);border:1px solid var(--b);border-radius:4px;padding:6px 8px;font-size:10px;color:var(--text);font-family:var(--mono);outline:none">
+            </div>
+          </div>
+        </div>
+
+        <!-- 솔라피 PFID + 발신자 (참조) -->
+        <div style="margin-top:24px;padding:14px;background:rgba(255,255,255,.02);border:1px dashed var(--b);border-radius:8px;font-size:11px;color:var(--muted);line-height:1.7">
+          <div style="font-weight:700;color:var(--text);margin-bottom:6px">🔑 솔라피 채널 정보 (Railway 환경변수)</div>
+          <div>SOLAPI_PFID: <span style="font-family:var(--mono);color:var(--gold)" id="pfidDisplay">로딩 중...</span></div>
+          <div>SOLAPI_SENDER: <span style="font-family:var(--mono);color:var(--gold)" id="senderDisplay">로딩 중...</span></div>
+          <div style="margin-top:6px">변경하려면 Railway 환경변수 직접 수정.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- 발송 확인 모달 -->
 <div class="overlay" id="sendConfirm">
   <div class="modal">
@@ -3159,7 +3297,8 @@ const pageTitles = {
   send:'📨 발송 현황', content:'📝 주제 관리',
   archive:'📚 콘텐츠 아카이브',
   stats:'📈 통계 분석',
-  revenue:'💰 매출 현황', payments:'💳 결제 이력', scheduler:'⏰ 스케줄러', settings:'⚙️ 설정',
+  revenue:'💰 매출 현황', payments:'💳 결제 이력',
+  scheduler:'⏰ 스케줄러', settings:'🗂️ 카테고리 관리', notify:'🔔 알림 관리',
 };
 // 아카이브 영역은 이제 page-archive 안에 정적으로 있음 — 동적 이동 불필요
 function _moveArchiveSection(_mode) {
@@ -3237,7 +3376,8 @@ function loadPage(name) {
   }
   if (name === 'payments')     loadPayments();
   if (name === 'settings')     loadSettings();
-  if (name === 'scheduler')    loadSchedulerStatus();
+  if (name === 'scheduler')    { loadSchedulerStatus(); loadSchedulerSettings(); }
+  if (name === 'notify')       loadNotifySettings();
 }
 function loadAll() { loadPage(currentPage); showToast('새로고침 완료', 'ok'); }
 
@@ -9545,6 +9685,219 @@ async function saveSchedulerTime(key, value) {
       showToast('저장 실패: ' + (e?.message || e), 'ng');
     }
   }, 800);
+}
+
+// [v157] 스케줄러 페이지 진입 시 토글/시간 초기 로드 (옛 loadSystemSettings 분리)
+async function loadSchedulerSettings() {
+  try {
+    const res = await apiFetch('/admin/settings');
+    const data = res && res.data ? res.data : {};
+
+    const dailySendEnabled = String(data.daily_send_enabled?.value || data.auto_send_enabled?.value || 'false').toLowerCase() === 'true';
+    const dailySendHour    = parseInt(data.daily_send_hour?.value     || '8', 10);
+    const dailySendMinute  = parseInt(data.daily_send_minute?.value   || '0', 10);
+
+    const expireEnabled = String(data.expire_subscriptions_enabled?.value || 'true').toLowerCase() === 'true';
+    const expireHour    = parseInt(data.expire_subscriptions_hour?.value     || '0', 10);
+    const expireMinute  = parseInt(data.expire_subscriptions_minute?.value   || '10', 10);
+
+    const d1Enabled = String(data.send_expiry_d1_enabled?.value || 'true').toLowerCase() === 'true';
+    const d1Hour    = parseInt(data.send_expiry_d1_hour?.value     || '9', 10);
+    const d1Minute  = parseInt(data.send_expiry_d1_minute?.value   || '0', 10);
+
+    const retryEnabled = String(data.retry_failed_refunds_enabled?.value || 'true').toLowerCase() === 'true';
+    const retryMinute  = parseInt(data.retry_failed_refunds_minute?.value || '15', 10);
+
+    const autoRefund = String(data.auto_refund_enabled?.value || 'true').toLowerCase() === 'true';
+
+    const _setField = (id, value) => { const el = document.getElementById(id); if (el) el.value = value; };
+    const _setCheckbox = (id, checked) => { const el = document.getElementById(id); if (el) el.checked = checked; };
+
+    _setCheckbox('schedDailySend', dailySendEnabled);
+    _setField('schedDailySendHour', dailySendHour);
+    _setField('schedDailySendMinute', dailySendMinute);
+    _updateSchedToggleUI('daily_send_enabled', dailySendEnabled);
+
+    _setCheckbox('schedExpireSubs', expireEnabled);
+    _setField('schedExpireSubsHour', expireHour);
+    _setField('schedExpireSubsMinute', expireMinute);
+    _updateSchedToggleUI('expire_subscriptions_enabled', expireEnabled);
+
+    _setCheckbox('schedExpiryD1', d1Enabled);
+    _setField('schedExpiryD1Hour', d1Hour);
+    _setField('schedExpiryD1Minute', d1Minute);
+    _updateSchedToggleUI('send_expiry_d1_enabled', d1Enabled);
+
+    _setCheckbox('schedRetryRefunds', retryEnabled);
+    _setField('schedRetryRefundsMinute', retryMinute);
+    _updateSchedToggleUI('retry_failed_refunds_enabled', retryEnabled);
+
+    _setCheckbox('cfgAutoRefund', autoRefund);
+    _updateAutoRefundUI(autoRefund);
+
+    let latestUpdated = null;
+    const schedKeys = ['daily_send_enabled','daily_send_hour','daily_send_minute',
+      'expire_subscriptions_enabled','expire_subscriptions_hour','expire_subscriptions_minute',
+      'send_expiry_d1_enabled','send_expiry_d1_hour','send_expiry_d1_minute',
+      'retry_failed_refunds_enabled','retry_failed_refunds_minute','auto_refund_enabled'];
+    for (const k of schedKeys) {
+      const u = data[k]?.updated_at;
+      if (u && (!latestUpdated || u > latestUpdated)) latestUpdated = u;
+    }
+    if (latestUpdated) {
+      const dt = new Date(latestUpdated).toLocaleString('ko-KR', {
+        timeZone: 'Asia/Seoul', month:'2-digit', day:'2-digit',
+        hour:'2-digit', minute:'2-digit', second:'2-digit', hour12:false
+      });
+      const el = document.getElementById('schedSingleLastSaved');
+      if (el) el.textContent = '최근 저장: ' + dt;
+    }
+  } catch (e) {
+    console.warn('[스케줄러 설정] 로드 실패:', e);
+  }
+}
+
+// ════════════════════════════════════════════════════════════
+// [v157] 알림 관리 — 토글 + 템플릿 ID 설정
+// ════════════════════════════════════════════════════════════
+// notify 토글 / 템플릿 키 매핑
+const NOTIFY_TOGGLE_KEYS = [
+  'notify_signup_complete_enabled',
+  'notify_payment_failed_enabled',
+  'notify_expiry_d1_enabled',
+  'notify_refund_complete_enabled',
+  'notify_content_work_enabled',
+  'notify_content_language_enabled',
+  'notify_content_tech_enabled',
+  'notify_content_finance_enabled',
+  'notify_content_health_enabled',
+  'notify_content_knowledge_enabled',
+];
+const NOTIFY_TPL_KEYS = [
+  'kakao_tpl_signup_complete', 'kakao_tpl_payment_failed', 'kakao_tpl_expiry_d1', 'kakao_tpl_refund_complete',
+  'alimtalk_tpl_work', 'alimtalk_tpl_language', 'alimtalk_tpl_tech',
+  'alimtalk_tpl_finance', 'alimtalk_tpl_health', 'alimtalk_tpl_knowledge',
+];
+
+function _updateNotifyToggleUI(key, enabled) {
+  // checkbox + slider + knob (data-key 기준)
+  const inp = document.querySelector(`input.notify-toggle[data-key="${key}"]`);
+  if (!inp) return;
+  inp.checked = enabled;
+  const row = inp.closest('.notify-row');
+  if (!row) return;
+  const slider = row.querySelector('.notify-slider');
+  const knob = row.querySelector('.notify-knob');
+  if (slider) slider.style.background = enabled ? '#10b981' : '#555';
+  if (knob) {
+    // 작은 토글 (22px)인지 큰 토글 (24px)인지 구분
+    const trXSmall = row.querySelector('.notify-toggle')?.parentElement?.style?.width === '40px';
+    knob.style.transform = enabled ? (trXSmall ? 'translateX(18px)' : 'translateX(22px)') : 'translateX(0)';
+  }
+}
+
+async function toggleNotify(key, enabled) {
+  _updateNotifyToggleUI(key, enabled);
+  try {
+    const r = await apiFetch('/admin/settings/' + key, { method:'PUT', body:JSON.stringify({value: enabled ? 'true' : 'false'}) });
+    const res = r && r.ok ? await r.json() : null;
+    if (res && res.success) {
+      showToast((enabled ? '활성화: ' : '비활성화: ') + key.replace('notify_','').replace('_enabled',''), 'ok');
+      updateNotifyLastSaved();
+    } else {
+      showToast('저장 실패: ' + (res?.message || 'unknown'), 'ng');
+      _updateNotifyToggleUI(key, !enabled);
+    }
+  } catch (e) {
+    showToast('저장 실패: ' + (e?.message || e), 'ng');
+    _updateNotifyToggleUI(key, !enabled);
+  }
+}
+
+let _saveNotifyTplDebounce = {};
+async function saveNotifyTemplate(key, value) {
+  // 디바운스 (1초)
+  clearTimeout(_saveNotifyTplDebounce[key]);
+  _saveNotifyTplDebounce[key] = setTimeout(async () => {
+    const trimmed = (value || '').trim();
+    if (trimmed && (trimmed.length < 30 || trimmed.length > 36 || !trimmed.startsWith('KA01TP'))) {
+      showToast('템플릿 ID 형식이 잘못되었습니다 (KA01TP로 시작, 32자)', 'ng');
+      return;
+    }
+    try {
+      const r = await apiFetch('/admin/settings/' + key, { method:'PUT', body:JSON.stringify({value: trimmed}) });
+      const res = r && r.ok ? await r.json() : null;
+      if (res && res.success) {
+        showToast('템플릿 저장: ' + key.replace('kakao_tpl_','').replace('alimtalk_tpl_',''), 'ok');
+        updateNotifyLastSaved();
+      } else {
+        showToast('저장 실패: ' + (res?.message || 'unknown'), 'ng');
+      }
+    } catch (e) {
+      showToast('저장 실패: ' + (e?.message || e), 'ng');
+    }
+  }, 700);
+}
+
+function updateNotifyLastSaved() {
+  const el = document.getElementById('notifyLastSaved');
+  if (!el) return;
+  const now = new Date().toLocaleString('ko-KR', {
+    timeZone: 'Asia/Seoul', month:'2-digit', day:'2-digit',
+    hour:'2-digit', minute:'2-digit', second:'2-digit', hour12:false
+  });
+  el.textContent = '최근 저장: ' + now;
+}
+
+async function loadNotifySettings() {
+  try {
+    const res = await apiFetch('/admin/settings');
+    const data = res && res.data ? res.data : {};
+
+    // 토글 10개
+    NOTIFY_TOGGLE_KEYS.forEach(key => {
+      // 기본값: 모두 true (활성)
+      const enabled = String(data[key]?.value || 'true').toLowerCase() === 'true';
+      _updateNotifyToggleUI(key, enabled);
+    });
+
+    // 템플릿 ID 10개
+    NOTIFY_TPL_KEYS.forEach(key => {
+      const inp = document.querySelector(`input.notify-tpl[data-key="${key}"]`);
+      if (!inp) return;
+      // DB에 저장된 값 우선, 없으면 빈 값 (환경변수는 백엔드에서 fallback 사용)
+      inp.value = data[key]?.value || '';
+    });
+
+    // PFID + Sender 표시 (debug endpoint에서)
+    try {
+      const tplRes = await apiFetch('/admin/debug/alimtalk-templates');
+      const env = tplRes?.env || {};
+      const pfidEl = document.getElementById('pfidDisplay');
+      const senderEl = document.getElementById('senderDisplay');
+      if (pfidEl) pfidEl.textContent = env.SOLAPI_PFID?.set ? '✅ 설정됨' : '⚠️ 미설정';
+      if (senderEl) senderEl.textContent = env.SOLAPI_SENDER?.value || env.SOLAPI_SENDER?.set ? '✅ 설정됨' : '⚠️ 미설정';
+    } catch (e) {
+      // 디버그 endpoint 없어도 무시
+    }
+
+    // 최근 저장 시간 (notify 키 중 최신)
+    let latestUpdated = null;
+    [...NOTIFY_TOGGLE_KEYS, ...NOTIFY_TPL_KEYS].forEach(k => {
+      const u = data[k]?.updated_at;
+      if (u && (!latestUpdated || u > latestUpdated)) latestUpdated = u;
+    });
+    if (latestUpdated) {
+      const dt = new Date(latestUpdated).toLocaleString('ko-KR', {
+        timeZone: 'Asia/Seoul', month:'2-digit', day:'2-digit',
+        hour:'2-digit', minute:'2-digit', second:'2-digit', hour12:false
+      });
+      const el = document.getElementById('notifyLastSaved');
+      if (el) el.textContent = '최근 저장: ' + dt;
+    }
+  } catch (e) {
+    console.warn('[알림 관리] 로드 실패:', e);
+  }
 }
 
 // 스케줄러 현황 조회 (next_run_time)
