@@ -196,6 +196,11 @@ body {
 }
 .content.active { display:block; }
 
+/* ─── [v170] 알림 관리 페이지 — wrapper 단순화로 .content 자체가 flex 컨테이너 ─── */
+#page-notify.content.active {
+  display:flex;
+}
+
 /* ─── 콘텐츠 페이지: 아카이브 메인 + 주제 작업 collapsible ─── */
 #page-content.content.active,
 #page-archive.content.active {
@@ -751,6 +756,11 @@ body.light-mode .filter-pill.active { color:#fff; }
   }
   .kpi-grid, .kpi-grid-5 { grid-template-columns:repeat(2,1fr); }
   .two-col { grid-template-columns:1fr; }
+  /* [v170] 스케줄러 페이지 — 좁은 화면에서는 1열로 (main 위, side1·side2 아래) */
+  #page-scheduler > div[style*="grid-template-areas"] {
+    grid-template-columns:1fr !important;
+    grid-template-areas:'main' 'side1' 'side2' !important;
+  }
 }
 
 /* ── 컬럼 리사이즈 ── */
@@ -980,7 +990,7 @@ body:not(.light-mode) .np-time { color:#9b9eaa; }
 <!-- SIDEBAR -->
 <aside class="sidebar">
   <div class="sb-logo">1DAYECO<small>Admin Dashboard</small>
-    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v168</span>
+    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v170</span>
   </div>
   <nav class="sb-nav">
     <div class="sb-group">운영</div>
@@ -2029,8 +2039,12 @@ body:not(.light-mode) .np-time { color:#9b9eaa; }
 
   <!-- ── PAGE: 스케줄러 ── -->
   <div class="content" id="page-scheduler">
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;max-width:900px">
-      <div class="panel" style="grid-column:1/-1">
+    <!-- [v170] 첨부 로드맵 그대로:
+         - 좌측 (큰 영역): 단일 시간 스케줄러 (panel 3)
+         - 우측 (작은 사이드): 스케줄러 현황 (panel 1) + 콘텐츠 자동 생성 (panel 2)
+         HTML 순서를 바꾸지 않고 grid-template-areas로 자리만 배치 -->
+    <div style="display:grid;grid-template-columns:minmax(0, 1.6fr) minmax(280px, 1fr);grid-template-areas:'main side1' 'main side2';gap:16px;max-width:1400px;align-items:start">
+      <div class="panel" style="grid-area:side1">
         <div class="panel-head">
           <div class="panel-title">⏰ 스케줄러 현황</div>
           <div style="display:flex;gap:8px">
@@ -2040,9 +2054,9 @@ body:not(.light-mode) .np-time { color:#9b9eaa; }
         </div>
         <div style="padding:20px"><div id="schedulerJobList" style="display:flex;flex-direction:column;gap:10px"></div></div>
       </div>
-      <div class="panel" style="grid-column:1/-1">
+      <div class="panel" style="grid-area:side2">
         <div class="panel-head"><div class="panel-title">📝 콘텐츠 자동 생성</div></div>
-        <div style="padding:20px;display:flex;flex-direction:column;gap:16px;max-width:640px">
+        <div style="padding:20px;display:flex;flex-direction:column;gap:16px">
           <!-- 활성/비활성 명확한 버튼 토글 -->
           <div>
             <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:8px;letter-spacing:.5px">자동 생성 상태</label>
@@ -2090,7 +2104,7 @@ body:not(.light-mode) .np-time { color:#9b9eaa; }
         </div>
       </div>
       <!-- ── [v157] 단일 시간 스케줄러 4개 + 자동 환불 (설정 페이지에서 이동) ── -->
-      <div class="panel" style="grid-column:1/-1">
+      <div class="panel" style="grid-area:main">
         <div class="panel-head">
           <div class="panel-title">🛎️ 단일 시간 스케줄러</div>
           <span id="schedSingleLastSaved" style="font-size:11px;color:var(--muted)">최근 저장: -</span>
@@ -3116,10 +3130,8 @@ body:not(.light-mode) .np-time { color:#9b9eaa; }
 </div>
 HIDDEN_HOUR_PICKER_END -->
 
-  <!-- ── [v162] PAGE: 알림 관리 — nav 깨짐 방지 (min-width 안전화) ── -->
-  <div class="content" id="page-notify">
-    <div style="max-width:1400px;width:100%">
-      <div style="display:flex;gap:18px;align-items:flex-start;flex-wrap:wrap;width:100%">
+  <!-- ── [v170] PAGE: 알림 관리 — wrapper 단순화 + #page-notify가 직접 flex 컨테이너 ── -->
+  <div class="content" id="page-notify" style="flex-wrap:wrap;gap:18px;align-items:flex-start">
 
     <!-- 좌측: 템플릿 목록 -->
     <div class="panel" style="flex:0 0 360px;max-width:360px;min-width:0">
@@ -3219,8 +3231,6 @@ HIDDEN_HOUR_PICKER_END -->
       </div>
     </div>
 
-      </div>
-    </div>
   </div>
 
 <!-- 발송 확인 모달 -->
