@@ -27,6 +27,11 @@
   --sans: 'Noto Sans KR', sans-serif;
   --mono: 'JetBrains Mono', monospace;
   --sidebar: 220px;
+  /* [v160] 알림톡 미리보기 색상 — 다크모드: 부드러운 머스타드 */
+  --preview-bg: #d4b85b;
+  --preview-text: #1a1606;
+  --preview-header-bg: #3a3015;
+  --preview-header-text: #d4b85b;
 }
 
 /* ── LIGHT MODE ── */
@@ -44,6 +49,11 @@ body.light-mode {
   --red: #DC2626;
   --blue: #2563EB;
   --amber: #D97706;
+  /* [v160] 라이트 모드 알림톡 미리보기 — 부드러운 베이지-노랑 */
+  --preview-bg: #f5e6a8;
+  --preview-text: #3a2f0a;
+  --preview-header-bg: #e8d785;
+  --preview-header-text: #3a2f0a;
 }
 /* 라이트 모드 보강: 패널/KPI에 그림자 */
 body.light-mode .panel,
@@ -769,7 +779,7 @@ body.light-mode .filter-pill.active { color:#fff; }
 <!-- SIDEBAR -->
 <aside class="sidebar">
   <div class="sb-logo">1DAYECO<small>Admin Dashboard</small>
-    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v159</span>
+    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v160</span>
   </div>
   <nav class="sb-nav">
     <div class="sb-group">운영</div>
@@ -2931,9 +2941,9 @@ body.light-mode .filter-pill.active { color:#fff; }
 </div>
 HIDDEN_HOUR_PICKER_END -->
 
-<!-- ── [v158] PAGE: 알림 관리 — 솔라피 스타일 (좌측 목록 + 우측 미리보기/설정) ── -->
-<div class="content" id="page-notify">
-  <div style="display:flex;gap:18px;max-width:1400px;align-items:flex-start;flex-wrap:wrap">
+  <!-- ── [v158] PAGE: 알림 관리 — 솔라피 스타일 (좌측 목록 + 우측 미리보기/설정) ── -->
+  <div class="content" id="page-notify">
+    <div style="max-width:1400px;display:flex;gap:18px;align-items:flex-start;flex-wrap:wrap">
 
     <!-- 좌측: 템플릿 목록 -->
     <div class="panel" style="flex:0 0 380px;max-width:380px">
@@ -2997,7 +3007,15 @@ HIDDEN_HOUR_PICKER_END -->
         <!-- 미리보기 -->
         <div style="margin-bottom:14px">
           <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:6px;letter-spacing:.3px">템플릿 미리보기 (예시 데이터)</label>
-          <div id="notifyDetailPreview" style="background:#FFEB3B;color:#000;border-radius:8px;padding:14px;font-size:12px;line-height:1.7;white-space:pre-wrap;min-height:120px;font-family:'Apple SD Gothic Neo','Malgun Gothic',sans-serif"></div>
+          <div style="border-radius:8px;overflow:hidden;border:1px solid var(--b)">
+            <!-- 카카오톡 헤더 (어두운 골드) -->
+            <div style="background:var(--preview-header-bg);color:var(--preview-header-text);padding:8px 14px;font-size:11px;font-weight:700;display:flex;align-items:center;gap:6px">
+              <span style="background:#ffe300;color:#3c1e1e;padding:1px 6px;border-radius:3px;font-size:10px;font-weight:700">kakao</span>
+              <span>알림톡 도착</span>
+            </div>
+            <!-- 본문 (부드러운 머스타드) -->
+            <div id="notifyDetailPreview" style="background:var(--preview-bg);color:var(--preview-text);padding:14px;font-size:12px;line-height:1.7;white-space:pre-wrap;min-height:120px;font-family:'Apple SD Gothic Neo','Malgun Gothic',sans-serif"></div>
+          </div>
           <div style="font-size:10px;color:var(--muted);margin-top:6px;text-align:right">※ 본문 수정은 솔라피 콘솔에서만 가능합니다.</div>
         </div>
 
