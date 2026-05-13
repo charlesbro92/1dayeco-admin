@@ -785,6 +785,134 @@ body.light-mode .filter-pill.active { color:#fff; }
 .topic-act-btn:hover { color:var(--gold); }
 .topic-act-del:hover { color:#F87171; }
 
+/* ════════════════════════════════════════════════════════════ */
+/* [v165] 알림 관리 — 솔라피 콘솔 동일 디자인 미리보기                  */
+/* ════════════════════════════════════════════════════════════ */
+.notify-preview-shell {
+  width:380px;
+  max-width:100%;
+  margin:0 auto;
+  background:#E8E9F0;         /* 솔라피 외곽 회색-라벤더 */
+  border-radius:12px;
+  padding:18px 16px 14px;
+  box-sizing:border-box;
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+}
+body.light-mode .notify-preview-shell {
+  background:#E8E9F0;          /* 라이트 모드도 동일 */
+}
+/* 다크 모드용 외곽 — 어두운 차콜 */
+body:not(.light-mode) .notify-preview-shell {
+  background:#2a2c34;
+}
+
+.np-date {
+  text-align:center;
+  font-size:11px;
+  color:#7a7e8a;
+  font-family:'Apple SD Gothic Neo','Malgun Gothic',sans-serif;
+  letter-spacing:.3px;
+}
+body:not(.light-mode) .np-date { color:#9b9eaa; }
+
+.np-profile {
+  display:flex;
+  align-items:center;
+  gap:8px;
+  margin-top:2px;
+}
+.np-avatar {
+  width:36px; height:36px;
+  border-radius:50%;
+  background:#C2C5D0;        /* 빈 아바타 (솔라피와 동일) */
+  flex-shrink:0;
+}
+body:not(.light-mode) .np-avatar { background:#4a4d57; }
+.np-channel {
+  font-size:13px;
+  color:#1a1a1a;
+  font-weight:500;
+  font-family:'Apple SD Gothic Neo','Malgun Gothic',sans-serif;
+}
+body:not(.light-mode) .np-channel { color:#E8E4D9; }
+
+.np-message-row {
+  display:flex;
+  align-items:flex-end;
+  gap:6px;
+  margin-left:44px;             /* 아바타 폭만큼 들여쓰기 */
+}
+
+.np-bubble {
+  flex:0 0 auto;
+  width:260px;
+  background:#FAE100;           /* 카카오 알림톡 노란색 */
+  border-radius:10px;
+  overflow:hidden;
+  display:flex;
+  flex-direction:column;
+  box-shadow:0 1px 2px rgba(0,0,0,.06);
+}
+.np-bubble-head {
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  padding:8px 12px 6px;
+  flex-shrink:0;
+}
+.np-bubble-title {
+  font-size:12px;
+  font-weight:700;
+  color:#1a1a1a;
+  font-family:'Apple SD Gothic Neo','Malgun Gothic',sans-serif;
+}
+.np-kakao-badge {
+  background:#3c3c3c;
+  color:#ffffff;
+  font-size:9px;
+  font-weight:600;
+  padding:2px 7px;
+  border-radius:10px;
+  letter-spacing:.3px;
+  font-family:'Apple SD Gothic Neo','Malgun Gothic',sans-serif;
+}
+.np-bubble-body {
+  padding:0 12px 12px;
+  font-size:12.5px;
+  line-height:1.65;
+  color:#1a1a1a;
+  white-space:pre-wrap;
+  word-break:break-word;
+  max-height:380px;             /* 너무 길면 박스 안에서 스크롤 */
+  overflow-y:auto;
+  overflow-x:hidden;
+  font-family:'Apple SD Gothic Neo','Malgun Gothic',sans-serif;
+}
+/* 본문 스크롤바 (말풍선 안에서만, 노란 배경에 어울리도록) */
+.np-bubble-body::-webkit-scrollbar { width:5px; }
+.np-bubble-body::-webkit-scrollbar-thumb { background:rgba(0,0,0,.18); border-radius:3px; }
+.np-bubble-body::-webkit-scrollbar-track { background:transparent; }
+
+.np-time {
+  font-size:10px;
+  color:#7a7e8a;
+  flex-shrink:0;
+  padding-bottom:2px;
+  font-family:'Apple SD Gothic Neo','Malgun Gothic',sans-serif;
+  white-space:nowrap;
+}
+body:not(.light-mode) .np-time { color:#9b9eaa; }
+
+.np-footnote {
+  font-size:11px;
+  color:var(--muted);
+  margin-top:8px;
+  text-align:center;
+  font-family:var(--sans);
+}
+
 </style>
 </head>
 <body>
@@ -815,7 +943,7 @@ body.light-mode .filter-pill.active { color:#fff; }
 <!-- SIDEBAR -->
 <aside class="sidebar">
   <div class="sb-logo">1DAYECO<small>Admin Dashboard</small>
-    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v164</span>
+    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v165</span>
   </div>
   <nav class="sb-nav">
     <div class="sb-group">운영</div>
@@ -2998,7 +3126,7 @@ HIDDEN_HOUR_PICKER_END -->
     </div>
 
     <!-- 우측: 선택된 템플릿 상세 + 미리보기 — [v164] max-width 고정으로 화면 끝까지 늘어남 방지 -->
-    <div class="panel" style="flex:1 1 520px;min-width:0;max-width:520px">
+    <div class="panel" style="flex:1 1 480px;min-width:0;max-width:480px">
       <div class="panel-head">
         <div class="panel-title" id="notifyDetailTitle">📋 템플릿 선택</div>
         <div id="notifyDetailStatus" style="font-size:11px"></div>
@@ -3041,20 +3169,35 @@ HIDDEN_HOUR_PICKER_END -->
           <div id="notifyDetailWhen" style="font-size:12px;color:var(--text);line-height:1.6;padding:8px 12px;background:rgba(201,168,76,.05);border-left:3px solid var(--gold);border-radius:4px"></div>
         </div>
 
-        <!-- 미리보기 -->
+        <!-- 미리보기 — [v165] 솔라피 콘솔 동일 디자인 (회색 컨테이너 + 날짜 + 프로필 + 카카오 배지 우상단 + 시간 + 면책) -->
         <div style="margin-bottom:14px">
-          <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:6px;letter-spacing:.3px">템플릿 미리보기 (예시 데이터)</label>
-          <!-- [v164] 박스 사이즈 완전 고정 — width 380px / height 460px / 가운데 정렬. 내용이 길면 본문 내부에서만 세로 스크롤 -->
-          <div style="width:380px;max-width:100%;margin:0 auto;border-radius:8px;overflow:hidden;border:1px solid var(--b);display:flex;flex-direction:column;box-sizing:border-box">
-            <!-- 카카오톡 헤더 (어두운 골드) — 고정 높이 -->
-            <div style="background:var(--preview-header-bg);color:var(--preview-header-text);padding:8px 14px;font-size:11px;font-weight:700;display:flex;align-items:center;gap:6px;flex-shrink:0">
-              <span style="background:#ffe300;color:#3c1e1e;padding:1px 6px;border-radius:3px;font-size:10px;font-weight:700">kakao</span>
-              <span>알림톡 도착</span>
+          <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:6px;letter-spacing:.3px">템플릿 미리보기</label>
+          <!-- 외곽 회색 컨테이너 (솔라피와 동일) -->
+          <div class="notify-preview-shell">
+            <!-- 날짜 (가운데 정렬) -->
+            <div class="np-date" id="notifyPreviewDate">—</div>
+            <!-- 프로필: 아바타 + 채널명 -->
+            <div class="np-profile">
+              <div class="np-avatar"></div>
+              <div class="np-channel">채널명</div>
             </div>
-            <!-- 본문 (부드러운 머스타드) — 고정 높이, 내부 스크롤만 -->
-            <div id="notifyDetailPreview" style="background:var(--preview-bg);color:var(--preview-text);padding:14px;font-size:12px;line-height:1.7;white-space:pre-wrap;height:460px;overflow-y:auto;overflow-x:hidden;font-family:'Apple SD Gothic Neo','Malgun Gothic',sans-serif;box-sizing:border-box;word-break:break-word"></div>
+            <!-- 알림톡 말풍선 + 시간 -->
+            <div class="np-message-row">
+              <div class="np-bubble">
+                <!-- 헤더: 알림톡 도착 + kakao 배지(우측 상단) -->
+                <div class="np-bubble-head">
+                  <span class="np-bubble-title">알림톡 도착</span>
+                  <span class="np-kakao-badge">kakao</span>
+                </div>
+                <!-- 본문 -->
+                <div id="notifyDetailPreview" class="np-bubble-body"></div>
+              </div>
+              <!-- 시간 (우측 하단) -->
+              <div class="np-time" id="notifyPreviewTime">—</div>
+            </div>
           </div>
-          <div style="font-size:10px;color:var(--muted);margin-top:6px;text-align:center">※ 본문 수정은 솔라피 콘솔에서만 가능합니다.</div>
+          <!-- 면책 문구 (솔라피와 동일) -->
+          <div class="np-footnote">미리보기는 실제 단말기와 차이가 있을 수 있습니다.</div>
         </div>
 
         <!-- 저장 + 취소 버튼 (sticky bottom) -->
@@ -10042,8 +10185,19 @@ function selectNotifyTemplate(id) {
   document.getElementById('notifyDetailVars').innerHTML = t.vars.map(v => `<span style="background:rgba(201,168,76,.1);color:var(--gold);padding:2px 6px;border-radius:3px;margin-right:4px;display:inline-block">#{${v}}</span>`).join('');
   document.getElementById('notifyDetailWhen').textContent = t.when;
 
-  // 미리보기
+  // 미리보기 — [v165] 솔라피 스타일: 본문 + 오늘 날짜 + 현재 시간
   document.getElementById('notifyDetailPreview').textContent = t.preview;
+  // 날짜 + 시간 (KST 기준)
+  const _nowKst = new Date(new Date().getTime() + (new Date().getTimezoneOffset() + 9*60) * 60000);
+  const _y = _nowKst.getFullYear();
+  const _m = String(_nowKst.getMonth() + 1).padStart(2,'0');
+  const _d = String(_nowKst.getDate()).padStart(2,'0');
+  document.getElementById('notifyPreviewDate').textContent = `${_y}년 ${_m}월 ${_d}일`;
+  const _h24 = _nowKst.getHours();
+  const _min = String(_nowKst.getMinutes()).padStart(2,'0');
+  const _ampm = _h24 < 12 ? '오전' : '오후';
+  const _h12 = _h24 % 12 === 0 ? 12 : _h24 % 12;
+  document.getElementById('notifyPreviewTime').textContent = `${_ampm} ${_h12}:${_min}`;
 
   // 저장 버튼 비활성화 (방금 로드했으니 dirty=false)
   _NOTIFY_DIRTY = false;
