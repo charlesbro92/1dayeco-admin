@@ -769,7 +769,7 @@ body.light-mode .filter-pill.active { color:#fff; }
 <!-- SIDEBAR -->
 <aside class="sidebar">
   <div class="sb-logo">1DAYECO<small>Admin Dashboard</small>
-    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v154</span>
+    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v155</span>
   </div>
   <nav class="sb-nav">
     <div class="sb-group">운영</div>
@@ -1944,21 +1944,50 @@ body.light-mode .filter-pill.active { color:#fff; }
             <input type="hidden" id="cfgHour" value="8">
           </div>
 
-          <!-- 무료 체험 기간 -->
+          <!-- [v155] 자동 발송 토글 -->
           <div style="border-top:1px solid var(--b);padding-top:16px">
-            <label style="font-size:12px;color:var(--muted);display:block;margin-bottom:6px">
-              🎁 무료 체험 기간 (일)
-              <span style="font-size:11px;color:var(--gold);margin-left:6px">신규 가입자에게 적용</span>
+            <label style="font-size:12px;color:var(--muted);display:block;margin-bottom:8px">
+              📬 자동 발송 (매일 KST 08:00)
+              <span style="font-size:11px;color:var(--gold);margin-left:6px">외부 cron이 호출 시 적용</span>
             </label>
-            <div style="display:flex;gap:8px;align-items:center">
-              <input type="number" id="cfgTrialDays" min="0" max="30" step="1" placeholder="3" style="flex:1;background:var(--s3);border:1px solid var(--b);border-radius:8px;padding:10px 14px;font-size:14px;color:var(--text);font-family:var(--mono);outline:none;text-align:right">
-              <span style="font-size:13px;color:var(--muted);font-weight:500">일</span>
-              <button onclick="saveTrialDays()" style="background:rgba(201,168,76,.15);color:var(--gold);border:1px solid rgba(201,168,76,.3);padding:9px 14px;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap">저장</button>
-            </div>
-            <div style="font-size:11px;color:var(--muted);margin-top:6px;line-height:1.5">
-              0~30일 사이로 설정 가능. 기존 가입자에게는 영향 없음 (신규 가입자만 적용).
+            <div style="display:flex;gap:10px;align-items:center;justify-content:space-between;padding:10px 12px;background:var(--s3);border:1px solid var(--b);border-radius:8px">
+              <div style="flex:1">
+                <div id="autoSendStatusLabel" style="font-size:14px;font-weight:700;color:var(--text)">로딩 중...</div>
+                <div style="font-size:11px;color:var(--muted);margin-top:2px;line-height:1.4">
+                  ON: 매일 가입자에게 카카오톡 콘텐츠 자동 발송 / OFF: 어드민 수동 발송만 작동
+                </div>
+              </div>
+              <label style="position:relative;display:inline-block;width:52px;height:28px;flex-shrink:0">
+                <input type="checkbox" id="cfgAutoSend" onchange="toggleAutoSend(this.checked)" style="opacity:0;width:0;height:0">
+                <span id="cfgAutoSendSlider" style="position:absolute;cursor:pointer;top:0;left:0;right:0;bottom:0;background:#555;transition:.3s;border-radius:28px"></span>
+                <span style="position:absolute;content:'';height:22px;width:22px;left:3px;bottom:3px;background:white;transition:.3s;border-radius:50%;pointer-events:none;box-shadow:0 1px 3px rgba(0,0,0,.3)" id="cfgAutoSendKnob"></span>
+              </label>
             </div>
           </div>
+
+          <!-- [v155] 자동 환불 토글 -->
+          <div style="border-top:1px solid var(--b);padding-top:16px">
+            <label style="font-size:12px;color:var(--muted);display:block;margin-bottom:8px">
+              💸 자동 환불 처리
+              <span style="font-size:11px;color:var(--gold);margin-left:6px">랜딩에서 환불 요청 시</span>
+            </label>
+            <div style="display:flex;gap:10px;align-items:center;justify-content:space-between;padding:10px 12px;background:var(--s3);border:1px solid var(--b);border-radius:8px">
+              <div style="flex:1">
+                <div id="autoRefundStatusLabel" style="font-size:14px;font-weight:700;color:var(--text)">로딩 중...</div>
+                <div style="font-size:11px;color:var(--muted);margin-top:2px;line-height:1.4">
+                  ON: 환불 요청 즉시 자동 완료 처리 (테스트용) / OFF: 어드민에서 수동 검토 후 처리 (실 운영)
+                </div>
+              </div>
+              <label style="position:relative;display:inline-block;width:52px;height:28px;flex-shrink:0">
+                <input type="checkbox" id="cfgAutoRefund" onchange="toggleAutoRefund(this.checked)" style="opacity:0;width:0;height:0">
+                <span id="cfgAutoRefundSlider" style="position:absolute;cursor:pointer;top:0;left:0;right:0;bottom:0;background:#555;transition:.3s;border-radius:28px"></span>
+                <span style="position:absolute;content:'';height:22px;width:22px;left:3px;bottom:3px;background:white;transition:.3s;border-radius:50%;pointer-events:none;box-shadow:0 1px 3px rgba(0,0,0,.3)" id="cfgAutoRefundKnob"></span>
+              </label>
+            </div>
+          </div>
+
+          <!-- legacy: 무료 체험 기간 (옵션 B에서 미사용, hidden) -->
+          <input type="hidden" id="cfgTrialDays" value="0">
 
           <button onclick="saveSettings()" style="background:var(--gold);color:var(--bg);border:none;padding:12px;border-radius:8px;font-size:14px;font-weight:700;font-family:var(--sans);cursor:pointer;transition:all .2s" onmouseover="this.style.background='#e8c97a'" onmouseout="this.style.background='var(--gold)'">설정 저장</button>
         </div>
@@ -2080,7 +2109,7 @@ body.light-mode .filter-pill.active { color:#fff; }
             <label style="font-size:10px;color:var(--muted);display:block;margin-bottom:3px">3개월</label>
             <div style="display:flex;gap:8px">
               <input type="number" id="catInputPkg3mOriginal" min="0" step="100" placeholder="29700 (정가)" style="flex:1;background:var(--s3);border:1px solid var(--b);border-radius:6px;padding:8px 10px;font-size:12px;color:var(--text);font-family:var(--mono);outline:none;text-align:right">
-              <input type="number" id="catInputPkg3mPrice" min="0" step="100" placeholder="14900 (할인)" style="flex:1;background:var(--s3);border:1px solid rgba(201,168,76,.3);border-radius:6px;padding:8px 10px;font-size:12px;color:var(--gold);font-family:var(--mono);outline:none;text-align:right">
+              <input type="number" id="catInputPkg3mPrice" min="0" step="100" placeholder="19900 (할인)" style="flex:1;background:var(--s3);border:1px solid rgba(201,168,76,.3);border-radius:6px;padding:8px 10px;font-size:12px;color:var(--gold);font-family:var(--mono);outline:none;text-align:right">
             </div>
             <div id="catPkg3mPct" style="font-size:10px;color:var(--muted);margin-top:3px;text-align:right">할인율: -</div>
           </div>
@@ -4004,7 +4033,7 @@ function renderSubscribersRows(filtered) {
       <td style="text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"><strong>${s.name}</strong>${newBadge}${notifyD1Badge}</td>
       <td class="t-phone" style="font-size:12px;text-align:center;white-space:nowrap">${fmtPhone(s.phone)}</td>
       <td style="font-family:var(--mono);font-size:12px;text-align:center;color:var(--muted);white-space:nowrap">
-        ${{monthly:'₩9,900',yearly:'₩79,000',free:'₩0',pkg3m:'₩14,900',pkg6m:'₩24,900',pkg1y:'₩41,900'}[s.plan]||''}
+        ${{monthly:'₩9,900',yearly:'₩79,000',free:'₩0',pkg3m:'₩19,900',pkg6m:'₩24,900',pkg1y:'₩41,900'}[s.plan]||''}
       </td>
       <td style="text-align:center">
         <span class="badge ${s.plan}">${planLabel(s.plan)}</span>
@@ -8687,7 +8716,7 @@ async function loadRevenue() {
 
   // KPI 계산
   const PLAN_AMOUNT = {
-    monthly: 9900, pkg3m: 14900, pkg6m: 24900, pkg1y: 41900,
+    monthly: 9900, pkg3m: 19900, pkg6m: 24900, pkg1y: 41900,
     yearly: 79000, free: 0,
   };
 
@@ -8817,7 +8846,7 @@ async function loadPayments() {
   // v131: pending 상태 결제 후보 추가 — subscribers 중 pending_charge/trial(billing_key 있음) 인 row를 결제 대기로 노출
   try {
     const subs = STATE.subscribers || [];
-    const PLAN_AMOUNT = { monthly: 9900, pkg3m: 14900, pkg6m: 24900, pkg1y: 41900, yearly: 79000 };
+    const PLAN_AMOUNT = { monthly: 9900, pkg3m: 19900, pkg6m: 24900, pkg1y: 41900, yearly: 79000 };
     const existingSubIds = new Set(payments.filter(p => p.status === 'paid' || p.status === 'refunded').map(p => p.subscriber_id));
     subs.forEach(s => {
       const isPending = (s.status === 'pending_charge') ||
@@ -8852,7 +8881,7 @@ async function loadPayments() {
       const ps = s.payment_status;
       return ps && ps !== 'pending';
     });
-    const PLAN_AMOUNT = { monthly: 9900, pkg3m: 14900, pkg6m: 24900, pkg1y: 41900, yearly: 79000 };
+    const PLAN_AMOUNT = { monthly: 9900, pkg3m: 19900, pkg6m: 24900, pkg1y: 41900, yearly: 79000 };
     payments = subs.map(s => ({
       id: 'fb_' + (s.id || ''),
       paid_at: s.trial_end_date || s.created_at,
@@ -9189,10 +9218,27 @@ async function loadSystemSettings() {
   try {
     const res = await apiFetch('/admin/settings');
     const data = res && res.data ? res.data : {};
-    // trial_days 입력 필드에 표시
-    const trialDays = data.trial_days?.value || '3';
+    // trial_days 입력 필드에 표시 (legacy hidden)
+    const trialDays = data.trial_days?.value || '0';
     const el = document.getElementById('cfgTrialDays');
     if (el) el.value = trialDays;
+
+    // [v155] 자동 발송 토글
+    const autoSend = String(data.auto_send_enabled?.value || 'false').toLowerCase() === 'true';
+    const autoSendCheckbox = document.getElementById('cfgAutoSend');
+    if (autoSendCheckbox) {
+      autoSendCheckbox.checked = autoSend;
+      _updateAutoSendUI(autoSend);
+    }
+
+    // [v155] 자동 환불 토글
+    const autoRefund = String(data.auto_refund_enabled?.value || 'true').toLowerCase() === 'true';
+    const autoRefundCheckbox = document.getElementById('cfgAutoRefund');
+    if (autoRefundCheckbox) {
+      autoRefundCheckbox.checked = autoRefund;
+      _updateAutoRefundUI(autoRefund);
+    }
+
     // 최근 저장 시간 표시 (모든 settings 중 가장 최신 updated_at)
     let latestUpdated = null;
     for (const key in data) {
@@ -9210,6 +9256,73 @@ async function loadSystemSettings() {
     }
   } catch (e) {
     console.warn('[설정] 로드 실패:', e);
+  }
+}
+
+// [v155] 자동 발송 토글
+function _updateAutoSendUI(enabled) {
+  const label = document.getElementById('autoSendStatusLabel');
+  const slider = document.getElementById('cfgAutoSendSlider');
+  const knob = document.getElementById('cfgAutoSendKnob');
+  if (label) {
+    label.textContent = enabled ? '✅ 활성 (매일 자동 발송)' : '⏸️ 비활성 (수동 발송만)';
+    label.style.color = enabled ? '#10b981' : 'var(--muted)';
+  }
+  if (slider) slider.style.background = enabled ? '#10b981' : '#555';
+  if (knob) knob.style.transform = enabled ? 'translateX(24px)' : 'translateX(0)';
+}
+
+async function toggleAutoSend(enabled) {
+  _updateAutoSendUI(enabled);  // 즉시 UI 반영
+  try {
+    const r = await apiFetch('/admin/settings/auto_send_enabled', { method:'PUT', body:JSON.stringify({value: enabled ? 'true' : 'false'}) });
+    const res = r && r.ok ? await r.json() : null;
+    if (res && res.success) {
+      showToast(enabled ? '자동 발송이 활성화되었습니다' : '자동 발송이 비활성화되었습니다', 'ok');
+      updateServiceSettingsLastSaved();
+    } else {
+      showToast('저장 실패: ' + (res?.message || 'unknown'), 'ng');
+      // 롤백
+      document.getElementById('cfgAutoSend').checked = !enabled;
+      _updateAutoSendUI(!enabled);
+    }
+  } catch (e) {
+    showToast('저장 실패: ' + (e?.message || e), 'ng');
+    document.getElementById('cfgAutoSend').checked = !enabled;
+    _updateAutoSendUI(!enabled);
+  }
+}
+
+// [v155] 자동 환불 토글
+function _updateAutoRefundUI(enabled) {
+  const label = document.getElementById('autoRefundStatusLabel');
+  const slider = document.getElementById('cfgAutoRefundSlider');
+  const knob = document.getElementById('cfgAutoRefundKnob');
+  if (label) {
+    label.textContent = enabled ? '⚡ 자동 (즉시 환불 완료)' : '🔍 수동 (어드민 검토 후 처리)';
+    label.style.color = enabled ? '#f59e0b' : '#10b981';
+  }
+  if (slider) slider.style.background = enabled ? '#f59e0b' : '#10b981';
+  if (knob) knob.style.transform = enabled ? 'translateX(24px)' : 'translateX(0)';
+}
+
+async function toggleAutoRefund(enabled) {
+  _updateAutoRefundUI(enabled);
+  try {
+    const r = await apiFetch('/admin/settings/auto_refund_enabled', { method:'PUT', body:JSON.stringify({value: enabled ? 'true' : 'false'}) });
+    const res = r && r.ok ? await r.json() : null;
+    if (res && res.success) {
+      showToast(enabled ? '자동 환불 처리가 활성화되었습니다 (테스트 모드)' : '환불 수동 처리 모드로 전환되었습니다 (실 운영 모드)', 'ok');
+      updateServiceSettingsLastSaved();
+    } else {
+      showToast('저장 실패: ' + (res?.message || 'unknown'), 'ng');
+      document.getElementById('cfgAutoRefund').checked = !enabled;
+      _updateAutoRefundUI(!enabled);
+    }
+  } catch (e) {
+    showToast('저장 실패: ' + (e?.message || e), 'ng');
+    document.getElementById('cfgAutoRefund').checked = !enabled;
+    _updateAutoRefundUI(!enabled);
   }
 }
 
@@ -10010,7 +10123,7 @@ function setCategoryFormPrices(c) {
   c = c || {};
   document.getElementById('catInputMonthly').value      = String(c.monthly_price    || 9900);
   document.getElementById('catInputPkg3mOriginal').value = String(c.pkg3m_original || 29700);
-  document.getElementById('catInputPkg3mPrice').value    = String(c.pkg3m_price    || 14900);
+  document.getElementById('catInputPkg3mPrice').value    = String(c.pkg3m_price    || 19900);
   document.getElementById('catInputPkg6mOriginal').value = String(c.pkg6m_original || 59400);
   document.getElementById('catInputPkg6mPrice').value    = String(c.pkg6m_price    || 24900);
   document.getElementById('catInputPkg1yOriginal').value = String(c.pkg1y_original || 118800);
