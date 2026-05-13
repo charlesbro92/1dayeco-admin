@@ -87,19 +87,20 @@ body {
   background:var(--bg); color:var(--text); font-family:var(--sans);
   min-height:100vh;
   transition: background .25s ease, color .25s ease;
-  /* [v167] ┳ 구조 — body는 block, topbar는 fixed top:0, sidebar/main은 padding-top으로 비켜남 */
-  padding-top:var(--topbar-h);
+  /* [v171] ⊢ 구조 — sidebar는 좌측 풀높이, topbar는 main 영역 위쪽만 */
 }
 
-/* ── [v167] TOPBAR — 화면 최상단 전체 너비 고정 (┳ 가로축) ── */
+/* ── [v171] TOPBAR — 사이드바 우측부터 화면 우측 끝까지만 (사이드바 영역 침범 X) ── */
 .topbar {
-  position:fixed; top:0; left:0; right:0;
+  position:fixed;
+  top:0;
+  left:var(--sidebar);              /* 사이드바 우측부터 시작 */
+  right:0;
   height:var(--topbar-h);
   background:var(--s1); border-bottom:1px solid var(--b);
   display:flex; align-items:center; justify-content:space-between;
   padding:0 28px;
-  z-index:60;            /* sidebar(50)보다 위 */
-  width:100vw;
+  z-index:40;
   box-sizing:border-box;
 }
 .page-title {
@@ -113,13 +114,13 @@ body {
   white-space:nowrap;
 }
 
-/* ── SIDEBAR — topbar 아래부터 시작 (┳ 좌측 세로축) ── */
+/* ── SIDEBAR — 화면 최상단부터 바닥까지 풀높이 (⊢ 좌측 세로축) ── */
 .sidebar {
   width:var(--sidebar); background:var(--s1);
   border-right:1px solid var(--b); padding:0;
   display:flex; flex-direction:column;
   position:fixed;
-  top:var(--topbar-h);              /* topbar 바로 아래 */
+  top:0;                            /* [v171] 화면 최상단부터 */
   left:0; bottom:0;
   z-index:50;
 }
@@ -162,8 +163,9 @@ body {
 /* ── MAIN — topbar 아래 + sidebar 우측 ── */
 .main {
   margin-left:var(--sidebar);
+  padding-top:var(--topbar-h);        /* [v171] topbar 아래부터 컨텐츠 시작 */
   display:block;
-  min-height:calc(100vh - var(--topbar-h));
+  min-height:100vh;
   /* main이 컨텐츠 따라 늘어나지 않도록 width 고정 */
   width:calc(100vw - var(--sidebar));
   max-width:calc(100vw - var(--sidebar));
@@ -990,7 +992,7 @@ body:not(.light-mode) .np-time { color:#9b9eaa; }
 <!-- SIDEBAR -->
 <aside class="sidebar">
   <div class="sb-logo">1DAYECO<small>Admin Dashboard</small>
-    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v170</span>
+    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v171</span>
   </div>
   <nav class="sb-nav">
     <div class="sb-group">운영</div>
