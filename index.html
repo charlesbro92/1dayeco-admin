@@ -769,7 +769,7 @@ body.light-mode .filter-pill.active { color:#fff; }
 <!-- SIDEBAR -->
 <aside class="sidebar">
   <div class="sb-logo">1DAYECO<small>Admin Dashboard</small>
-    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v158</span>
+    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v159</span>
   </div>
   <nav class="sb-nav">
     <div class="sb-group">운영</div>
@@ -2931,189 +2931,84 @@ body.light-mode .filter-pill.active { color:#fff; }
 </div>
 HIDDEN_HOUR_PICKER_END -->
 
-<!-- ── [v157] PAGE: 알림 관리 ── -->
+<!-- ── [v158] PAGE: 알림 관리 — 솔라피 스타일 (좌측 목록 + 우측 미리보기/설정) ── -->
 <div class="content" id="page-notify">
-  <div style="max-width:1100px;display:flex;flex-direction:column;gap:18px">
-    <div class="panel">
+  <div style="display:flex;gap:18px;max-width:1400px;align-items:flex-start;flex-wrap:wrap">
+
+    <!-- 좌측: 템플릿 목록 -->
+    <div class="panel" style="flex:0 0 380px;max-width:380px">
       <div class="panel-head" style="display:flex;justify-content:space-between;align-items:center">
-        <div class="panel-title">🔔 알림톡 발송 관리</div>
-        <span id="notifyLastSaved" style="font-size:11px;color:var(--muted)">최근 저장: -</span>
+        <div class="panel-title">🔔 알림톡 템플릿</div>
+        <span id="notifyLastSaved" style="font-size:10px;color:var(--muted)">-</span>
       </div>
-      <div style="padding:20px">
-        <div style="font-size:12px;color:var(--muted);margin-bottom:18px;line-height:1.6">
-          각 종류별 알림톡 발송 ON/OFF 및 솔라피 템플릿 ID를 관리합니다. 변경 즉시 적용됩니다.<br>
-          <span style="color:var(--gold)">💡 템플릿 ID는 32자 (KA01TP로 시작). 환경변수 우선 → DB값 fallback.</span>
+      <div style="padding:12px">
+        <div style="font-size:11px;color:var(--muted);margin-bottom:10px;line-height:1.5;padding:8px 10px;background:rgba(201,168,76,.05);border-radius:6px">
+          💡 템플릿 클릭 시 우측에서 발송 ON/OFF + 솔라피 ID를 설정합니다.<br>
+          본문 수정은 <strong>솔라피 콘솔</strong>에서 진행하세요.
+        </div>
+        <div id="notifyTemplateList" style="display:flex;flex-direction:column;gap:4px;max-height:calc(100vh - 240px);overflow-y:auto"></div>
+      </div>
+    </div>
+
+    <!-- 우측: 선택된 템플릿 상세 + 미리보기 -->
+    <div class="panel" style="flex:1;min-width:540px">
+      <div class="panel-head">
+        <div class="panel-title" id="notifyDetailTitle">📋 템플릿 선택</div>
+        <div id="notifyDetailStatus" style="font-size:11px"></div>
+      </div>
+      <div style="padding:18px" id="notifyDetailEmpty">
+        <div style="text-align:center;color:var(--muted);padding:60px 0;font-size:13px">
+          좌측에서 템플릿을 선택해주세요.
+        </div>
+      </div>
+      <div style="padding:18px;display:none" id="notifyDetailBody">
+        <!-- 발송 ON/OFF -->
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:14px;background:var(--s3);border:1px solid var(--b);border-radius:8px;margin-bottom:12px">
+          <div style="flex:1">
+            <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:4px">발송 활성화</div>
+            <div style="font-size:11px;color:var(--muted)">OFF로 전환 시 이 종류의 알림톡 발송이 중단됩니다.</div>
+          </div>
+          <label style="position:relative;display:inline-block;width:50px;height:26px;flex-shrink:0">
+            <input type="checkbox" id="notifyDetailToggle" onchange="markNotifyDirty()" style="opacity:0;width:0;height:0">
+            <span id="notifyDetailToggleSlider" style="position:absolute;cursor:pointer;top:0;left:0;right:0;bottom:0;background:#555;transition:.3s;border-radius:26px"></span>
+            <span id="notifyDetailToggleKnob" style="position:absolute;height:20px;width:20px;left:3px;top:3px;background:white;transition:.3s;border-radius:50%;pointer-events:none;box-shadow:0 1px 3px rgba(0,0,0,.3)"></span>
+          </label>
         </div>
 
-        <!-- 라이프사이클 알림 (4개) -->
-        <div style="margin-bottom:24px">
-          <div style="font-size:13px;font-weight:700;color:var(--gold);margin-bottom:10px;letter-spacing:.5px;padding-bottom:6px;border-bottom:1px solid rgba(201,168,76,.2)">📋 라이프사이클 알림</div>
-
-          <!-- 가입+결제 완료 -->
-          <div class="notify-row" data-key="signup_complete" style="background:var(--s3);border:1px solid var(--b);border-radius:8px;padding:14px;margin-bottom:10px">
-            <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
-              <div style="font-size:13px;font-weight:700;color:var(--text);flex:1">📥 가입+결제 완료 알림</div>
-              <label style="position:relative;display:inline-block;width:46px;height:24px;flex-shrink:0">
-                <input type="checkbox" class="notify-toggle" data-key="notify_signup_complete_enabled" onchange="toggleNotify('notify_signup_complete_enabled', this.checked)" style="opacity:0;width:0;height:0">
-                <span class="notify-slider" style="position:absolute;cursor:pointer;top:0;left:0;right:0;bottom:0;background:#555;transition:.3s;border-radius:24px"></span>
-                <span class="notify-knob" style="position:absolute;height:18px;width:18px;left:3px;top:3px;background:white;transition:.3s;border-radius:50%;pointer-events:none;box-shadow:0 1px 2px rgba(0,0,0,.3)"></span>
-              </label>
-            </div>
-            <div style="display:flex;gap:8px;align-items:center;font-size:11px;color:var(--muted)">
-              <span style="width:70px;flex-shrink:0">템플릿 ID</span>
-              <input type="text" class="notify-tpl" data-key="kakao_tpl_signup_complete" placeholder="KA01TP..." onchange="saveNotifyTemplate('kakao_tpl_signup_complete', this.value)" style="flex:1;background:var(--s3);border:1px solid var(--b);border-radius:4px;padding:6px 8px;font-size:11px;color:var(--text);font-family:var(--mono);outline:none">
-            </div>
-            <div style="font-size:11px;color:var(--muted);margin-top:6px;line-height:1.4">payment/verify 성공 직후 발송. 변수: name, amount, paid_at, category, subtopic, plan, first_send_date, plan_end_date</div>
-          </div>
-
-          <!-- 결제 실패 -->
-          <div class="notify-row" data-key="payment_failed" style="background:var(--s3);border:1px solid var(--b);border-radius:8px;padding:14px;margin-bottom:10px">
-            <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
-              <div style="font-size:13px;font-weight:700;color:var(--text);flex:1">❌ 결제 실패 알림</div>
-              <label style="position:relative;display:inline-block;width:46px;height:24px;flex-shrink:0">
-                <input type="checkbox" class="notify-toggle" data-key="notify_payment_failed_enabled" onchange="toggleNotify('notify_payment_failed_enabled', this.checked)" style="opacity:0;width:0;height:0">
-                <span class="notify-slider" style="position:absolute;cursor:pointer;top:0;left:0;right:0;bottom:0;background:#555;transition:.3s;border-radius:24px"></span>
-                <span class="notify-knob" style="position:absolute;height:18px;width:18px;left:3px;top:3px;background:white;transition:.3s;border-radius:50%;pointer-events:none;box-shadow:0 1px 2px rgba(0,0,0,.3)"></span>
-              </label>
-            </div>
-            <div style="display:flex;gap:8px;align-items:center;font-size:11px;color:var(--muted)">
-              <span style="width:70px;flex-shrink:0">템플릿 ID</span>
-              <input type="text" class="notify-tpl" data-key="kakao_tpl_payment_failed" placeholder="KA01TP..." onchange="saveNotifyTemplate('kakao_tpl_payment_failed', this.value)" style="flex:1;background:var(--s3);border:1px solid var(--b);border-radius:4px;padding:6px 8px;font-size:11px;color:var(--text);font-family:var(--mono);outline:none">
-            </div>
-            <div style="font-size:11px;color:var(--muted);margin-top:6px;line-height:1.4">결제 실패 또는 중단 시 발송. 변수: name, plan, amount, reason</div>
-          </div>
-
-          <!-- D-1 만료 알림 -->
-          <div class="notify-row" data-key="expiry_d1" style="background:var(--s3);border:1px solid var(--b);border-radius:8px;padding:14px;margin-bottom:10px">
-            <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
-              <div style="font-size:13px;font-weight:700;color:var(--text);flex:1">🔔 D-1 만료 알림</div>
-              <label style="position:relative;display:inline-block;width:46px;height:24px;flex-shrink:0">
-                <input type="checkbox" class="notify-toggle" data-key="notify_expiry_d1_enabled" onchange="toggleNotify('notify_expiry_d1_enabled', this.checked)" style="opacity:0;width:0;height:0">
-                <span class="notify-slider" style="position:absolute;cursor:pointer;top:0;left:0;right:0;bottom:0;background:#555;transition:.3s;border-radius:24px"></span>
-                <span class="notify-knob" style="position:absolute;height:18px;width:18px;left:3px;top:3px;background:white;transition:.3s;border-radius:50%;pointer-events:none;box-shadow:0 1px 2px rgba(0,0,0,.3)"></span>
-              </label>
-            </div>
-            <div style="display:flex;gap:8px;align-items:center;font-size:11px;color:var(--muted)">
-              <span style="width:70px;flex-shrink:0">템플릿 ID</span>
-              <input type="text" class="notify-tpl" data-key="kakao_tpl_expiry_d1" placeholder="KA01TP..." onchange="saveNotifyTemplate('kakao_tpl_expiry_d1', this.value)" style="flex:1;background:var(--s3);border:1px solid var(--b);border-radius:4px;padding:6px 8px;font-size:11px;color:var(--text);font-family:var(--mono);outline:none">
-            </div>
-            <div style="font-size:11px;color:var(--muted);margin-top:6px;line-height:1.4">매일 09:00 KST 스케줄러가 만료 1일 전 구독자에게 발송</div>
-          </div>
-
-          <!-- 환불 완료 -->
-          <div class="notify-row" data-key="refund_complete" style="background:var(--s3);border:1px solid var(--b);border-radius:8px;padding:14px;margin-bottom:10px">
-            <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
-              <div style="font-size:13px;font-weight:700;color:var(--text);flex:1">💰 환불 완료 알림</div>
-              <label style="position:relative;display:inline-block;width:46px;height:24px;flex-shrink:0">
-                <input type="checkbox" class="notify-toggle" data-key="notify_refund_complete_enabled" onchange="toggleNotify('notify_refund_complete_enabled', this.checked)" style="opacity:0;width:0;height:0">
-                <span class="notify-slider" style="position:absolute;cursor:pointer;top:0;left:0;right:0;bottom:0;background:#555;transition:.3s;border-radius:24px"></span>
-                <span class="notify-knob" style="position:absolute;height:18px;width:18px;left:3px;top:3px;background:white;transition:.3s;border-radius:50%;pointer-events:none;box-shadow:0 1px 2px rgba(0,0,0,.3)"></span>
-              </label>
-            </div>
-            <div style="display:flex;gap:8px;align-items:center;font-size:11px;color:var(--muted)">
-              <span style="width:70px;flex-shrink:0">템플릿 ID</span>
-              <input type="text" class="notify-tpl" data-key="kakao_tpl_refund_complete" placeholder="KA01TP..." onchange="saveNotifyTemplate('kakao_tpl_refund_complete', this.value)" style="flex:1;background:var(--s3);border:1px solid var(--b);border-radius:4px;padding:6px 8px;font-size:11px;color:var(--text);font-family:var(--mono);outline:none">
-            </div>
-            <div style="font-size:11px;color:var(--muted);margin-top:6px;line-height:1.4">환불 완료 처리 시 발송. 변수: name, refund_amount, reason, refunded_at</div>
-          </div>
+        <!-- 템플릿 ID -->
+        <div style="margin-bottom:12px">
+          <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:6px;letter-spacing:.3px">템플릿 ID</label>
+          <input type="text" id="notifyDetailTplId" placeholder="KA01TP... (비워두면 환경변수 사용)" oninput="markNotifyDirty()" style="width:100%;background:var(--s3);border:1px solid var(--b);border-radius:6px;padding:10px 12px;font-size:12px;color:var(--text);font-family:var(--mono);outline:none">
+          <div id="notifyDetailIdStatus" style="font-size:11px;color:var(--muted);margin-top:6px;line-height:1.4"></div>
         </div>
 
-        <!-- 일일 콘텐츠 알림 (6개 그룹) -->
-        <div>
-          <div style="font-size:13px;font-weight:700;color:var(--gold);margin-bottom:10px;letter-spacing:.5px;padding-bottom:6px;border-bottom:1px solid rgba(201,168,76,.2)">📚 일일 콘텐츠 (6개 그룹)</div>
-          <div style="font-size:11px;color:var(--muted);margin-bottom:12px">매일 08:00 KST 가입자에게 카테고리 그룹별 다른 템플릿으로 발송</div>
-
-          <!-- 6개 그룹 반복 -->
-          <div id="contentNotifyGrid" style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-            <!-- 일·업무 -->
-            <div class="notify-row" data-key="content_work" style="background:var(--s3);border:1px solid var(--b);border-radius:8px;padding:12px">
-              <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
-                <div style="font-size:12px;font-weight:700;color:var(--text);flex:1">💼 일·업무</div>
-                <label style="position:relative;display:inline-block;width:40px;height:22px;flex-shrink:0">
-                  <input type="checkbox" class="notify-toggle" data-key="notify_content_work_enabled" onchange="toggleNotify('notify_content_work_enabled', this.checked)" style="opacity:0;width:0;height:0">
-                  <span class="notify-slider" style="position:absolute;cursor:pointer;top:0;left:0;right:0;bottom:0;background:#555;transition:.3s;border-radius:22px"></span>
-                  <span class="notify-knob" style="position:absolute;height:16px;width:16px;left:3px;top:3px;background:white;transition:.3s;border-radius:50%;pointer-events:none;box-shadow:0 1px 2px rgba(0,0,0,.3)"></span>
-                </label>
-              </div>
-              <input type="text" class="notify-tpl" data-key="alimtalk_tpl_work" placeholder="KA01TP..." onchange="saveNotifyTemplate('alimtalk_tpl_work', this.value)" style="width:100%;background:var(--s3);border:1px solid var(--b);border-radius:4px;padding:6px 8px;font-size:10px;color:var(--text);font-family:var(--mono);outline:none">
-            </div>
-
-            <!-- 외국어 -->
-            <div class="notify-row" data-key="content_language" style="background:var(--s3);border:1px solid var(--b);border-radius:8px;padding:12px">
-              <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
-                <div style="font-size:12px;font-weight:700;color:var(--text);flex:1">🌐 외국어</div>
-                <label style="position:relative;display:inline-block;width:40px;height:22px;flex-shrink:0">
-                  <input type="checkbox" class="notify-toggle" data-key="notify_content_language_enabled" onchange="toggleNotify('notify_content_language_enabled', this.checked)" style="opacity:0;width:0;height:0">
-                  <span class="notify-slider" style="position:absolute;cursor:pointer;top:0;left:0;right:0;bottom:0;background:#555;transition:.3s;border-radius:22px"></span>
-                  <span class="notify-knob" style="position:absolute;height:16px;width:16px;left:3px;top:3px;background:white;transition:.3s;border-radius:50%;pointer-events:none;box-shadow:0 1px 2px rgba(0,0,0,.3)"></span>
-                </label>
-              </div>
-              <input type="text" class="notify-tpl" data-key="alimtalk_tpl_language" placeholder="KA01TP..." onchange="saveNotifyTemplate('alimtalk_tpl_language', this.value)" style="width:100%;background:var(--s3);border:1px solid var(--b);border-radius:4px;padding:6px 8px;font-size:10px;color:var(--text);font-family:var(--mono);outline:none">
-            </div>
-
-            <!-- 테크·디지털 -->
-            <div class="notify-row" data-key="content_tech" style="background:var(--s3);border:1px solid var(--b);border-radius:8px;padding:12px">
-              <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
-                <div style="font-size:12px;font-weight:700;color:var(--text);flex:1">💻 테크·디지털</div>
-                <label style="position:relative;display:inline-block;width:40px;height:22px;flex-shrink:0">
-                  <input type="checkbox" class="notify-toggle" data-key="notify_content_tech_enabled" onchange="toggleNotify('notify_content_tech_enabled', this.checked)" style="opacity:0;width:0;height:0">
-                  <span class="notify-slider" style="position:absolute;cursor:pointer;top:0;left:0;right:0;bottom:0;background:#555;transition:.3s;border-radius:22px"></span>
-                  <span class="notify-knob" style="position:absolute;height:16px;width:16px;left:3px;top:3px;background:white;transition:.3s;border-radius:50%;pointer-events:none;box-shadow:0 1px 2px rgba(0,0,0,.3)"></span>
-                </label>
-              </div>
-              <input type="text" class="notify-tpl" data-key="alimtalk_tpl_tech" placeholder="KA01TP..." onchange="saveNotifyTemplate('alimtalk_tpl_tech', this.value)" style="width:100%;background:var(--s3);border:1px solid var(--b);border-radius:4px;padding:6px 8px;font-size:10px;color:var(--text);font-family:var(--mono);outline:none">
-            </div>
-
-            <!-- 금융·투자 -->
-            <div class="notify-row" data-key="content_finance" style="background:var(--s3);border:1px solid var(--b);border-radius:8px;padding:12px">
-              <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
-                <div style="font-size:12px;font-weight:700;color:var(--text);flex:1">💰 금융·투자</div>
-                <label style="position:relative;display:inline-block;width:40px;height:22px;flex-shrink:0">
-                  <input type="checkbox" class="notify-toggle" data-key="notify_content_finance_enabled" onchange="toggleNotify('notify_content_finance_enabled', this.checked)" style="opacity:0;width:0;height:0">
-                  <span class="notify-slider" style="position:absolute;cursor:pointer;top:0;left:0;right:0;bottom:0;background:#555;transition:.3s;border-radius:22px"></span>
-                  <span class="notify-knob" style="position:absolute;height:16px;width:16px;left:3px;top:3px;background:white;transition:.3s;border-radius:50%;pointer-events:none;box-shadow:0 1px 2px rgba(0,0,0,.3)"></span>
-                </label>
-              </div>
-              <input type="text" class="notify-tpl" data-key="alimtalk_tpl_finance" placeholder="KA01TP..." onchange="saveNotifyTemplate('alimtalk_tpl_finance', this.value)" style="width:100%;background:var(--s3);border:1px solid var(--b);border-radius:4px;padding:6px 8px;font-size:10px;color:var(--text);font-family:var(--mono);outline:none">
-            </div>
-
-            <!-- 건강·일상 -->
-            <div class="notify-row" data-key="content_health" style="background:var(--s3);border:1px solid var(--b);border-radius:8px;padding:12px">
-              <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
-                <div style="font-size:12px;font-weight:700;color:var(--text);flex:1">🌱 건강·일상</div>
-                <label style="position:relative;display:inline-block;width:40px;height:22px;flex-shrink:0">
-                  <input type="checkbox" class="notify-toggle" data-key="notify_content_health_enabled" onchange="toggleNotify('notify_content_health_enabled', this.checked)" style="opacity:0;width:0;height:0">
-                  <span class="notify-slider" style="position:absolute;cursor:pointer;top:0;left:0;right:0;bottom:0;background:#555;transition:.3s;border-radius:22px"></span>
-                  <span class="notify-knob" style="position:absolute;height:16px;width:16px;left:3px;top:3px;background:white;transition:.3s;border-radius:50%;pointer-events:none;box-shadow:0 1px 2px rgba(0,0,0,.3)"></span>
-                </label>
-              </div>
-              <input type="text" class="notify-tpl" data-key="alimtalk_tpl_health" placeholder="KA01TP..." onchange="saveNotifyTemplate('alimtalk_tpl_health', this.value)" style="width:100%;background:var(--s3);border:1px solid var(--b);border-radius:4px;padding:6px 8px;font-size:10px;color:var(--text);font-family:var(--mono);outline:none">
-            </div>
-
-            <!-- 교양·지식 -->
-            <div class="notify-row" data-key="content_knowledge" style="background:var(--s3);border:1px solid var(--b);border-radius:8px;padding:12px">
-              <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
-                <div style="font-size:12px;font-weight:700;color:var(--text);flex:1">📚 교양·지식</div>
-                <label style="position:relative;display:inline-block;width:40px;height:22px;flex-shrink:0">
-                  <input type="checkbox" class="notify-toggle" data-key="notify_content_knowledge_enabled" onchange="toggleNotify('notify_content_knowledge_enabled', this.checked)" style="opacity:0;width:0;height:0">
-                  <span class="notify-slider" style="position:absolute;cursor:pointer;top:0;left:0;right:0;bottom:0;background:#555;transition:.3s;border-radius:22px"></span>
-                  <span class="notify-knob" style="position:absolute;height:16px;width:16px;left:3px;top:3px;background:white;transition:.3s;border-radius:50%;pointer-events:none;box-shadow:0 1px 2px rgba(0,0,0,.3)"></span>
-                </label>
-              </div>
-              <input type="text" class="notify-tpl" data-key="alimtalk_tpl_knowledge" placeholder="KA01TP..." onchange="saveNotifyTemplate('alimtalk_tpl_knowledge', this.value)" style="width:100%;background:var(--s3);border:1px solid var(--b);border-radius:4px;padding:6px 8px;font-size:10px;color:var(--text);font-family:var(--mono);outline:none">
-            </div>
-          </div>
+        <!-- 변수 안내 -->
+        <div style="margin-bottom:14px">
+          <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:6px;letter-spacing:.3px">템플릿 변수</label>
+          <div id="notifyDetailVars" style="background:var(--s3);border:1px solid var(--b);border-radius:6px;padding:10px 12px;font-size:11px;color:var(--muted);line-height:1.6;font-family:var(--mono)"></div>
         </div>
 
-        <!-- 솔라피 PFID + 발신자 (참조) -->
-        <div style="margin-top:24px;padding:14px;background:rgba(255,255,255,.02);border:1px dashed var(--b);border-radius:8px;font-size:11px;color:var(--muted);line-height:1.7">
-          <div style="font-weight:700;color:var(--text);margin-bottom:6px">🔑 솔라피 채널 정보 (Railway 환경변수)</div>
-          <div>SOLAPI_PFID: <span style="font-family:var(--mono);color:var(--gold)" id="pfidDisplay">로딩 중...</span></div>
-          <div>SOLAPI_SENDER: <span style="font-family:var(--mono);color:var(--gold)" id="senderDisplay">로딩 중...</span></div>
-          <div style="margin-top:6px">변경하려면 Railway 환경변수 직접 수정.</div>
+        <!-- 발송 시점 + 설명 -->
+        <div style="margin-bottom:14px">
+          <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:6px;letter-spacing:.3px">발송 시점</label>
+          <div id="notifyDetailWhen" style="font-size:12px;color:var(--text);line-height:1.6;padding:8px 12px;background:rgba(201,168,76,.05);border-left:3px solid var(--gold);border-radius:4px"></div>
+        </div>
+
+        <!-- 미리보기 -->
+        <div style="margin-bottom:14px">
+          <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:6px;letter-spacing:.3px">템플릿 미리보기 (예시 데이터)</label>
+          <div id="notifyDetailPreview" style="background:#FFEB3B;color:#000;border-radius:8px;padding:14px;font-size:12px;line-height:1.7;white-space:pre-wrap;min-height:120px;font-family:'Apple SD Gothic Neo','Malgun Gothic',sans-serif"></div>
+          <div style="font-size:10px;color:var(--muted);margin-top:6px;text-align:right">※ 본문 수정은 솔라피 콘솔에서만 가능합니다.</div>
+        </div>
+
+        <!-- 저장 + 취소 버튼 -->
+        <div style="display:flex;gap:8px;justify-content:flex-end;padding-top:14px;border-top:1px solid var(--b)">
+          <button onclick="resetNotifyDetail()" style="background:none;border:1px solid var(--b);color:var(--muted);padding:10px 20px;border-radius:6px;font-size:12px;cursor:pointer">취소</button>
+          <button id="notifyDetailSaveBtn" onclick="saveNotifyDetail()" disabled style="background:var(--gold);color:var(--bg);border:none;padding:10px 24px;border-radius:6px;font-size:13px;font-weight:700;cursor:pointer;opacity:.4;transition:opacity .2s">💾 저장</button>
         </div>
       </div>
     </div>
+
   </div>
 </div>
 
@@ -9513,6 +9408,7 @@ async function loadSystemSettings() {
 
     // 스케줄러 현황 비동기 로드
     loadSchedulerStatus();
+    loadSchedulerStatusPanel();
 
     // 최근 저장 시간 표시 (모든 settings 중 가장 최신 updated_at)
     let latestUpdated = null;
@@ -9629,7 +9525,7 @@ async function toggleScheduler(key, enabled) {
       showToast((enabled ? '활성화됨: ' : '비활성화됨: ') + key, 'ok');
       updateServiceSettingsLastSaved();
       // 1초 후 현황 새로고침
-      setTimeout(loadSchedulerStatus, 1000);
+      setTimeout(loadSchedulerStatusPanel, 1000);
     } else {
       showToast('저장 실패: ' + (res?.message || 'unknown'), 'ng');
       // 롤백
@@ -9677,7 +9573,7 @@ async function saveSchedulerTime(key, value) {
       if (res && res.success) {
         showToast('시간 변경 저장: ' + key + ' = ' + n, 'ok');
         updateServiceSettingsLastSaved();
-        setTimeout(loadSchedulerStatus, 1000);
+        setTimeout(loadSchedulerStatusPanel, 1000);
       } else {
         showToast('저장 실패: ' + (res?.message || 'unknown'), 'ng');
       }
@@ -9757,184 +9653,245 @@ async function loadSchedulerSettings() {
   }
 }
 
+
 // ════════════════════════════════════════════════════════════
-// [v157] 알림 관리 — 토글 + 템플릿 ID 설정
+// [v158] 알림 관리 — 솔라피 스타일 (좌측 목록 + 우측 상세)
 // ════════════════════════════════════════════════════════════
-// notify 토글 / 템플릿 키 매핑
-const NOTIFY_TOGGLE_KEYS = [
-  'notify_signup_complete_enabled',
-  'notify_payment_failed_enabled',
-  'notify_expiry_d1_enabled',
-  'notify_refund_complete_enabled',
-  'notify_content_work_enabled',
-  'notify_content_language_enabled',
-  'notify_content_tech_enabled',
-  'notify_content_finance_enabled',
-  'notify_content_health_enabled',
-  'notify_content_knowledge_enabled',
+const NOTIFY_TEMPLATES = [
+  {
+    id: 'signup_complete',
+    group: 'lifecycle',
+    icon: '📥',
+    name: '가입+결제 완료',
+    toggleKey: 'notify_signup_complete_enabled',
+    tplKey:    'kakao_tpl_signup_complete',
+    envKey:    'KAKAO_TPL_SIGNUP_COMPLETE',
+    when: 'payment/verify 성공 직후 (가입 즉시)',
+    vars: ['name', 'amount', 'paid_at', 'category', 'subtopic', 'plan', 'first_send_date', 'plan_end_date'],
+    preview: `[1DAYECO]
+구독 신청이 정상 처리되었습니다.
+
+#{name}님, 환영합니다.
+
+▶ 결제 내역
+- 금액: #{amount}원
+- 결제일시: #{paid_at}
+
+▶ 신청 정보
+- 카테고리: #{category}
+- 주제: #{subtopic}
+- 플랜: #{plan}
+
+▶ 발송 일정
+- 첫 발송일: #{first_send_date}
+- 구독 종료일: #{plan_end_date}
+
+문의: 카카오톡 : @1DAYECO`
+  },
+  {
+    id: 'payment_failed',
+    group: 'lifecycle',
+    icon: '❌',
+    name: '결제 실패',
+    toggleKey: 'notify_payment_failed_enabled',
+    tplKey:    'kakao_tpl_payment_failed',
+    envKey:    'KAKAO_TPL_PAYMENT_FAILED',
+    when: '결제 시도 실패 또는 사용자가 결제 중단 시',
+    vars: ['name', 'plan', 'amount', 'reason'],
+    preview: `[1DAYECO]
+결제가 정상적으로 처리되지 않았습니다.
+
+#{name}님, 안녕하세요.
+
+▶ 결제 정보
+- 플랜: #{plan}
+- 금액: #{amount}원
+- 사유: #{reason}
+
+다시 신청해주세요.
+
+문의: 카카오톡 : @1DAYECO`
+  },
+  {
+    id: 'expiry_d1',
+    group: 'lifecycle',
+    icon: '🔔',
+    name: 'D-1 만료 알림',
+    toggleKey: 'notify_expiry_d1_enabled',
+    tplKey:    'kakao_tpl_expiry_d1',
+    envKey:    'KAKAO_TPL_EXPIRY_D1',
+    when: '매일 09:00 KST 스케줄러 — 구독 만료 1일 전',
+    vars: ['name', 'category', 'subtopic', 'end_date'],
+    preview: `[1DAYECO]
+구독이 내일 만료됩니다.
+
+#{name}님, 안녕하세요.
+
+▶ 구독 정보
+- 카테고리: #{category}
+- 주제: #{subtopic}
+- 종료일: #{end_date}
+
+계속 받아보시려면 1DAYECO에서 재신청해주세요.
+
+문의: 카카오톡 : @1DAYECO`
+  },
+  {
+    id: 'refund_complete',
+    group: 'lifecycle',
+    icon: '💰',
+    name: '환불 완료',
+    toggleKey: 'notify_refund_complete_enabled',
+    tplKey:    'kakao_tpl_refund_complete',
+    envKey:    'KAKAO_TPL_REFUND_COMPLETE',
+    when: '환불 완료 처리 직후',
+    vars: ['name', 'refund_amount', 'reason', 'refunded_at'],
+    preview: `[1DAYECO]
+환불이 정상 처리되었습니다.
+
+#{name}님, 안녕하세요.
+
+▶ 환불 내역
+- 환불 금액: #{refund_amount}원
+- 사유: #{reason}
+- 처리일시: #{refunded_at}
+
+카드사 영업일 기준 3~7일 내 환급됩니다.
+
+문의: 카카오톡 : @1DAYECO`
+  },
+  // ─ 콘텐츠 그룹 6개 ─
+  {
+    id: 'content_work', group: 'content', icon: '💼', name: '일·업무 콘텐츠',
+    toggleKey: 'notify_content_work_enabled',
+    tplKey:    'alimtalk_tpl_work', envKey: 'ALIMTALK_TPL_WORK',
+    when: '매일 08:00 KST — 일·업무 카테고리 구독자에게',
+    vars: ['name', 'subtopic', 'body'],
+    preview: `[1DAYECO] 오늘의 한 줄 학습 메시지
+
+#{name}님이 구독하신 [일·업무] #{subtopic} 콘텐츠입니다.
+
+#{body}
+
+본 메시지는 고객님이 구독 신청하신 1DAYECO 학습 콘텐츠로, 매일 아침 발송됩니다.
+
+문의: 카카오톡 : @1DAYECO`
+  },
+  {
+    id: 'content_language', group: 'content', icon: '🌐', name: '외국어 콘텐츠',
+    toggleKey: 'notify_content_language_enabled',
+    tplKey:    'alimtalk_tpl_language', envKey: 'ALIMTALK_TPL_LANGUAGE',
+    when: '매일 08:00 KST — 외국어 카테고리 구독자에게',
+    vars: ['name', 'subtopic', 'body'],
+    preview: `[1DAYECO] 오늘의 한 줄 학습 메시지
+
+#{name}님이 구독하신 [외국어] #{subtopic} 콘텐츠입니다.
+
+#{body}
+
+본 메시지는 고객님이 구독 신청하신 1DAYECO 학습 콘텐츠로, 매일 아침 발송됩니다.
+
+문의: 카카오톡 : @1DAYECO`
+  },
+  {
+    id: 'content_tech', group: 'content', icon: '💻', name: '테크·디지털 콘텐츠',
+    toggleKey: 'notify_content_tech_enabled',
+    tplKey:    'alimtalk_tpl_tech', envKey: 'ALIMTALK_TPL_TECH',
+    when: '매일 08:00 KST — 테크·디지털 카테고리 구독자에게',
+    vars: ['name', 'subtopic', 'body'],
+    preview: `[1DAYECO] 오늘의 한 줄 학습 메시지
+
+#{name}님이 구독하신 [테크·디지털] #{subtopic} 콘텐츠입니다.
+
+#{body}
+
+본 메시지는 고객님이 구독 신청하신 1DAYECO 학습 콘텐츠로, 매일 아침 발송됩니다.
+
+문의: 카카오톡 : @1DAYECO`
+  },
+  {
+    id: 'content_finance', group: 'content', icon: '💰', name: '금융·투자 콘텐츠',
+    toggleKey: 'notify_content_finance_enabled',
+    tplKey:    'alimtalk_tpl_finance', envKey: 'ALIMTALK_TPL_FINANCE',
+    when: '매일 08:00 KST — 금융·투자 카테고리 구독자에게',
+    vars: ['name', 'subtopic', 'body'],
+    preview: `[1DAYECO] 오늘의 한 줄 학습 메시지
+
+#{name}님이 구독하신 [금융·투자] #{subtopic} 콘텐츠입니다.
+
+#{body}
+
+본 메시지는 고객님이 구독 신청하신 1DAYECO 학습 콘텐츠로, 매일 아침 발송됩니다.
+
+문의: 카카오톡 : @1DAYECO`
+  },
+  {
+    id: 'content_health', group: 'content', icon: '🌱', name: '건강·일상 콘텐츠',
+    toggleKey: 'notify_content_health_enabled',
+    tplKey:    'alimtalk_tpl_health', envKey: 'ALIMTALK_TPL_HEALTH',
+    when: '매일 08:00 KST — 건강·일상 카테고리 구독자에게',
+    vars: ['name', 'subtopic', 'body'],
+    preview: `[1DAYECO] 오늘의 한 줄 학습 메시지
+
+#{name}님이 구독하신 [건강·일상] #{subtopic} 콘텐츠입니다.
+
+#{body}
+
+본 메시지는 고객님이 구독 신청하신 1DAYECO 학습 콘텐츠로, 매일 아침 발송됩니다.
+
+문의: 카카오톡 : @1DAYECO`
+  },
+  {
+    id: 'content_knowledge', group: 'content', icon: '📚', name: '교양·지식 콘텐츠',
+    toggleKey: 'notify_content_knowledge_enabled',
+    tplKey:    'alimtalk_tpl_knowledge', envKey: 'ALIMTALK_TPL_KNOWLEDGE',
+    when: '매일 08:00 KST — 교양·지식 카테고리 구독자에게',
+    vars: ['name', 'subtopic', 'body'],
+    preview: `[1DAYECO] 오늘의 한 줄 학습 메시지
+
+#{name}님이 구독하신 [교양·지식] #{subtopic} 콘텐츠입니다.
+
+#{body}
+
+본 메시지는 고객님이 구독 신청하신 1DAYECO 학습 콘텐츠로, 매일 아침 발송됩니다.
+
+문의: 카카오톡 : @1DAYECO`
+  },
 ];
-const NOTIFY_TPL_KEYS = [
-  'kakao_tpl_signup_complete', 'kakao_tpl_payment_failed', 'kakao_tpl_expiry_d1', 'kakao_tpl_refund_complete',
-  'alimtalk_tpl_work', 'alimtalk_tpl_language', 'alimtalk_tpl_tech',
-  'alimtalk_tpl_finance', 'alimtalk_tpl_health', 'alimtalk_tpl_knowledge',
-];
 
-function _updateNotifyToggleUI(key, enabled) {
-  // checkbox + slider + knob (data-key 기준)
-  const inp = document.querySelector(`input.notify-toggle[data-key="${key}"]`);
-  if (!inp) return;
-  inp.checked = enabled;
-  const row = inp.closest('.notify-row');
-  if (!row) return;
-  const slider = row.querySelector('.notify-slider');
-  const knob = row.querySelector('.notify-knob');
-  if (slider) slider.style.background = enabled ? '#10b981' : '#555';
-  if (knob) {
-    // 작은 토글 (22px)인지 큰 토글 (24px)인지 구분
-    const trXSmall = row.querySelector('.notify-toggle')?.parentElement?.style?.width === '40px';
-    knob.style.transform = enabled ? (trXSmall ? 'translateX(18px)' : 'translateX(22px)') : 'translateX(0)';
-  }
-}
-
-async function toggleNotify(key, enabled) {
-  _updateNotifyToggleUI(key, enabled);
-  try {
-    const r = await apiFetch('/admin/settings/' + key, { method:'PUT', body:JSON.stringify({value: enabled ? 'true' : 'false'}) });
-    const res = r && r.ok ? await r.json() : null;
-    if (res && res.success) {
-      showToast((enabled ? '활성화: ' : '비활성화: ') + key.replace('notify_','').replace('_enabled',''), 'ok');
-      updateNotifyLastSaved();
-    } else {
-      showToast('저장 실패: ' + (res?.message || 'unknown'), 'ng');
-      _updateNotifyToggleUI(key, !enabled);
-    }
-  } catch (e) {
-    showToast('저장 실패: ' + (e?.message || e), 'ng');
-    _updateNotifyToggleUI(key, !enabled);
-  }
-}
-
-let _saveNotifyTplDebounce = {};
-async function saveNotifyTemplate(key, value) {
-  // 디바운스 (1초)
-  clearTimeout(_saveNotifyTplDebounce[key]);
-  _saveNotifyTplDebounce[key] = setTimeout(async () => {
-    const trimmed = (value || '').trim();
-    if (trimmed && (trimmed.length < 30 || trimmed.length > 36 || !trimmed.startsWith('KA01TP'))) {
-      showToast('템플릿 ID 형식이 잘못되었습니다 (KA01TP로 시작, 32자)', 'ng');
-      return;
-    }
-    try {
-      const r = await apiFetch('/admin/settings/' + key, { method:'PUT', body:JSON.stringify({value: trimmed}) });
-      const res = r && r.ok ? await r.json() : null;
-      if (res && res.success) {
-        showToast('템플릿 저장: ' + key.replace('kakao_tpl_','').replace('alimtalk_tpl_',''), 'ok');
-        updateNotifyLastSaved();
-      } else {
-        showToast('저장 실패: ' + (res?.message || 'unknown'), 'ng');
-      }
-    } catch (e) {
-      showToast('저장 실패: ' + (e?.message || e), 'ng');
-    }
-  }, 700);
-}
-
-function updateNotifyLastSaved() {
-  const el = document.getElementById('notifyLastSaved');
-  if (!el) return;
-  const now = new Date().toLocaleString('ko-KR', {
-    timeZone: 'Asia/Seoul', month:'2-digit', day:'2-digit',
-    hour:'2-digit', minute:'2-digit', second:'2-digit', hour12:false
-  });
-  el.textContent = '최근 저장: ' + now;
-}
+// 상태 저장
+let _NOTIFY_CACHE = {};          // /admin/settings 응답
+let _NOTIFY_DEBUG = {};          // /admin/debug/alimtalk-templates 응답
+let _NOTIFY_SELECTED = null;     // 선택된 템플릿 객체
+let _NOTIFY_DIRTY = false;       // 변경됨 (저장 버튼 활성화)
 
 async function loadNotifySettings() {
   try {
-    const res = await apiFetch('/admin/settings');
-    const data = res && res.data ? res.data : {};
+    const [res1, res2] = await Promise.all([
+      apiFetch('/admin/settings'),
+      apiFetch('/admin/debug/alimtalk-templates').catch(() => ({})),
+    ]);
+    _NOTIFY_CACHE = res1?.data || {};
+    _NOTIFY_DEBUG = res2 || {};
 
-    // 토글 10개
-    NOTIFY_TOGGLE_KEYS.forEach(key => {
-      const enabled = String(data[key]?.value || 'true').toLowerCase() === 'true';
-      _updateNotifyToggleUI(key, enabled);
-    });
-
-    // 템플릿 ID 10개
-    NOTIFY_TPL_KEYS.forEach(key => {
-      const inp = document.querySelector(`input.notify-tpl[data-key="${key}"]`);
-      if (!inp) return;
-      inp.value = data[key]?.value || '';
-    });
-
-    // [v157] env/db 사용 상태 + effective ID 표시
-    try {
-      const tplRes = await apiFetch('/admin/debug/alimtalk-templates');
-      // env_key → db_key 매핑
-      const envToDbMap = {
-        'ALIMTALK_TPL_WORK':         'alimtalk_tpl_work',
-        'ALIMTALK_TPL_LANGUAGE':     'alimtalk_tpl_language',
-        'ALIMTALK_TPL_TECH':         'alimtalk_tpl_tech',
-        'ALIMTALK_TPL_FINANCE':      'alimtalk_tpl_finance',
-        'ALIMTALK_TPL_HEALTH':       'alimtalk_tpl_health',
-        'ALIMTALK_TPL_KNOWLEDGE':    'alimtalk_tpl_knowledge',
-        'KAKAO_TPL_SIGNUP_COMPLETE': 'kakao_tpl_signup_complete',
-        'KAKAO_TPL_PAYMENT_FAILED':  'kakao_tpl_payment_failed',
-        'KAKAO_TPL_EXPIRY_D1':       'kakao_tpl_expiry_d1',
-        'KAKAO_TPL_REFUND_COMPLETE': 'kakao_tpl_refund_complete',
-      };
-      // 각 입력란 옆에 effective ID + source 표시
-      for (const [envKey, dbKey] of Object.entries(envToDbMap)) {
-        const info = tplRes?.[envKey] || {};
-        const inp = document.querySelector(`input.notify-tpl[data-key="${dbKey}"]`);
-        if (!inp) continue;
-        // status 뱃지 생성/업데이트
-        let badge = inp.parentElement.querySelector(`.notify-tpl-status[data-key="${dbKey}"]`);
-        if (!badge) {
-          badge = document.createElement('div');
-          badge.className = 'notify-tpl-status';
-          badge.dataset.key = dbKey;
-          badge.style.cssText = 'font-size:10px;color:var(--muted);margin-top:3px;line-height:1.3';
-          inp.parentElement.appendChild(badge);
-        }
-        const source = info.source;
-        if (source === 'db') {
-          badge.innerHTML = `✅ <span style="color:#10b981">DB값 사용 중</span>: <code style="font-family:var(--mono)">${info.effective || ''}</code>`;
-        } else if (source === 'env') {
-          badge.innerHTML = `⚠️ <span style="color:#f59e0b">환경변수 fallback</span>: <code style="font-family:var(--mono);color:#888">${info.effective || ''}</code>`;
-        } else {
-          badge.innerHTML = `❌ <span style="color:#ef4444">미설정</span> (DB + env 모두 비어있음 — 발송 불가)`;
-        }
-      }
-    } catch (e) {
-      console.warn('[알림 관리] 템플릿 상태 조회 실패:', e);
+    renderNotifyTemplateList();
+    // 선택된 게 있으면 다시 렌더 (refresh)
+    if (_NOTIFY_SELECTED) {
+      selectNotifyTemplate(_NOTIFY_SELECTED.id);
     }
 
-    // PFID + Sender 표시
-    try {
-      const tplRes = await apiFetch('/admin/debug/alimtalk-templates');
-      const pfidEl = document.getElementById('pfidDisplay');
-      const senderEl = document.getElementById('senderDisplay');
-      if (pfidEl) {
-        const pfidInfo = tplRes?.SOLAPI_PFID;
-        pfidEl.textContent = pfidInfo?.env_set ? (pfidInfo.env_value || '✅ 설정됨') : '⚠️ 미설정';
-      }
-      if (senderEl) {
-        const sndInfo = tplRes?.SOLAPI_SENDER;
-        senderEl.textContent = sndInfo?.env_set ? (sndInfo.env_value || '✅ 설정됨') : '⚠️ 미설정';
-      }
-    } catch (e) {}
-
-    // 최근 저장 시간
-    let latestUpdated = null;
-    [...NOTIFY_TOGGLE_KEYS, ...NOTIFY_TPL_KEYS].forEach(k => {
-      const u = data[k]?.updated_at;
-      if (u && (!latestUpdated || u > latestUpdated)) latestUpdated = u;
+    // 최근 저장
+    let latest = null;
+    NOTIFY_TEMPLATES.forEach(t => {
+      [_NOTIFY_CACHE[t.toggleKey], _NOTIFY_CACHE[t.tplKey]].forEach(item => {
+        const u = item?.updated_at;
+        if (u && (!latest || u > latest)) latest = u;
+      });
     });
-    if (latestUpdated) {
-      const dt = new Date(latestUpdated).toLocaleString('ko-KR', {
+    if (latest) {
+      const dt = new Date(latest).toLocaleString('ko-KR', {
         timeZone: 'Asia/Seoul', month:'2-digit', day:'2-digit',
-        hour:'2-digit', minute:'2-digit', second:'2-digit', hour12:false
+        hour:'2-digit', minute:'2-digit', hour12:false
       });
       const el = document.getElementById('notifyLastSaved');
       if (el) el.textContent = '최근 저장: ' + dt;
@@ -9944,8 +9901,179 @@ async function loadNotifySettings() {
   }
 }
 
-// 스케줄러 현황 조회 (next_run_time)
-async function loadSchedulerStatus() {
+function renderNotifyTemplateList() {
+  const container = document.getElementById('notifyTemplateList');
+  if (!container) return;
+
+  const groups = {
+    lifecycle: { label: '📋 라이프사이클', items: [] },
+    content:   { label: '📚 일일 콘텐츠 (6개 그룹)', items: [] },
+  };
+  NOTIFY_TEMPLATES.forEach(t => groups[t.group].items.push(t));
+
+  let html = '';
+  for (const [groupKey, group] of Object.entries(groups)) {
+    html += `<div style="font-size:10px;font-weight:700;color:var(--gold);margin:8px 4px 4px;letter-spacing:.5px">${group.label}</div>`;
+    group.items.forEach(t => {
+      const enabled = String(_NOTIFY_CACHE[t.toggleKey]?.value || 'true').toLowerCase() === 'true';
+      const debugInfo = _NOTIFY_DEBUG[t.envKey] || {};
+      const source = debugInfo.source;
+      let badge = '';
+      if (source === 'db')  badge = '<span style="font-size:9px;color:#10b981;background:rgba(16,185,129,.1);padding:2px 6px;border-radius:3px;margin-left:6px">DB</span>';
+      else if (source === 'env') badge = '<span style="font-size:9px;color:#f59e0b;background:rgba(245,158,11,.1);padding:2px 6px;border-radius:3px;margin-left:6px">ENV</span>';
+      else badge = '<span style="font-size:9px;color:#ef4444;background:rgba(239,68,68,.1);padding:2px 6px;border-radius:3px;margin-left:6px">없음</span>';
+
+      const selected = _NOTIFY_SELECTED?.id === t.id;
+      const enabledIcon = enabled ? '🟢' : '⚪';
+      html += `
+        <div class="notify-list-item" onclick="selectNotifyTemplate('${t.id}')" style="cursor:pointer;padding:10px 12px;border-radius:6px;border:1px solid ${selected ? 'var(--gold)' : 'var(--b)'};background:${selected ? 'rgba(201,168,76,.08)' : 'var(--s3)'};display:flex;align-items:center;gap:8px;transition:all .15s">
+          <span style="font-size:14px;flex-shrink:0">${enabledIcon}</span>
+          <span style="font-size:14px;flex-shrink:0">${t.icon}</span>
+          <span style="font-size:12px;color:var(--text);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${t.name}</span>
+          ${badge}
+        </div>`;
+    });
+  }
+  container.innerHTML = html;
+}
+
+function selectNotifyTemplate(id) {
+  // 변경 사항 있으면 확인
+  if (_NOTIFY_DIRTY && _NOTIFY_SELECTED && _NOTIFY_SELECTED.id !== id) {
+    if (!confirm('저장하지 않은 변경사항이 있습니다. 무시하고 이동하시겠습니까?')) {
+      return;
+    }
+    _NOTIFY_DIRTY = false;
+  }
+  const t = NOTIFY_TEMPLATES.find(x => x.id === id);
+  if (!t) return;
+  _NOTIFY_SELECTED = t;
+
+  document.getElementById('notifyDetailEmpty').style.display = 'none';
+  document.getElementById('notifyDetailBody').style.display = 'block';
+  document.getElementById('notifyDetailTitle').textContent = t.icon + ' ' + t.name;
+
+  // 토글 상태
+  const enabled = String(_NOTIFY_CACHE[t.toggleKey]?.value || 'true').toLowerCase() === 'true';
+  document.getElementById('notifyDetailToggle').checked = enabled;
+  _updateNotifyDetailToggleUI(enabled);
+
+  // 템플릿 ID
+  document.getElementById('notifyDetailTplId').value = _NOTIFY_CACHE[t.tplKey]?.value || '';
+
+  // 상태 뱃지
+  const debugInfo = _NOTIFY_DEBUG[t.envKey] || {};
+  const statusEl = document.getElementById('notifyDetailStatus');
+  if (debugInfo.source === 'db') {
+    statusEl.innerHTML = `<span style="color:#10b981">✅ DB값 사용 중</span> · <code style="font-size:10px;color:var(--muted)">${debugInfo.effective || ''}</code>`;
+  } else if (debugInfo.source === 'env') {
+    statusEl.innerHTML = `<span style="color:#f59e0b">⚠️ 환경변수 fallback</span> · <code style="font-size:10px;color:var(--muted)">${debugInfo.effective || ''}</code>`;
+  } else {
+    statusEl.innerHTML = '<span style="color:#ef4444">❌ 미설정</span>';
+  }
+
+  // ID 상태 안내
+  const idStatusEl = document.getElementById('notifyDetailIdStatus');
+  if (debugInfo.source === 'db') {
+    idStatusEl.innerHTML = `✅ <span style="color:#10b981">DB값으로 발송 중</span>`;
+  } else if (debugInfo.source === 'env') {
+    idStatusEl.innerHTML = `⚠️ DB 비어있음 — 환경변수 <code style="font-size:10px">${t.envKey}</code> 값 (${debugInfo.effective}) 사용 중`;
+  } else {
+    idStatusEl.innerHTML = `❌ DB + 환경변수 모두 비어있음 — 발송 불가`;
+  }
+
+  // 변수 + 발송 시점
+  document.getElementById('notifyDetailVars').innerHTML = t.vars.map(v => `<span style="background:rgba(201,168,76,.1);color:var(--gold);padding:2px 6px;border-radius:3px;margin-right:4px;display:inline-block">#{${v}}</span>`).join('');
+  document.getElementById('notifyDetailWhen').textContent = t.when;
+
+  // 미리보기
+  document.getElementById('notifyDetailPreview').textContent = t.preview;
+
+  // 저장 버튼 비활성화 (방금 로드했으니 dirty=false)
+  _NOTIFY_DIRTY = false;
+  updateNotifySaveBtnState();
+
+  // 좌측 목록 다시 렌더 (선택된 거 강조)
+  renderNotifyTemplateList();
+}
+
+function _updateNotifyDetailToggleUI(enabled) {
+  const slider = document.getElementById('notifyDetailToggleSlider');
+  const knob = document.getElementById('notifyDetailToggleKnob');
+  if (slider) slider.style.background = enabled ? '#10b981' : '#555';
+  if (knob) knob.style.transform = enabled ? 'translateX(24px)' : 'translateX(0)';
+}
+
+function markNotifyDirty() {
+  _NOTIFY_DIRTY = true;
+  updateNotifySaveBtnState();
+  // 토글 UI 즉시 반영
+  const cb = document.getElementById('notifyDetailToggle');
+  if (cb) _updateNotifyDetailToggleUI(cb.checked);
+}
+
+function updateNotifySaveBtnState() {
+  const btn = document.getElementById('notifyDetailSaveBtn');
+  if (!btn) return;
+  btn.disabled = !_NOTIFY_DIRTY;
+  btn.style.opacity = _NOTIFY_DIRTY ? '1' : '.4';
+  btn.style.cursor = _NOTIFY_DIRTY ? 'pointer' : 'default';
+}
+
+function resetNotifyDetail() {
+  if (!_NOTIFY_SELECTED) return;
+  selectNotifyTemplate(_NOTIFY_SELECTED.id);  // 다시 로드
+}
+
+async function saveNotifyDetail() {
+  if (!_NOTIFY_SELECTED) return;
+  const t = _NOTIFY_SELECTED;
+  const enabled = document.getElementById('notifyDetailToggle').checked;
+  const tplId = document.getElementById('notifyDetailTplId').value.trim();
+
+  // 템플릿 ID 검증 (빈 값 허용)
+  if (tplId && (!tplId.startsWith('KA01TP') || tplId.length < 30 || tplId.length > 36)) {
+    showToast('템플릿 ID는 KA01TP로 시작하는 30~36자여야 합니다 (또는 비워두기)', 'ng');
+    return;
+  }
+
+  try {
+    // 1. 토글 저장
+    const r1 = await apiFetch('/admin/settings/' + t.toggleKey, {
+      method:'PUT',
+      body:JSON.stringify({value: enabled ? 'true' : 'false'})
+    });
+    const res1 = r1 && r1.ok ? await r1.json() : null;
+    if (!res1 || !res1.success) {
+      showToast('토글 저장 실패: ' + (res1?.message || 'unknown'), 'ng');
+      return;
+    }
+
+    // 2. 템플릿 ID 저장
+    const r2 = await apiFetch('/admin/settings/' + t.tplKey, {
+      method:'PUT',
+      body:JSON.stringify({value: tplId})
+    });
+    const res2 = r2 && r2.ok ? await r2.json() : null;
+    if (!res2 || !res2.success) {
+      showToast('템플릿 ID 저장 실패: ' + (res2?.message || 'unknown'), 'ng');
+      return;
+    }
+
+    showToast('✅ 저장 완료: ' + t.name, 'ok');
+    _NOTIFY_DIRTY = false;
+    updateNotifySaveBtnState();
+
+    // 캐시 갱신 + 화면 다시 그리기
+    await loadNotifySettings();
+  } catch (e) {
+    showToast('저장 실패: ' + (e?.message || e), 'ng');
+  }
+}
+
+
+// [v157] 스케줄러 현황 조회 — 실시간 next_run_time (덧붙임 패널용)
+async function loadSchedulerStatusPanel() {
   try {
     const r = await apiFetch('/admin/scheduler/status');
     const data = r || {};
