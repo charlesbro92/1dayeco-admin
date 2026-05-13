@@ -198,11 +198,6 @@ body {
 }
 .content.active { display:block; }
 
-/* ─── [v170] 알림 관리 페이지 — wrapper 단순화로 .content 자체가 flex 컨테이너 ─── */
-#page-notify.content.active {
-  display:flex;
-}
-
 /* ─── 콘텐츠 페이지: 아카이브 메인 + 주제 작업 collapsible ─── */
 #page-content.content.active,
 #page-archive.content.active {
@@ -992,7 +987,7 @@ body:not(.light-mode) .np-time { color:#9b9eaa; }
 <!-- SIDEBAR -->
 <aside class="sidebar">
   <div class="sb-logo">1DAYECO<small>Admin Dashboard</small>
-    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v171</span>
+    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v172</span>
   </div>
   <nav class="sb-nav">
     <div class="sb-group">운영</div>
@@ -3132,11 +3127,12 @@ body:not(.light-mode) .np-time { color:#9b9eaa; }
 </div>
 HIDDEN_HOUR_PICKER_END -->
 
-  <!-- ── [v170] PAGE: 알림 관리 — wrapper 단순화 + #page-notify가 직접 flex 컨테이너 ── -->
-  <div class="content" id="page-notify" style="flex-wrap:wrap;gap:18px;align-items:flex-start">
+  <!-- ── [v172] PAGE: 알림 관리 — grid로 명확한 좌(360px) + 우(나머지) 배치 ── -->
+  <div class="content" id="page-notify">
+    <div style="display:grid;grid-template-columns:360px minmax(0, 1fr);gap:18px;align-items:start;width:100%;max-width:1400px">
 
     <!-- 좌측: 템플릿 목록 -->
-    <div class="panel" style="flex:0 0 360px;max-width:360px;min-width:0">
+    <div class="panel" style="min-width:0">
       <div class="panel-head" style="display:flex;justify-content:space-between;align-items:center">
         <div class="panel-title">알림톡 템플릿</div>
         <span id="notifyLastSaved" style="font-size:10px;color:var(--muted)">-</span>
@@ -3150,8 +3146,8 @@ HIDDEN_HOUR_PICKER_END -->
       </div>
     </div>
 
-    <!-- 우측: 선택된 템플릿 상세 + 미리보기 — [v164] max-width 고정으로 화면 끝까지 늘어남 방지 -->
-    <div class="panel" style="flex:1 1 480px;min-width:0;max-width:480px">
+    <!-- 우측: 선택된 템플릿 상세 + 미리보기 [v172] grid 환경에 맞춤 -->
+    <div class="panel" style="min-width:0;max-width:520px">
       <div class="panel-head">
         <div class="panel-title" id="notifyDetailTitle">📋 템플릿 선택</div>
         <div id="notifyDetailStatus" style="font-size:11px"></div>
@@ -3233,6 +3229,7 @@ HIDDEN_HOUR_PICKER_END -->
       </div>
     </div>
 
+    </div><!-- /flex wrapper [v172] -->
   </div>
 
 <!-- 발송 확인 모달 -->
