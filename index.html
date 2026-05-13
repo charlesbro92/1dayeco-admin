@@ -162,11 +162,11 @@ body {
 
 /* ── MAIN — topbar 아래 + sidebar 우측 ── */
 .main {
-  margin-left:var(--sidebar) !important;       /* [v173] 강제 */
+  margin-left:var(--sidebar);
   padding-top:var(--topbar-h);
   display:block;
   min-height:100vh;
-  width:calc(100vw - var(--sidebar)) !important;  /* [v173] 강제 */
+  width:calc(100vw - var(--sidebar));
   max-width:calc(100vw - var(--sidebar));
   box-sizing:border-box;
 }
@@ -745,9 +745,9 @@ body.light-mode .filter-pill.active { color:#fff; }
   .sidebar { transform:translateX(-100%); }
   /* [v164] 사이드바 숨길 때 main도 viewport 전체 사용 — 우측 빈 공간 제거 */
   .main {
-    margin-left:0 !important;
-    max-width:100vw !important;
-    width:100vw !important;
+    margin-left:0;
+    max-width:100vw;
+    width:100vw;
   }
   .kpi-grid, .kpi-grid-5 { grid-template-columns:repeat(2,1fr); }
   .two-col { grid-template-columns:1fr; }
@@ -985,7 +985,7 @@ body:not(.light-mode) .np-time { color:#9b9eaa; }
 <!-- SIDEBAR -->
 <aside class="sidebar">
   <div class="sb-logo">1DAYECO<small>Admin Dashboard</small>
-    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v173</span>
+    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v174</span>
   </div>
   <nav class="sb-nav">
     <div class="sb-group">운영</div>
@@ -2261,8 +2261,6 @@ body:not(.light-mode) .np-time { color:#9b9eaa; }
           </div>
         </div>
       </div>
-
-      </div><!-- /좌우 flex 컨테이너 -->
 
     </div>
   </div>
@@ -10126,50 +10124,6 @@ let _NOTIFY_SELECTED = null;     // 선택된 템플릿 객체
 let _NOTIFY_DIRTY = false;       // 변경됨 (저장 버튼 활성화)
 
 async function loadNotifySettings() {
-  // [v173 진단] 첫 진입 시 화면 박스 위치 출력 — 디버그용
-  try {
-    setTimeout(() => {
-      const page = document.getElementById('page-notify');
-      const main = document.querySelector('.main');
-      const side = document.querySelector('.sidebar');
-      const tbar = document.querySelector('.topbar');
-      const inner = page ? page.querySelector(':scope > div') : null;
-      if (!page || !main) return;
-      const pr = page.getBoundingClientRect();
-      const mr = main.getBoundingClientRect();
-      const sr = side ? side.getBoundingClientRect() : {x:0,y:0,width:0,height:0};
-      const tr = tbar ? tbar.getBoundingClientRect() : {x:0,y:0,width:0,height:0};
-      const ir = inner ? inner.getBoundingClientRect() : {x:0,y:0,width:0,height:0};
-      const cs = getComputedStyle(page);
-      const ms = getComputedStyle(main);
-      const info =
-        `[v173 진단]\n` +
-        `viewport      : ${window.innerWidth} × ${window.innerHeight}\n` +
-        `devicePixelRatio: ${window.devicePixelRatio}\n` +
-        `\nsidebar       : x=${Math.round(sr.x)} y=${Math.round(sr.y)} w=${Math.round(sr.width)} h=${Math.round(sr.height)}\n` +
-        `topbar        : x=${Math.round(tr.x)} y=${Math.round(tr.y)} w=${Math.round(tr.width)} h=${Math.round(tr.height)}\n` +
-        `main          : x=${Math.round(mr.x)} y=${Math.round(mr.y)} w=${Math.round(mr.width)} h=${Math.round(mr.height)}\n` +
-        `  margin-left = ${ms.marginLeft}  padding-top=${ms.paddingTop}\n` +
-        `  width       = ${ms.width}\n` +
-        `\npage-notify   : x=${Math.round(pr.x)} y=${Math.round(pr.y)} w=${Math.round(pr.width)} h=${Math.round(pr.height)}\n` +
-        `  display = ${cs.display}  active=${page.classList.contains('active')}\n` +
-        `  padding = ${cs.padding}\n` +
-        `inner wrapper : x=${Math.round(ir.x)} y=${Math.round(ir.y)} w=${Math.round(ir.width)} h=${Math.round(ir.height)}\n` +
-        `\n예상값: main x≈220, main w≈viewport-220, page-notify y≈86 (58+28)\n`;
-      console.log(info);
-      let box = document.getElementById('__v173_diag');
-      if (!box) {
-        box = document.createElement('div');
-        box.id = '__v173_diag';
-        box.style.cssText = 'position:fixed;top:62px;right:8px;z-index:99999;background:rgba(0,0,0,.92);color:#fff;border:2px solid #ff0;border-radius:6px;padding:12px 14px;font-family:monospace;font-size:11px;line-height:1.55;white-space:pre;max-width:560px;cursor:pointer;letter-spacing:0';
-        box.title = '클릭 시 닫기';
-        box.onclick = () => box.remove();
-        document.body.appendChild(box);
-      }
-      box.textContent = info + '\n(클릭 시 닫기)';
-    }, 250);
-  } catch(e) { console.warn('[v173 진단]', e); }
-
   try {
     const [res1, res2] = await Promise.all([
       apiFetch('/admin/settings'),
