@@ -769,7 +769,7 @@ body.light-mode .filter-pill.active { color:#fff; }
 <!-- SIDEBAR -->
 <aside class="sidebar">
   <div class="sb-logo">1DAYECO<small>Admin Dashboard</small>
-    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v157</span>
+    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v158</span>
   </div>
   <nav class="sb-nav">
     <div class="sb-group">운영</div>
@@ -9856,7 +9856,6 @@ async function loadNotifySettings() {
 
     // 토글 10개
     NOTIFY_TOGGLE_KEYS.forEach(key => {
-      // 기본값: 모두 true (활성)
       const enabled = String(data[key]?.value || 'true').toLowerCase() === 'true';
       _updateNotifyToggleUI(key, enabled);
     });
@@ -9865,23 +9864,68 @@ async function loadNotifySettings() {
     NOTIFY_TPL_KEYS.forEach(key => {
       const inp = document.querySelector(`input.notify-tpl[data-key="${key}"]`);
       if (!inp) return;
-      // DB에 저장된 값 우선, 없으면 빈 값 (환경변수는 백엔드에서 fallback 사용)
       inp.value = data[key]?.value || '';
     });
 
-    // PFID + Sender 표시 (debug endpoint에서)
+    // [v157] env/db 사용 상태 + effective ID 표시
     try {
       const tplRes = await apiFetch('/admin/debug/alimtalk-templates');
-      const env = tplRes?.env || {};
-      const pfidEl = document.getElementById('pfidDisplay');
-      const senderEl = document.getElementById('senderDisplay');
-      if (pfidEl) pfidEl.textContent = env.SOLAPI_PFID?.set ? '✅ 설정됨' : '⚠️ 미설정';
-      if (senderEl) senderEl.textContent = env.SOLAPI_SENDER?.value || env.SOLAPI_SENDER?.set ? '✅ 설정됨' : '⚠️ 미설정';
+      // env_key → db_key 매핑
+      const envToDbMap = {
+        'ALIMTALK_TPL_WORK':         'alimtalk_tpl_work',
+        'ALIMTALK_TPL_LANGUAGE':     'alimtalk_tpl_language',
+        'ALIMTALK_TPL_TECH':         'alimtalk_tpl_tech',
+        'ALIMTALK_TPL_FINANCE':      'alimtalk_tpl_finance',
+        'ALIMTALK_TPL_HEALTH':       'alimtalk_tpl_health',
+        'ALIMTALK_TPL_KNOWLEDGE':    'alimtalk_tpl_knowledge',
+        'KAKAO_TPL_SIGNUP_COMPLETE': 'kakao_tpl_signup_complete',
+        'KAKAO_TPL_PAYMENT_FAILED':  'kakao_tpl_payment_failed',
+        'KAKAO_TPL_EXPIRY_D1':       'kakao_tpl_expiry_d1',
+        'KAKAO_TPL_REFUND_COMPLETE': 'kakao_tpl_refund_complete',
+      };
+      // 각 입력란 옆에 effective ID + source 표시
+      for (const [envKey, dbKey] of Object.entries(envToDbMap)) {
+        const info = tplRes?.[envKey] || {};
+        const inp = document.querySelector(`input.notify-tpl[data-key="${dbKey}"]`);
+        if (!inp) continue;
+        // status 뱃지 생성/업데이트
+        let badge = inp.parentElement.querySelector(`.notify-tpl-status[data-key="${dbKey}"]`);
+        if (!badge) {
+          badge = document.createElement('div');
+          badge.className = 'notify-tpl-status';
+          badge.dataset.key = dbKey;
+          badge.style.cssText = 'font-size:10px;color:var(--muted);margin-top:3px;line-height:1.3';
+          inp.parentElement.appendChild(badge);
+        }
+        const source = info.source;
+        if (source === 'db') {
+          badge.innerHTML = `✅ <span style="color:#10b981">DB값 사용 중</span>: <code style="font-family:var(--mono)">${info.effective || ''}</code>`;
+        } else if (source === 'env') {
+          badge.innerHTML = `⚠️ <span style="color:#f59e0b">환경변수 fallback</span>: <code style="font-family:var(--mono);color:#888">${info.effective || ''}</code>`;
+        } else {
+          badge.innerHTML = `❌ <span style="color:#ef4444">미설정</span> (DB + env 모두 비어있음 — 발송 불가)`;
+        }
+      }
     } catch (e) {
-      // 디버그 endpoint 없어도 무시
+      console.warn('[알림 관리] 템플릿 상태 조회 실패:', e);
     }
 
-    // 최근 저장 시간 (notify 키 중 최신)
+    // PFID + Sender 표시
+    try {
+      const tplRes = await apiFetch('/admin/debug/alimtalk-templates');
+      const pfidEl = document.getElementById('pfidDisplay');
+      const senderEl = document.getElementById('senderDisplay');
+      if (pfidEl) {
+        const pfidInfo = tplRes?.SOLAPI_PFID;
+        pfidEl.textContent = pfidInfo?.env_set ? (pfidInfo.env_value || '✅ 설정됨') : '⚠️ 미설정';
+      }
+      if (senderEl) {
+        const sndInfo = tplRes?.SOLAPI_SENDER;
+        senderEl.textContent = sndInfo?.env_set ? (sndInfo.env_value || '✅ 설정됨') : '⚠️ 미설정';
+      }
+    } catch (e) {}
+
+    // 최근 저장 시간
     let latestUpdated = null;
     [...NOTIFY_TOGGLE_KEYS, ...NOTIFY_TPL_KEYS].forEach(k => {
       const u = data[k]?.updated_at;
