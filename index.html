@@ -985,7 +985,7 @@ body:not(.light-mode) .np-time { color:#9b9eaa; }
 <!-- SIDEBAR -->
 <aside class="sidebar">
   <div class="sb-logo">1DAYECO<small>Admin Dashboard</small>
-    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v174</span>
+    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v175</span>
   </div>
   <nav class="sb-nav">
     <div class="sb-group">운영</div>
@@ -2439,6 +2439,110 @@ body:not(.light-mode) .np-time { color:#9b9eaa; }
   </div>
 </div>
 
+  <!-- ── [v172] PAGE: 알림 관리 — grid로 명확한 좌(360px) + 우(나머지) 배치 ── -->
+  <div class="content" id="page-notify">
+    <div style="display:grid;grid-template-columns:360px minmax(0, 1fr);gap:18px;align-items:start;width:100%;max-width:1400px">
+
+    <!-- 좌측: 템플릿 목록 -->
+    <div class="panel" style="min-width:0">
+      <div class="panel-head" style="display:flex;justify-content:space-between;align-items:center">
+        <div class="panel-title">알림톡 템플릿</div>
+        <span id="notifyLastSaved" style="font-size:10px;color:var(--muted)">-</span>
+      </div>
+      <div style="padding:12px">
+        <div style="font-size:11px;color:var(--muted);margin-bottom:10px;line-height:1.5;padding:8px 10px;background:rgba(201,168,76,.05);border-radius:6px">
+          💡 템플릿 클릭 시 우측에서 발송 ON/OFF + 솔라피 ID를 설정합니다.<br>
+          본문 수정은 <strong>솔라피 콘솔</strong>에서 진행하세요.
+        </div>
+        <div id="notifyTemplateList" style="display:flex;flex-direction:column;gap:4px;max-height:calc(100vh - 240px);overflow-y:auto"></div>
+      </div>
+    </div>
+
+    <!-- 우측: 선택된 템플릿 상세 + 미리보기 [v172] grid 환경에 맞춤 -->
+    <div class="panel" style="min-width:0;max-width:520px">
+      <div class="panel-head">
+        <div class="panel-title" id="notifyDetailTitle">📋 템플릿 선택</div>
+        <div id="notifyDetailStatus" style="font-size:11px"></div>
+      </div>
+      <div style="padding:18px" id="notifyDetailEmpty">
+        <div style="text-align:center;color:var(--muted);padding:60px 0;font-size:13px">
+          좌측에서 템플릿을 선택해주세요.
+        </div>
+      </div>
+      <div style="padding:18px;display:none" id="notifyDetailBody">
+        <!-- 발송 ON/OFF -->
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:14px;background:var(--s3);border:1px solid var(--b);border-radius:8px;margin-bottom:12px">
+          <div style="flex:1">
+            <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:4px">발송 활성화</div>
+            <div style="font-size:11px;color:var(--muted)">OFF로 전환 시 이 종류의 알림톡 발송이 중단됩니다.</div>
+          </div>
+          <label style="position:relative;display:inline-block;width:50px;height:26px;flex-shrink:0">
+            <input type="checkbox" id="notifyDetailToggle" onchange="markNotifyDirty()" style="opacity:0;width:0;height:0">
+            <span id="notifyDetailToggleSlider" style="position:absolute;cursor:pointer;top:0;left:0;right:0;bottom:0;background:#555;transition:.3s;border-radius:26px"></span>
+            <span id="notifyDetailToggleKnob" style="position:absolute;height:20px;width:20px;left:3px;top:3px;background:white;transition:.3s;border-radius:50%;pointer-events:none;box-shadow:0 1px 3px rgba(0,0,0,.3)"></span>
+          </label>
+        </div>
+
+        <!-- 템플릿 ID -->
+        <div style="margin-bottom:12px">
+          <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:6px;letter-spacing:.3px">템플릿 ID</label>
+          <input type="text" id="notifyDetailTplId" placeholder="KA01TP... (비워두면 환경변수 사용)" oninput="markNotifyDirty()" style="width:100%;background:var(--s3);border:1px solid var(--b);border-radius:6px;padding:10px 12px;font-size:12px;color:var(--text);font-family:var(--mono);outline:none">
+          <div id="notifyDetailIdStatus" style="font-size:11px;color:var(--muted);margin-top:6px;line-height:1.4"></div>
+        </div>
+
+        <!-- 변수 안내 -->
+        <div style="margin-bottom:14px">
+          <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:6px;letter-spacing:.3px">템플릿 변수</label>
+          <div id="notifyDetailVars" style="background:var(--s3);border:1px solid var(--b);border-radius:6px;padding:10px 12px;font-size:11px;color:var(--muted);line-height:1.6;font-family:var(--mono)"></div>
+        </div>
+
+        <!-- 발송 시점 + 설명 -->
+        <div style="margin-bottom:14px">
+          <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:6px;letter-spacing:.3px">발송 시점</label>
+          <div id="notifyDetailWhen" style="font-size:12px;color:var(--text);line-height:1.6;padding:8px 12px;background:rgba(201,168,76,.05);border-left:3px solid var(--gold);border-radius:4px"></div>
+        </div>
+
+        <!-- 미리보기 — [v165] 솔라피 콘솔 동일 디자인 (회색 컨테이너 + 날짜 + 프로필 + 카카오 배지 우상단 + 시간 + 면책) -->
+        <div style="margin-bottom:14px">
+          <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:6px;letter-spacing:.3px">템플릿 미리보기</label>
+          <!-- 외곽 회색 컨테이너 (솔라피와 동일) -->
+          <div class="notify-preview-shell">
+            <!-- 날짜 (가운데 정렬) -->
+            <div class="np-date" id="notifyPreviewDate">—</div>
+            <!-- 프로필: 아바타 + 채널명 -->
+            <div class="np-profile">
+              <div class="np-avatar"></div>
+              <div class="np-channel">채널명</div>
+            </div>
+            <!-- 알림톡 말풍선 + 시간 -->
+            <div class="np-message-row">
+              <div class="np-bubble">
+                <!-- 헤더: 알림톡 도착 + kakao 배지(우측 상단) -->
+                <div class="np-bubble-head">
+                  <span class="np-bubble-title">알림톡 도착</span>
+                  <span class="np-kakao-badge">kakao</span>
+                </div>
+                <!-- 본문 -->
+                <div id="notifyDetailPreview" class="np-bubble-body"></div>
+              </div>
+              <!-- 시간 (우측 하단) -->
+              <div class="np-time" id="notifyPreviewTime">—</div>
+            </div>
+          </div>
+          <!-- 면책 문구 (솔라피와 동일) -->
+          <div class="np-footnote">미리보기는 실제 단말기와 차이가 있을 수 있습니다.</div>
+        </div>
+
+        <!-- 저장 + 취소 버튼 (sticky bottom) -->
+        <div style="display:flex;gap:8px;justify-content:flex-end;padding:14px 0 4px;border-top:1px solid var(--b);position:sticky;bottom:0;background:var(--s1);margin-top:auto">
+          <button onclick="resetNotifyDetail()" style="background:none;border:1px solid var(--b);color:var(--muted);padding:10px 20px;border-radius:6px;font-size:12px;cursor:pointer">취소</button>
+          <button id="notifyDetailSaveBtn" onclick="saveNotifyDetail()" disabled style="background:var(--gold);color:var(--bg);border:none;padding:10px 24px;border-radius:6px;font-size:13px;font-weight:700;cursor:pointer;opacity:.4;transition:opacity .2s">💾 저장</button>
+        </div>
+      </div>
+    </div>
+
+    </div><!-- /flex wrapper [v172] -->
+  </div>
 </div><!-- /main -->
 
 <!-- 콘텐츠 상세 팝업 -->
@@ -3123,110 +3227,6 @@ body:not(.light-mode) .np-time { color:#9b9eaa; }
 </div>
 HIDDEN_HOUR_PICKER_END -->
 
-  <!-- ── [v172] PAGE: 알림 관리 — grid로 명확한 좌(360px) + 우(나머지) 배치 ── -->
-  <div class="content" id="page-notify">
-    <div style="display:grid;grid-template-columns:360px minmax(0, 1fr);gap:18px;align-items:start;width:100%;max-width:1400px">
-
-    <!-- 좌측: 템플릿 목록 -->
-    <div class="panel" style="min-width:0">
-      <div class="panel-head" style="display:flex;justify-content:space-between;align-items:center">
-        <div class="panel-title">알림톡 템플릿</div>
-        <span id="notifyLastSaved" style="font-size:10px;color:var(--muted)">-</span>
-      </div>
-      <div style="padding:12px">
-        <div style="font-size:11px;color:var(--muted);margin-bottom:10px;line-height:1.5;padding:8px 10px;background:rgba(201,168,76,.05);border-radius:6px">
-          💡 템플릿 클릭 시 우측에서 발송 ON/OFF + 솔라피 ID를 설정합니다.<br>
-          본문 수정은 <strong>솔라피 콘솔</strong>에서 진행하세요.
-        </div>
-        <div id="notifyTemplateList" style="display:flex;flex-direction:column;gap:4px;max-height:calc(100vh - 240px);overflow-y:auto"></div>
-      </div>
-    </div>
-
-    <!-- 우측: 선택된 템플릿 상세 + 미리보기 [v172] grid 환경에 맞춤 -->
-    <div class="panel" style="min-width:0;max-width:520px">
-      <div class="panel-head">
-        <div class="panel-title" id="notifyDetailTitle">📋 템플릿 선택</div>
-        <div id="notifyDetailStatus" style="font-size:11px"></div>
-      </div>
-      <div style="padding:18px" id="notifyDetailEmpty">
-        <div style="text-align:center;color:var(--muted);padding:60px 0;font-size:13px">
-          좌측에서 템플릿을 선택해주세요.
-        </div>
-      </div>
-      <div style="padding:18px;display:none" id="notifyDetailBody">
-        <!-- 발송 ON/OFF -->
-        <div style="display:flex;align-items:center;justify-content:space-between;padding:14px;background:var(--s3);border:1px solid var(--b);border-radius:8px;margin-bottom:12px">
-          <div style="flex:1">
-            <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:4px">발송 활성화</div>
-            <div style="font-size:11px;color:var(--muted)">OFF로 전환 시 이 종류의 알림톡 발송이 중단됩니다.</div>
-          </div>
-          <label style="position:relative;display:inline-block;width:50px;height:26px;flex-shrink:0">
-            <input type="checkbox" id="notifyDetailToggle" onchange="markNotifyDirty()" style="opacity:0;width:0;height:0">
-            <span id="notifyDetailToggleSlider" style="position:absolute;cursor:pointer;top:0;left:0;right:0;bottom:0;background:#555;transition:.3s;border-radius:26px"></span>
-            <span id="notifyDetailToggleKnob" style="position:absolute;height:20px;width:20px;left:3px;top:3px;background:white;transition:.3s;border-radius:50%;pointer-events:none;box-shadow:0 1px 3px rgba(0,0,0,.3)"></span>
-          </label>
-        </div>
-
-        <!-- 템플릿 ID -->
-        <div style="margin-bottom:12px">
-          <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:6px;letter-spacing:.3px">템플릿 ID</label>
-          <input type="text" id="notifyDetailTplId" placeholder="KA01TP... (비워두면 환경변수 사용)" oninput="markNotifyDirty()" style="width:100%;background:var(--s3);border:1px solid var(--b);border-radius:6px;padding:10px 12px;font-size:12px;color:var(--text);font-family:var(--mono);outline:none">
-          <div id="notifyDetailIdStatus" style="font-size:11px;color:var(--muted);margin-top:6px;line-height:1.4"></div>
-        </div>
-
-        <!-- 변수 안내 -->
-        <div style="margin-bottom:14px">
-          <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:6px;letter-spacing:.3px">템플릿 변수</label>
-          <div id="notifyDetailVars" style="background:var(--s3);border:1px solid var(--b);border-radius:6px;padding:10px 12px;font-size:11px;color:var(--muted);line-height:1.6;font-family:var(--mono)"></div>
-        </div>
-
-        <!-- 발송 시점 + 설명 -->
-        <div style="margin-bottom:14px">
-          <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:6px;letter-spacing:.3px">발송 시점</label>
-          <div id="notifyDetailWhen" style="font-size:12px;color:var(--text);line-height:1.6;padding:8px 12px;background:rgba(201,168,76,.05);border-left:3px solid var(--gold);border-radius:4px"></div>
-        </div>
-
-        <!-- 미리보기 — [v165] 솔라피 콘솔 동일 디자인 (회색 컨테이너 + 날짜 + 프로필 + 카카오 배지 우상단 + 시간 + 면책) -->
-        <div style="margin-bottom:14px">
-          <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:6px;letter-spacing:.3px">템플릿 미리보기</label>
-          <!-- 외곽 회색 컨테이너 (솔라피와 동일) -->
-          <div class="notify-preview-shell">
-            <!-- 날짜 (가운데 정렬) -->
-            <div class="np-date" id="notifyPreviewDate">—</div>
-            <!-- 프로필: 아바타 + 채널명 -->
-            <div class="np-profile">
-              <div class="np-avatar"></div>
-              <div class="np-channel">채널명</div>
-            </div>
-            <!-- 알림톡 말풍선 + 시간 -->
-            <div class="np-message-row">
-              <div class="np-bubble">
-                <!-- 헤더: 알림톡 도착 + kakao 배지(우측 상단) -->
-                <div class="np-bubble-head">
-                  <span class="np-bubble-title">알림톡 도착</span>
-                  <span class="np-kakao-badge">kakao</span>
-                </div>
-                <!-- 본문 -->
-                <div id="notifyDetailPreview" class="np-bubble-body"></div>
-              </div>
-              <!-- 시간 (우측 하단) -->
-              <div class="np-time" id="notifyPreviewTime">—</div>
-            </div>
-          </div>
-          <!-- 면책 문구 (솔라피와 동일) -->
-          <div class="np-footnote">미리보기는 실제 단말기와 차이가 있을 수 있습니다.</div>
-        </div>
-
-        <!-- 저장 + 취소 버튼 (sticky bottom) -->
-        <div style="display:flex;gap:8px;justify-content:flex-end;padding:14px 0 4px;border-top:1px solid var(--b);position:sticky;bottom:0;background:var(--s1);margin-top:auto">
-          <button onclick="resetNotifyDetail()" style="background:none;border:1px solid var(--b);color:var(--muted);padding:10px 20px;border-radius:6px;font-size:12px;cursor:pointer">취소</button>
-          <button id="notifyDetailSaveBtn" onclick="saveNotifyDetail()" disabled style="background:var(--gold);color:var(--bg);border:none;padding:10px 24px;border-radius:6px;font-size:13px;font-weight:700;cursor:pointer;opacity:.4;transition:opacity .2s">💾 저장</button>
-        </div>
-      </div>
-    </div>
-
-    </div><!-- /flex wrapper [v172] -->
-  </div>
 
 <!-- 발송 확인 모달 -->
 <div class="overlay" id="sendConfirm">
