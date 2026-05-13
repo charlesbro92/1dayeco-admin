@@ -81,6 +81,7 @@ body.light-mode textarea {
   background: var(--s1) !important;
 }
 * { margin:0; padding:0; box-sizing:border-box; }
+html, body { overflow-x:hidden; }  /* [v163] 페이지 가로 스크롤 원천 차단 — topbar 흔들림 방지 */
 body {
   background:var(--bg); color:var(--text); font-family:var(--sans);
   display:flex; min-height:100vh;
@@ -131,16 +132,38 @@ body {
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
 
 /* ── MAIN ── */
-.main { margin-left:var(--sidebar); flex:1; display:flex; flex-direction:column; }
+.main {
+  margin-left:var(--sidebar);
+  flex:1 1 0;
+  display:flex; flex-direction:column;
+  /* [v163] topbar 흔들림 방지 — main이 컨텐츠 따라 늘어나지 않도록 width 고정 */
+  min-width:0;
+  max-width:calc(100vw - var(--sidebar));
+  width:calc(100vw - var(--sidebar));
+}
 
 /* ── TOPBAR ── */
 .topbar {
   height:58px; background:var(--s1); border-bottom:1px solid var(--b);
   display:flex; align-items:center; justify-content:space-between; padding:0 28px;
   position:sticky; top:0; z-index:40;
+  /* [v163] topbar는 항상 main 전체 폭 사용 */
+  width:100%;
+  box-sizing:border-box;
+  flex-shrink:0;
 }
-.page-title { font-size:15px; font-weight:700; letter-spacing:.5px; }
-.topbar-right { display:flex; align-items:center; gap:12px; }
+.page-title {
+  font-size:15px; font-weight:700; letter-spacing:.5px;
+  /* [v163] 우측 시계/버튼이 많아져도 제목이 줄어들지 않게 */
+  flex-shrink:0;
+  white-space:nowrap;
+}
+.topbar-right {
+  display:flex; align-items:center; gap:12px;
+  /* [v163] 우측 그룹도 흔들림 방지 */
+  flex-shrink:0;
+  white-space:nowrap;
+}
 .tb-time { font-family:var(--mono); font-size:13px; color:var(--text); letter-spacing:.5px; }
 .btn-send {
   background:var(--gold); color:var(--bg); border:none;
@@ -158,7 +181,14 @@ body {
 .btn-refresh:hover { color:var(--text); border-color:var(--gold); }
 
 /* ── CONTENT AREA ── */
-.content { padding:28px; display:none; }
+.content {
+  padding:28px;
+  display:none;
+  /* [v163] 컨텐츠가 main 폭을 절대 넘지 않도록 — wide 테이블/그리드도 안에서 스크롤 */
+  max-width:100%;
+  box-sizing:border-box;
+  overflow-x:auto;
+}
 .content.active { display:block; }
 
 /* ─── 콘텐츠 페이지: 아카이브 메인 + 주제 작업 collapsible ─── */
@@ -779,7 +809,7 @@ body.light-mode .filter-pill.active { color:#fff; }
 <!-- SIDEBAR -->
 <aside class="sidebar">
   <div class="sb-logo">1DAYECO<small>Admin Dashboard</small>
-    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v162</span>
+    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v163</span>
   </div>
   <nav class="sb-nav">
     <div class="sb-group">운영</div>
