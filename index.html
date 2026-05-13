@@ -985,7 +985,7 @@ body:not(.light-mode) .np-time { color:#9b9eaa; }
 <!-- SIDEBAR -->
 <aside class="sidebar">
   <div class="sb-logo">1DAYECO<small>Admin Dashboard</small>
-    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v176</span>
+    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v177</span>
   </div>
   <nav class="sb-nav">
     <div class="sb-group">운영</div>
@@ -2459,11 +2459,18 @@ body:not(.light-mode) .np-time { color:#9b9eaa; }
       </div>
     </div>
 
-    <!-- 우측: 선택된 템플릿 상세 + 미리보기 [v176] 좌측과 동일 높이 + 내부 스크롤 -->
+    <!-- 우측: 선택된 템플릿 상세 + 미리보기 [v177] 저장 버튼 헤더로 — 본문과 겹침 방지 -->
     <div class="panel" style="min-width:0;max-width:520px;display:flex;flex-direction:column;height:100%;overflow:hidden">
-      <div class="panel-head" style="flex-shrink:0">
-        <div class="panel-title" id="notifyDetailTitle">📋 템플릿 선택</div>
-        <div id="notifyDetailStatus" style="font-size:11px"></div>
+      <div class="panel-head" style="flex-shrink:0;display:flex;justify-content:space-between;align-items:center;gap:10px">
+        <div style="display:flex;align-items:center;gap:10px;min-width:0;flex:1">
+          <div class="panel-title" id="notifyDetailTitle" style="min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">📋 템플릿 선택</div>
+          <div id="notifyDetailStatus" style="font-size:11px"></div>
+        </div>
+        <!-- [v177] 저장/취소 버튼 — 헤더 우측에 배치, 템플릿 선택 시에만 표시 -->
+        <div id="notifyDetailActions" style="display:none;gap:6px;flex-shrink:0">
+          <button onclick="resetNotifyDetail()" style="background:none;border:1px solid var(--b);color:var(--muted);padding:6px 12px;border-radius:6px;font-size:12px;cursor:pointer">취소</button>
+          <button id="notifyDetailSaveBtn" onclick="saveNotifyDetail()" disabled style="background:var(--gold);color:var(--bg);border:none;padding:6px 14px;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;opacity:.4;transition:opacity .2s">💾 저장</button>
+        </div>
       </div>
       <div style="padding:18px;flex:1 1 auto;min-height:0;overflow-y:auto" id="notifyDetailEmpty">
         <div style="text-align:center;color:var(--muted);padding:60px 0;font-size:13px">
@@ -2534,11 +2541,6 @@ body:not(.light-mode) .np-time { color:#9b9eaa; }
           <div class="np-footnote">미리보기는 실제 단말기와 차이가 있을 수 있습니다.</div>
         </div>
 
-        <!-- 저장 + 취소 버튼 (sticky bottom) -->
-        <div style="display:flex;gap:8px;justify-content:flex-end;padding:14px 0 4px;border-top:1px solid var(--b);position:sticky;bottom:0;background:var(--s1);margin-top:auto">
-          <button onclick="resetNotifyDetail()" style="background:none;border:1px solid var(--b);color:var(--muted);padding:10px 20px;border-radius:6px;font-size:12px;cursor:pointer">취소</button>
-          <button id="notifyDetailSaveBtn" onclick="saveNotifyDetail()" disabled style="background:var(--gold);color:var(--bg);border:none;padding:10px 24px;border-radius:6px;font-size:13px;font-weight:700;cursor:pointer;opacity:.4;transition:opacity .2s">💾 저장</button>
-        </div>
       </div>
     </div>
 
@@ -10210,6 +10212,9 @@ function selectNotifyTemplate(id) {
   document.getElementById('notifyDetailEmpty').style.display = 'none';
   document.getElementById('notifyDetailBody').style.display = 'block';
   document.getElementById('notifyDetailTitle').textContent = t.name;
+  // [v177] 저장/취소 버튼 헤더에 표시
+  const actions = document.getElementById('notifyDetailActions');
+  if (actions) actions.style.display = 'flex';
 
   // 토글 상태
   const enabled = String(_NOTIFY_CACHE[t.toggleKey]?.value || 'true').toLowerCase() === 'true';
