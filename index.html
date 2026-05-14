@@ -985,7 +985,7 @@ body:not(.light-mode) .np-time { color:#9b9eaa; }
 <!-- SIDEBAR -->
 <aside class="sidebar">
   <div class="sb-logo">1DAYECO<small>Admin Dashboard</small>
-    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v183</span>
+    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v184</span>
   </div>
   <nav class="sb-nav">
     <div class="sb-group">운영</div>
@@ -12210,8 +12210,24 @@ function openSubDetail(id) {
   document.getElementById('sdInputHour').value           = String(sub.send_hour || 8);
   document.getElementById('sdInputEmail').value          = sub.email || '';
   document.getElementById('sdInputMemo').value           = sub.memo  || '';
-  const sdCd = new Date(sub.created_at);
-  document.getElementById('sdInputStartDate').value = sdCd.toISOString().slice(0,10);
+  // [v184] 시작일: subscribers.start_date 우선, 없으면 created_at 익일 (KST) 로 fallback
+  let startDateStr = '';
+  if (sub.start_date) {
+    // DB가 'YYYY-MM-DD' (date 타입) 또는 ISO timestamptz 둘 다 가능
+    const sdRaw = String(sub.start_date);
+    if (sdRaw.length >= 10 && sdRaw[4] === '-') {
+      startDateStr = sdRaw.slice(0, 10);
+    } else {
+      try { startDateStr = new Date(sdRaw).toISOString().slice(0,10); } catch(e) { startDateStr = ''; }
+    }
+  } else if (sub.created_at) {
+    // fallback: 가입일 KST 익일 (start_date 백필 안된 옛 row 대응)
+    const cd = new Date(sub.created_at);
+    const cdKst = new Date(cd.getTime() + (cd.getTimezoneOffset() + 9*60) * 60000);
+    cdKst.setDate(cdKst.getDate() + 1);
+    startDateStr = cdKst.toISOString().slice(0,10);
+  }
+  document.getElementById('sdInputStartDate').value = startDateStr;
   document.getElementById('sdInputEndDate').value   = sub.end_date ? new Date(sub.end_date).toISOString().slice(0,10) : '';
 
   // 카테고리 영역 동적 렌더 (라디오 1개 선택)
@@ -12418,6 +12434,7 @@ async function saveSubDetail() {
       email: sub.email, memo: sub.memo, categories: sub.categories,
       subtopic_id: sub.subtopic_id || null,
       created_at: sub.created_at, end_date: sub.end_date,
+      start_date: sub.start_date || null,  // [v184]
     };
 
     // ── 입력값 적용 (낙관적 업데이트) ──────────────────
@@ -12432,7 +12449,8 @@ async function saveSubDetail() {
     sub.subtopic_id = newSubtopicIdInt;
     const sdStart = document.getElementById('sdInputStartDate').value;
     const sdEnd   = document.getElementById('sdInputEndDate').value;
-    if (sdStart) sub.created_at = sdStart + 'T00:00:00+09:00';
+    // [v184] 시작일은 별도 컬럼 start_date 로 저장 (created_at 덮어쓰지 않음)
+    if (sdStart) sub.start_date = sdStart;  // 'YYYY-MM-DD' 그대로 (date 타입)
     if (sdEnd)   sub.end_date   = sdEnd   + 'T23:59:59+09:00';
 
     // ── 백엔드 PUT 호출 ──────────────────────────────────
@@ -12447,7 +12465,7 @@ async function saveSubDetail() {
             email: sub.email, memo: sub.memo,
             categories: newCats,
             subtopic_id: newSubtopicIdInt,
-            created_at: sub.created_at,
+            start_date: sub.start_date || null,  // [v184] 시작일 컬럼
             end_date: sub.end_date,
           })
         });
