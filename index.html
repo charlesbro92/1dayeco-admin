@@ -985,7 +985,7 @@ body:not(.light-mode) .np-time { color:#9b9eaa; }
 <!-- SIDEBAR -->
 <aside class="sidebar">
   <div class="sb-logo">1DAYECO<small>Admin Dashboard</small>
-    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v186</span>
+    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v187</span>
   </div>
   <nav class="sb-nav">
     <div class="sb-group">운영</div>
@@ -4346,13 +4346,14 @@ function renderSubscribersRows(filtered) {
       ? paidDt.toLocaleTimeString('ko-KR', {hour:'2-digit', minute:'2-digit', hour12:false, timeZone:'Asia/Seoul'})
       : '';
 
-    // [v185] 종료일: subscribers.expires_at 컬럼 (사용자 요청 명시)
+    // [v187] 종료일: subscribers.end_date 컬럼 (사용자 정책: end_date 사용)
+    // 백엔드가 KST + offset 명시 저장 → 변환 없이 그대로 KST 날짜로 표시.
     let endDateStr;
     let endColor = 'var(--muted)';
-    if (s.expires_at) {
-      endDateStr = new Date(s.expires_at).toLocaleDateString('ko-KR', {timeZone:'Asia/Seoul'});
+    if (s.end_date) {
+      endDateStr = new Date(s.end_date).toLocaleDateString('ko-KR', {timeZone:'Asia/Seoul'});
       // 종료일 7일 이내면 amber, 아니면 muted
-      endColor = new Date(s.expires_at) < new Date(Date.now() + 7*86400000)
+      endColor = new Date(s.end_date) < new Date(Date.now() + 7*86400000)
         ? 'var(--amber)' : 'var(--muted)';
     } else if (isCancelled) {
       endDateStr = '해지됨';
@@ -12262,7 +12263,21 @@ async function openSubDetail(id) {
     startDateStr = cdKst.toISOString().slice(0,10);
   }
   document.getElementById('sdInputStartDate').value = startDateStr;
-  document.getElementById('sdInputEndDate').value   = sub.end_date ? new Date(sub.end_date).toISOString().slice(0,10) : '';
+  // [v187] 종료일 input — KST 날짜 명시 추출 (toISOString 우연 의존 회피)
+  let endDateInputStr = '';
+  if (sub.end_date) {
+    try {
+      const ed = new Date(sub.end_date);
+      // ko-KR locale (YYYY. M. D.) → ISO 형식으로 재구성
+      const parts = ed.toLocaleDateString('ko-KR', {timeZone:'Asia/Seoul', year:'numeric', month:'2-digit', day:'2-digit'})
+                      .replaceAll(' ','').replace(/\.$/,'').split('.');
+      // ['2026','11','10']
+      if (parts.length === 3) {
+        endDateInputStr = `${parts[0]}-${parts[1].padStart(2,'0')}-${parts[2].padStart(2,'0')}`;
+      }
+    } catch(e) {}
+  }
+  document.getElementById('sdInputEndDate').value = endDateInputStr;
 
   // 카테고리 영역 동적 렌더 (라디오 1개 선택)
   let cats = sub.categories;
