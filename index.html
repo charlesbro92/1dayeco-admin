@@ -985,7 +985,7 @@ body:not(.light-mode) .np-time { color:#9b9eaa; }
 <!-- SIDEBAR -->
 <aside class="sidebar">
   <div class="sb-logo">1DAYECO<small>Admin Dashboard</small>
-    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v178</span>
+    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v180</span>
   </div>
   <nav class="sb-nav">
     <div class="sb-group">운영</div>
@@ -2034,56 +2034,62 @@ body:not(.light-mode) .np-time { color:#9b9eaa; }
 
   <!-- ── PAGE: 스케줄러 ── -->
   <div class="content" id="page-scheduler">
-    <!-- [v170] 첨부 로드맵 그대로:
-         - 좌측 (큰 영역): 단일 시간 스케줄러 (panel 3)
-         - 우측 (작은 사이드): 스케줄러 현황 (panel 1) + 콘텐츠 자동 생성 (panel 2)
-         HTML 순서를 바꾸지 않고 grid-template-areas로 자리만 배치 -->
-    <div style="display:grid;grid-template-columns:minmax(0, 1.6fr) minmax(280px, 1fr);grid-template-areas:'main side1' 'main side2';gap:16px;max-width:1400px;align-items:start">
+    <!-- [v179] 우측 사이드:
+         - side1: 콘텐츠 스케줄러 (등록된 부주제 스케줄 리스트 + 각자 토글)
+         - side2: 콘텐츠 자동 생성 (카테고리/부주제 + 시간 선택 후 추가) -->
+    <div style="display:grid;grid-template-columns:minmax(0, 1.6fr) minmax(320px, 1fr);grid-template-areas:'main side1' 'main side2';gap:16px;max-width:1400px;align-items:start">
       <div class="panel" style="grid-area:side1">
         <div class="panel-head">
-          <div class="panel-title">⏰ 스케줄러 현황</div>
+          <div class="panel-title">📝 콘텐츠 스케줄러</div>
           <div style="display:flex;gap:8px">
             <span id="schedulerRunningBadge" style="font-size:11px;padding:4px 10px;border-radius:4px;border:1px solid var(--b);color:var(--muted);letter-spacing:.3px">○ 비활성</span>
-            <button onclick="loadSchedulerStatus()" style="background:none;border:1px solid var(--b);color:var(--muted);padding:4px 10px;border-radius:4px;font-size:11px;cursor:pointer">🔄 새로고침</button>
+            <button onclick="loadSubtopicSchedules()" style="background:none;border:1px solid var(--b);color:var(--muted);padding:4px 10px;border-radius:4px;font-size:11px;cursor:pointer">🔄 새로고침</button>
           </div>
         </div>
-        <div style="padding:20px"><div id="schedulerJobList" style="display:flex;flex-direction:column;gap:10px"></div></div>
+        <div style="padding:14px">
+          <div id="subtopicScheduleList" style="display:flex;flex-direction:column;gap:8px;max-height:380px;overflow-y:auto">
+            <div style="color:var(--muted);font-size:12px;padding:14px;text-align:center;background:rgba(255,255,255,.02);border:1px dashed var(--b);border-radius:8px">
+              로딩 중...
+            </div>
+          </div>
+        </div>
       </div>
       <div class="panel" style="grid-area:side2">
         <div class="panel-head"><div class="panel-title">📝 콘텐츠 자동 생성</div></div>
-        <div style="padding:20px;display:flex;flex-direction:column;gap:16px">
-          <!-- 활성/비활성 명확한 버튼 토글 -->
-          <div>
-            <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:8px;letter-spacing:.5px">자동 생성 상태</label>
-            <div style="display:flex;gap:8px">
-              <button id="autoGenOnBtn" onclick="setAutoGenEnabled(true)"
-                style="flex:1;padding:12px;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;
-                       background:rgba(74,222,128,.12);border:1.5px solid rgba(74,222,128,.4);color:var(--green);
-                       transition:all .2s;letter-spacing:.5px">
-                ● 활성화
-              </button>
-              <button id="autoGenOffBtn" onclick="setAutoGenEnabled(false)"
-                style="flex:1;padding:12px;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;
-                       background:var(--s3);border:1.5px solid var(--b);color:var(--muted);
-                       transition:all .2s;letter-spacing:.5px">
-                ○ 비활성화
-              </button>
-            </div>
-            <input type="checkbox" id="contentEnabled" style="display:none" onchange="onSchedulerToggle()">
+        <div style="padding:18px;display:flex;flex-direction:column;gap:12px">
+          <div style="font-size:11px;color:var(--muted);line-height:1.5;padding:8px 10px;background:rgba(201,168,76,.05);border-radius:6px">
+            💡 한 부주제당 1건만 등록됩니다. 같은 부주제로 다시 저장하면 시간이 덮어쓰기됩니다.
           </div>
-
+          <div>
+            <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:6px;letter-spacing:.5px">카테고리</label>
+            <select id="newSchedCategory" onchange="loadSubtopicsForSched(this.value)" style="width:100%;background:var(--s3);border:1px solid var(--b);color:var(--text);padding:10px;border-radius:6px;font-size:13px;outline:none">
+              <option value="">선택해주세요</option>
+            </select>
+          </div>
+          <div>
+            <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:6px;letter-spacing:.5px">부주제</label>
+            <select id="newSchedSubtopic" disabled style="width:100%;background:var(--s3);border:1px solid var(--b);color:var(--text);padding:10px;border-radius:6px;font-size:13px;outline:none">
+              <option value="">카테고리를 먼저 선택</option>
+            </select>
+          </div>
           <div>
             <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:6px;letter-spacing:.5px">생성 시각 (매일)</label>
             <div style="display:flex;gap:8px;align-items:center">
-              <select id="contentHour" style="flex:1;background:var(--s3);border:1px solid var(--b);color:var(--text);padding:10px;border-radius:6px;font-size:13px;outline:none">
+              <select id="newSchedHour" style="flex:1;background:var(--s3);border:1px solid var(--b);color:var(--text);padding:10px;border-radius:6px;font-size:13px;outline:none">
                 <option value="5">오전 5시</option>
                 <option value="6">오전 6시</option>
                 <option value="7" selected>오전 7시</option>
                 <option value="8">오전 8시</option>
                 <option value="9">오전 9시</option>
+                <option value="10">오전 10시</option>
+                <option value="11">오전 11시</option>
+                <option value="12">오후 12시</option>
+                <option value="13">오후 1시</option>
+                <option value="14">오후 2시</option>
+                <option value="15">오후 3시</option>
               </select>
               <span style="color:var(--muted)">:</span>
-              <select id="contentMinute" style="flex:1;background:var(--s3);border:1px solid var(--b);color:var(--text);padding:10px;border-radius:6px;font-size:13px;outline:none">
+              <select id="newSchedMinute" style="flex:1;background:var(--s3);border:1px solid var(--b);color:var(--text);padding:10px;border-radius:6px;font-size:13px;outline:none">
                 <option value="0">00분</option>
                 <option value="15">15분</option>
                 <option value="30" selected>30분</option>
@@ -2091,17 +2097,13 @@ body:not(.light-mode) .np-time { color:#9b9eaa; }
               </select>
             </div>
           </div>
-
-          <div style="display:flex;gap:8px">
-            <button onclick="saveSchedulerConfig()" style="flex:1;background:var(--gold);color:var(--bg);border:none;padding:10px;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;letter-spacing:.5px">💾 저장</button>
-            <button onclick="runJobNow('content_generate')" style="flex:1;background:none;border:1px solid var(--gold);color:var(--gold);padding:10px;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;letter-spacing:.5px">▶ 지금 실행</button>
-          </div>
+          <button onclick="addSubtopicSchedule()" style="background:var(--gold);color:var(--bg);border:none;padding:11px;border-radius:6px;font-size:13px;font-weight:700;cursor:pointer;letter-spacing:.5px;margin-top:4px">💾 저장</button>
         </div>
       </div>
-      <!-- ── [v157] 단일 시간 스케줄러 4개 + 자동 환불 (설정 페이지에서 이동) ── -->
+      <!-- ── [v179] 알림 스케줄러 (옛 단일 시간 스케줄러) ── -->
       <div class="panel" style="grid-area:main">
         <div class="panel-head">
-          <div class="panel-title">🛎️ 단일 시간 스케줄러</div>
+          <div class="panel-title">🔔 알림 스케줄러</div>
           <span id="schedSingleLastSaved" style="font-size:11px;color:var(--muted)">최근 저장: -</span>
         </div>
         <div style="padding:20px;display:flex;flex-direction:column;gap:12px;max-width:760px">
@@ -3490,7 +3492,7 @@ function loadPage(name) {
   }
   if (name === 'payments')     loadPayments();
   if (name === 'settings')     loadSettings();
-  if (name === 'scheduler')    { loadSchedulerStatus(); loadSchedulerSettings(); loadSchedulerStatusPanel(); }
+  if (name === 'scheduler')    { loadSchedulerStatus(); loadSchedulerSettings(); loadSchedulerStatusPanel(); loadSubtopicSchedules(); loadCategoriesForSched(); }
   if (name === 'notify')       loadNotifySettings();
 }
 function loadAll() { loadPage(currentPage); showToast('새로고침 완료', 'ok'); }
@@ -10399,6 +10401,186 @@ async function loadSchedulerStatusPanel() {
   } catch (e) {
     const container = document.getElementById('schedulerJobsList');
     if (container) container.innerHTML = '<span style="color:#ef4444">조회 실패: ' + (e?.message || e) + '</span>';
+  }
+}
+
+// ════════════════════════════════════════════════════════════
+// [v179] 콘텐츠 스케줄러 — 부주제 단위 다건 등록
+// ════════════════════════════════════════════════════════════
+let _SCHED_CATEGORIES = [];
+
+async function loadCategoriesForSched() {
+  try {
+    const r = await apiFetch('/admin/categories');
+    const cats = (r && r.data) ? r.data : (Array.isArray(r) ? r : []);
+    _SCHED_CATEGORIES = cats;
+    const sel = document.getElementById('newSchedCategory');
+    if (!sel) return;
+    sel.innerHTML = '<option value="">선택해주세요</option>' +
+      cats.map(c => `<option value="${c.id}">${c.name || c.id}</option>`).join('');
+  } catch (e) {
+    console.warn('loadCategoriesForSched:', e);
+  }
+}
+
+async function loadSubtopicsForSched(categoryId) {
+  const subSel = document.getElementById('newSchedSubtopic');
+  if (!subSel) return;
+  if (!categoryId) {
+    subSel.innerHTML = '<option value="">카테고리를 먼저 선택</option>';
+    subSel.disabled = true;
+    return;
+  }
+  subSel.disabled = false;
+  subSel.innerHTML = '<option value="">로딩 중...</option>';
+  try {
+    const r = await apiFetch('/admin/subtopics?category_id=' + encodeURIComponent(categoryId));
+    const subs = (r && r.data) ? r.data : (Array.isArray(r) ? r : []);
+    if (!subs.length) {
+      subSel.innerHTML = '<option value="">부주제 없음</option>';
+      return;
+    }
+    subSel.innerHTML = '<option value="">선택해주세요</option>' +
+      subs.map(s => `<option value="${s.id}">${s.name || ('#' + s.id)}</option>`).join('');
+  } catch (e) {
+    subSel.innerHTML = '<option value="">조회 실패</option>';
+    console.warn('loadSubtopicsForSched:', e);
+  }
+}
+
+async function loadSubtopicSchedules() {
+  const list = document.getElementById('subtopicScheduleList');
+  if (!list) return;
+  list.innerHTML = '<div style="color:var(--muted);font-size:12px;padding:14px;text-align:center">로딩 중...</div>';
+  try {
+    const r = await apiFetch('/admin/subtopic-schedules');
+    const items = (r && r.items) ? r.items : [];
+    // 활성 배지 업데이트
+    const enabledCount = items.filter(x => x.enabled).length;
+    const badge = document.getElementById('schedulerRunningBadge');
+    if (badge) {
+      if (enabledCount > 0) {
+        badge.textContent = '● 활성 ' + enabledCount + '개';
+        badge.style.color = 'var(--green)';
+        badge.style.borderColor = 'rgba(74,222,128,.3)';
+      } else {
+        badge.textContent = '○ 비활성';
+        badge.style.color = 'var(--muted)';
+        badge.style.borderColor = 'var(--b)';
+      }
+    }
+    if (!items.length) {
+      list.innerHTML = '<div style="color:var(--muted);font-size:12px;padding:14px;text-align:center;background:rgba(255,255,255,.02);border:1px dashed var(--b);border-radius:8px">등록된 콘텐츠 스케줄이 없습니다</div>';
+      return;
+    }
+    list.innerHTML = items.map(it => {
+      const hh = String(it.hour).padStart(2, '0');
+      const mm = String(it.minute).padStart(2, '0');
+      const onColor = it.enabled ? '#10b981' : '#94a3b8';
+      const knobPos = it.enabled ? 'translateX(16px)' : 'translateX(0)';
+      return `
+        <div style="display:flex;align-items:center;gap:10px;padding:12px;background:rgba(255,255,255,.02);border:1px solid var(--b);border-radius:8px">
+          <div style="flex:1;min-width:0">
+            <div style="font-size:12px;color:var(--muted);margin-bottom:2px">${it.category_name || it.category_id}</div>
+            <div style="font-size:13px;color:var(--text);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${it.subtopic_name || ('#' + it.subtopic_id)}</div>
+            <div style="font-size:11px;color:var(--gold);font-family:var(--mono);margin-top:3px">${hh}:${mm} KST</div>
+          </div>
+          <label style="position:relative;display:inline-block;width:38px;height:22px;cursor:pointer;flex-shrink:0">
+            <input type="checkbox" ${it.enabled ? 'checked' : ''} onchange="toggleSubtopicSchedule(${it.id}, this.checked)" style="opacity:0;width:0;height:0">
+            <span style="position:absolute;inset:0;background:${onColor};border-radius:22px;transition:.2s"></span>
+            <span style="position:absolute;left:3px;top:3px;width:16px;height:16px;background:#fff;border-radius:50%;transform:${knobPos};transition:transform .2s"></span>
+          </label>
+          <button onclick="runSubtopicScheduleNow(${it.id})" title="지금 실행" style="background:none;border:1px solid var(--b);color:var(--muted);padding:4px 8px;border-radius:4px;font-size:11px;cursor:pointer;flex-shrink:0">▶</button>
+          <button onclick="deleteSubtopicSchedule(${it.id})" title="삭제" style="background:none;border:1px solid rgba(248,113,113,.25);color:var(--red);padding:4px 8px;border-radius:4px;font-size:11px;cursor:pointer;flex-shrink:0">✕</button>
+        </div>
+      `;
+    }).join('');
+  } catch (e) {
+    list.innerHTML = '<div style="color:#ef4444;font-size:12px;padding:14px;text-align:center">조회 실패: ' + (e?.message || e) + '</div>';
+  }
+}
+
+async function addSubtopicSchedule() {
+  const catEl = document.getElementById('newSchedCategory');
+  const subEl = document.getElementById('newSchedSubtopic');
+  const hourEl = document.getElementById('newSchedHour');
+  const minEl  = document.getElementById('newSchedMinute');
+  const cat = catEl?.value;
+  const sub = subEl?.value;
+  if (!cat) { showToast('카테고리를 선택해주세요', 'ng'); return; }
+  if (!sub) { showToast('부주제를 선택해주세요', 'ng'); return; }
+  const payload = {
+    category_id: cat,
+    subtopic_id: parseInt(sub, 10),
+    hour: parseInt(hourEl.value, 10),
+    minute: parseInt(minEl.value, 10),
+    enabled: true,
+  };
+  try {
+    const r = await apiFetch('/admin/subtopic-schedules', {
+      method: 'POST', body: JSON.stringify(payload),
+    });
+    if (r && r.success) {
+      // [v180] upsert — action='inserted' or 'updated'
+      const msg = r.action === 'updated'
+        ? '같은 부주제가 있어 시간이 덮어쓰기 되었습니다'
+        : '콘텐츠 스케줄이 저장되었습니다';
+      showToast(msg, 'ok');
+      catEl.value = ''; subEl.innerHTML = '<option value="">카테고리를 먼저 선택</option>'; subEl.disabled = true;
+      hourEl.value = '7'; minEl.value = '30';
+      await loadSubtopicSchedules();
+    } else {
+      showToast('실패: ' + (r?.error || 'unknown'), 'ng');
+    }
+  } catch (e) {
+    showToast('네트워크 오류: ' + (e?.message || e), 'ng');
+  }
+}
+
+async function toggleSubtopicSchedule(id, enabled) {
+  try {
+    const r = await apiFetch('/admin/subtopic-schedules/' + id, {
+      method: 'PUT', body: JSON.stringify({ enabled }),
+    });
+    if (r && r.success) {
+      showToast((enabled ? '활성화: ' : '비활성화: ') + '#' + id, 'ok');
+      await loadSubtopicSchedules();
+    } else {
+      showToast('변경 실패', 'ng');
+    }
+  } catch (e) {
+    showToast('네트워크 오류', 'ng');
+  }
+}
+
+async function deleteSubtopicSchedule(id) {
+  if (!confirm('이 콘텐츠 스케줄을 삭제하시겠습니까?')) return;
+  try {
+    const r = await apiFetch('/admin/subtopic-schedules/' + id, { method: 'DELETE' });
+    if (r && r.success) {
+      showToast('삭제되었습니다', 'ok');
+      await loadSubtopicSchedules();
+    } else {
+      showToast('삭제 실패', 'ng');
+    }
+  } catch (e) {
+    showToast('네트워크 오류', 'ng');
+  }
+}
+
+async function runSubtopicScheduleNow(id) {
+  if (!confirm('이 콘텐츠를 지금 생성하시겠습니까? (수 분 소요)')) return;
+  try {
+    const r = await apiFetch('/admin/subtopic-schedules/' + id + '/run', {
+      method: 'POST', body: '{}',
+    });
+    if (r && r.success) {
+      showToast('콘텐츠 생성을 시작했습니다 (백그라운드)', 'ok');
+    } else {
+      showToast('실패: ' + (r?.error || 'unknown'), 'ng');
+    }
+  } catch (e) {
+    showToast('네트워크 오류', 'ng');
   }
 }
 
