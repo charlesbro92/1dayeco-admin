@@ -985,7 +985,7 @@ body:not(.light-mode) .np-time { color:#9b9eaa; }
 <!-- SIDEBAR -->
 <aside class="sidebar">
   <div class="sb-logo">1DAYECO<small>Admin Dashboard</small>
-    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v184</span>
+    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v185</span>
   </div>
   <nav class="sb-nav">
     <div class="sb-group">운영</div>
@@ -4310,12 +4310,24 @@ function renderSubscribersRows(filtered) {
       ? createdDt.toLocaleTimeString('ko-KR', {hour:'2-digit', minute:'2-digit', hour12:false, timeZone:'Asia/Seoul'})
       : '';
 
-    // 시작일 (created_at 날짜, KST)
-    const startDate = createdDt
-      ? createdDt.toLocaleDateString('ko-KR', {timeZone:'Asia/Seoul'})
-      : '';
+    // [v185] 시작일: subscribers.start_date 컬럼 (date 타입)
+    // - 사용자 요청 명시: 시작일 = start_date
+    let startDate = '';
+    if (s.start_date) {
+      // 'YYYY-MM-DD' (date) 또는 ISO 모두 대응
+      const sdRaw = String(s.start_date);
+      try {
+        // date 컬럼은 보통 'YYYY-MM-DD'. ko-KR locale로 포맷.
+        const d = (sdRaw.length === 10 && sdRaw[4] === '-')
+          ? new Date(sdRaw + 'T00:00:00+09:00')
+          : new Date(sdRaw);
+        startDate = d.toLocaleDateString('ko-KR', {timeZone:'Asia/Seoul'});
+      } catch (e) {
+        startDate = sdRaw;
+      }
+    }
 
-    // [v183] 결제시간 (paid_at 날짜, KST) — 시작일과 동일한 표기
+    // [v183] 결제시간 (paid_at, KST) — 날짜+시각
     const paidDt = s.paid_at ? new Date(s.paid_at) : null;
     const paidDateStr = paidDt
       ? paidDt.toLocaleDateString('ko-KR', {timeZone:'Asia/Seoul'})
@@ -4324,13 +4336,13 @@ function renderSubscribersRows(filtered) {
       ? paidDt.toLocaleTimeString('ko-KR', {hour:'2-digit', minute:'2-digit', hour12:false, timeZone:'Asia/Seoul'})
       : '';
 
-    // 종료일: 항상 진짜 end_date만 표시 (체험 D-N은 체험종료 컬럼에서)
+    // [v185] 종료일: subscribers.expires_at 컬럼 (사용자 요청 명시)
     let endDateStr;
     let endColor = 'var(--muted)';
-    if (s.end_date) {
-      endDateStr = new Date(s.end_date).toLocaleDateString('ko-KR');
+    if (s.expires_at) {
+      endDateStr = new Date(s.expires_at).toLocaleDateString('ko-KR', {timeZone:'Asia/Seoul'});
       // 종료일 7일 이내면 amber, 아니면 muted
-      endColor = new Date(s.end_date) < new Date(Date.now() + 7*86400000)
+      endColor = new Date(s.expires_at) < new Date(Date.now() + 7*86400000)
         ? 'var(--amber)' : 'var(--muted)';
     } else if (isCancelled) {
       endDateStr = '해지됨';
@@ -4418,7 +4430,7 @@ function renderSubscribersRows(filtered) {
         <div style="line-height:1.3">${paidDateStr || '—'}${paidTimeStr ? `<br><span style="font-size:9px;opacity:.6">${paidTimeStr}</span>` : ''}</div>
       </td>
       <td style="font-family:var(--mono);font-size:11px;color:var(--muted);text-align:center;white-space:nowrap">
-        <div style="line-height:1.3">${startDate || '—'}${joinTimeStr ? `<br><span style="font-size:9px;opacity:.6">가입 ${joinTimeStr}</span>` : ''}</div>
+        <div style="line-height:1.3">${startDate || '—'}</div>
       </td>
       <td style="font-family:var(--mono);font-size:11px;color:${endColor};text-align:center;white-space:nowrap">${endDateStr}</td>
       <td onclick="event.stopPropagation()" style="text-align:center">
@@ -12193,10 +12205,22 @@ async function _renderSdSubtopicSelect(catId, currentSubtopicId) {
   sel.disabled = false;
 }
 
-function openSubDetail(id) {
+async function openSubDetail(id) {
   const sub = STATE.subscribers.find(s => s.id === id);
   if (!sub) return;
   sdCurrentId = id;
+
+  // [v185] 카테고리/부제목 드롭다운이 비어있는 채로 모달이 뜨는 버그 방지:
+  // CATEGORIES_CACHE가 비어있으면 (구독자 페이지로 바로 진입한 경우 등) 강제 로드.
+  try {
+    if (typeof CATEGORIES_CACHE === 'undefined' || !CATEGORIES_CACHE || CATEGORIES_CACHE.length === 0) {
+      if (typeof loadCategoryList === 'function') {
+        await loadCategoryList();
+      }
+    }
+  } catch (e) {
+    console.warn('[openSubDetail] 카테고리 캐시 로드 실패 (모달은 계속 표시):', e);
+  }
 
   // 저장 버튼 상태 초기화 (이전 모달에서 비활성화 상태일 수 있음)
   const sdBtn = document.getElementById('sdSaveBtn');
