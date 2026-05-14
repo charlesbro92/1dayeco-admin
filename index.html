@@ -985,7 +985,7 @@ body:not(.light-mode) .np-time { color:#9b9eaa; }
 <!-- SIDEBAR -->
 <aside class="sidebar">
   <div class="sb-logo">1DAYECO<small>Admin Dashboard</small>
-    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v187</span>
+    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v188</span>
   </div>
   <nav class="sb-nav">
     <div class="sb-group">운영</div>
@@ -3460,7 +3460,14 @@ function loadPage(name) {
       loadRecentSubs();
     }).catch(e => console.warn('[overview] 백그라운드 갱신 실패:', e));
   }
-  if (name === 'subscribers')  loadSubscribers();
+  if (name === 'subscribers')  {
+    // [v188] 카테고리 캐시 안 채워져있으면 먼저 로드 후 구독자 테이블 렌더 (카테고리 컬럼 정상 표시 위해)
+    if (!CATEGORIES_CACHE.length) {
+      loadCategoryList().then(() => loadSubscribers()).catch(() => loadSubscribers());
+    } else {
+      loadSubscribers();
+    }
+  }
   if (name === 'send') {
     // 기간 필터 기본값: 최근 15일 (오늘 포함)
     const kstNow   = new Date(new Date().getTime() + 9*60*60*1000);
@@ -4106,14 +4113,12 @@ function renderSubCategoryName(categories) {
   if (!Array.isArray(arr) || arr.length === 0) {
     return '<span style="color:var(--muted);font-size:10px">—</span>';
   }
-  // 카테고리 ID → 이름 매핑 (CATEGORIES_CACHE 우선)
+  // [v188] DB의 categories.name 우선. 캐시 없으면 ID 그대로 (하드코딩 매핑 제거)
   const catId = arr[0];
   let name = catId;
   if (CATEGORIES_CACHE && CATEGORIES_CACHE.length) {
     const found = CATEGORIES_CACHE.find(c => c.id === catId);
     if (found) name = found.name || catId;
-  } else {
-    name = getCatShortName(catId) || catId;
   }
   return '<span style="font-size:11px;color:var(--text)">' + name + '</span>';
 }
@@ -4126,11 +4131,12 @@ function getSubCategoryNameText(categories) {
   }
   if (!Array.isArray(arr) || arr.length === 0) return '';
   const catId = arr[0];
+  // [v188] DB의 categories.name 우선, 폴백은 ID 그대로
   if (CATEGORIES_CACHE && CATEGORIES_CACHE.length) {
     const found = CATEGORIES_CACHE.find(c => c.id === catId);
     if (found) return found.name || catId;
   }
-  return getCatShortName(catId) || catId;
+  return catId;
 }
 
 // 부제목 이름 표시 (백엔드에서 join해서 내려주는 subtopic_name 우선 사용)
