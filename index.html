@@ -985,7 +985,7 @@ body:not(.light-mode) .np-time { color:#9b9eaa; }
 <!-- SIDEBAR -->
 <aside class="sidebar">
   <div class="sb-logo">1DAYECO<small>Admin Dashboard</small>
-    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v177</span>
+    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v178</span>
   </div>
   <nav class="sb-nav">
     <div class="sb-group">운영</div>
@@ -3490,7 +3490,7 @@ function loadPage(name) {
   }
   if (name === 'payments')     loadPayments();
   if (name === 'settings')     loadSettings();
-  if (name === 'scheduler')    { loadSchedulerStatus(); loadSchedulerSettings(); }
+  if (name === 'scheduler')    { loadSchedulerStatus(); loadSchedulerSettings(); loadSchedulerStatusPanel(); }
   if (name === 'notify')       loadNotifySettings();
 }
 function loadAll() { loadPage(currentPage); showToast('새로고침 완료', 'ok'); }
@@ -9691,11 +9691,12 @@ function _updateAutoRefundUI(enabled) {
   const slider = document.getElementById('cfgAutoRefundSlider');
   const knob = document.getElementById('cfgAutoRefundKnob');
   if (label) {
+    // [v178] 사용자 요청: ON=녹색, OFF=주황
     label.innerHTML = enabled
-      ? '<strong style="color:#f59e0b">⚡ 자동 환불 ON</strong> <span style="color:var(--muted);font-size:11px">— 즉시 환불 완료 (검토 없음, 테스트용)</span>'
-      : '<strong style="color:#10b981">🔍 수동 환불</strong> <span style="color:var(--muted);font-size:11px">— 어드민이 검토 후 환불완료 체크해야 처리됨 (운영 권장)</span>';
+      ? '<strong style="color:#10b981">⚡ 자동 환불 ON</strong> <span style="color:var(--muted);font-size:11px">— 즉시 환불 완료 (검토 없음, 테스트용)</span>'
+      : '<strong style="color:#f59e0b">🔍 수동 환불</strong> <span style="color:var(--muted);font-size:11px">— 어드민이 검토 후 환불완료 체크해야 처리됨 (운영 권장)</span>';
   }
-  if (slider) slider.style.background = enabled ? '#f59e0b' : '#10b981';
+  if (slider) slider.style.background = enabled ? '#10b981' : '#f59e0b';
   if (knob) knob.style.transform = enabled ? 'translateX(24px)' : 'translateX(0)';
 }
 
@@ -9746,8 +9747,18 @@ async function toggleScheduler(key, enabled) {
     if (res && res.success) {
       showToast((enabled ? '활성화됨: ' : '비활성화됨: ') + key, 'ok');
       updateServiceSettingsLastSaved();
+      // [v178] APScheduler 재등록 — 토글 즉시 반영
+      try {
+        const rr = await apiFetch('/admin/scheduler/reload', { method:'POST', body:'{}' });
+        if (rr && rr.ok) {
+          const rj = await rr.json();
+          if (rj && rj.success) {
+            console.log('[scheduler reload]', rj.jobs);
+          }
+        }
+      } catch(e) { console.warn('scheduler reload 실패:', e); }
       // 1초 후 현황 새로고침
-      setTimeout(loadSchedulerStatusPanel, 1000);
+      setTimeout(loadSchedulerStatusPanel, 1200);
     } else {
       showToast('저장 실패: ' + (res?.message || 'unknown'), 'ng');
       // 롤백
@@ -9795,7 +9806,11 @@ async function saveSchedulerTime(key, value) {
       if (res && res.success) {
         showToast('시간 변경 저장: ' + key + ' = ' + n, 'ok');
         updateServiceSettingsLastSaved();
-        setTimeout(loadSchedulerStatusPanel, 1000);
+        // [v178] APScheduler 재등록 — 시간 변경 즉시 반영
+        try {
+          await apiFetch('/admin/scheduler/reload', { method:'POST', body:'{}' });
+        } catch(e) { console.warn('scheduler reload 실패:', e); }
+        setTimeout(loadSchedulerStatusPanel, 1200);
       } else {
         showToast('저장 실패: ' + (res?.message || 'unknown'), 'ng');
       }
