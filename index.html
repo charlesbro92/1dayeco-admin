@@ -27,7 +27,6 @@
   --sans: 'Noto Sans KR', sans-serif;
   --mono: 'JetBrains Mono', monospace;
   --sidebar: 220px;
-  --topbar-h: 58px;
   /* [v160] 알림톡 미리보기 색상 — 다크모드: 부드러운 머스타드 */
   --preview-bg: #d4b85b;
   --preview-text: #1a1606;
@@ -82,47 +81,18 @@ body.light-mode textarea {
   background: var(--s1) !important;
 }
 * { margin:0; padding:0; box-sizing:border-box; }
-html, body { overflow-x:hidden; }  /* 페이지 가로 스크롤 원천 차단 */
 body {
   background:var(--bg); color:var(--text); font-family:var(--sans);
-  min-height:100vh;
+  display:flex; min-height:100vh;
   transition: background .25s ease, color .25s ease;
-  /* [v171] ⊢ 구조 — sidebar는 좌측 풀높이, topbar는 main 영역 위쪽만 */
 }
 
-/* ── [v171] TOPBAR — 사이드바 우측부터 화면 우측 끝까지만 (사이드바 영역 침범 X) ── */
-.topbar {
-  position:fixed;
-  top:0;
-  left:var(--sidebar);              /* 사이드바 우측부터 시작 */
-  right:0;
-  height:var(--topbar-h);
-  background:var(--s1); border-bottom:1px solid var(--b);
-  display:flex; align-items:center; justify-content:space-between;
-  padding:0 28px;
-  z-index:40;
-  box-sizing:border-box;
-}
-.page-title {
-  font-size:15px; font-weight:700; letter-spacing:.5px;
-  flex-shrink:0;
-  white-space:nowrap;
-}
-.topbar-right {
-  display:flex; align-items:center; gap:12px;
-  flex-shrink:0;
-  white-space:nowrap;
-}
-
-/* ── SIDEBAR — 화면 최상단부터 바닥까지 풀높이 (⊢ 좌측 세로축) ── */
+/* ── SIDEBAR ── */
 .sidebar {
   width:var(--sidebar); background:var(--s1);
   border-right:1px solid var(--b); padding:0;
   display:flex; flex-direction:column;
-  position:fixed;
-  top:0;                            /* [v171] 화면 최상단부터 */
-  left:0; bottom:0;
-  z-index:50;
+  position:fixed; top:0; left:0; bottom:0; z-index:50;
 }
 .sb-logo {
   padding:24px 20px 20px;
@@ -160,16 +130,17 @@ body {
 .status-dot { width:7px;height:7px;border-radius:50%;background:var(--green);animation:pulse 2s infinite; }
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
 
-/* ── MAIN — topbar 아래 + sidebar 우측 ── */
-.main {
-  margin-left:var(--sidebar);
-  padding-top:var(--topbar-h);
-  display:block;
-  min-height:100vh;
-  width:calc(100vw - var(--sidebar));
-  max-width:calc(100vw - var(--sidebar));
-  box-sizing:border-box;
+/* ── MAIN ── */
+.main { margin-left:var(--sidebar); flex:1; display:flex; flex-direction:column; }
+
+/* ── TOPBAR ── */
+.topbar {
+  height:58px; background:var(--s1); border-bottom:1px solid var(--b);
+  display:flex; align-items:center; justify-content:space-between; padding:0 28px;
+  position:sticky; top:0; z-index:40;
 }
+.page-title { font-size:15px; font-weight:700; letter-spacing:.5px; }
+.topbar-right { display:flex; align-items:center; gap:12px; }
 .tb-time { font-family:var(--mono); font-size:13px; color:var(--text); letter-spacing:.5px; }
 .btn-send {
   background:var(--gold); color:var(--bg); border:none;
@@ -187,20 +158,14 @@ body {
 .btn-refresh:hover { color:var(--text); border-color:var(--gold); }
 
 /* ── CONTENT AREA ── */
-.content {
-  padding:28px;
-  display:none;
-  /* [v173] overflow-x 제거 — 자식의 위치 계산이 안정적으로 되도록 */
-  max-width:100%;
-  box-sizing:border-box;
-}
+.content { padding:28px; display:none; }
 .content.active { display:block; }
 
 /* ─── 콘텐츠 페이지: 아카이브 메인 + 주제 작업 collapsible ─── */
 #page-content.content.active,
 #page-archive.content.active {
   display:flex; flex-direction:column;
-  height:calc(100vh - var(--topbar-h)); /* [v167] topbar 높이 제외 */
+  height:calc(100vh - 58px); /* topbar 높이 제외 */
   padding:20px 28px; gap:14px;
   box-sizing:border-box; overflow:hidden;
 }
@@ -313,10 +278,6 @@ tr:hover td { background:rgba(255,255,255,.02); }
 .badge.trial  { background:rgba(251,191,36,.1);  color:var(--amber); }
 .badge.cancelled { background:rgba(248,113,113,.1); color:var(--red); }
 .badge.expired   { background:rgba(148,163,184,.1); color:#94A3B8; }
-/* [v168] 환불 관련 상태 색상 */
-.badge.refund_protected_ended { background:rgba(139,92,246,.12); color:#a78bfa; }  /* 보라 — 보장환불 */
-.badge.refund_requested       { background:rgba(245,158,11,.12); color:var(--amber); }  /* 주황 — 환불요청 */
-.badge.refunded               { background:rgba(168,85,247,.12); color:#c084fc; }  /* 자주 — 환불완료 */
 .badge.monthly { background:rgba(96,165,250,.1); color:var(--blue); }
 .badge.yearly  { background:rgba(201,168,76,.1); color:var(--gold); }
 .badge.free    { background:rgba(255,255,255,.06); color:var(--muted); }
@@ -743,19 +704,9 @@ body.light-mode .filter-pill.active { color:#fff; }
 
 @media(max-width:900px) {
   .sidebar { transform:translateX(-100%); }
-  /* [v164] 사이드바 숨길 때 main도 viewport 전체 사용 — 우측 빈 공간 제거 */
-  .main {
-    margin-left:0;
-    max-width:100vw;
-    width:100vw;
-  }
+  .main { margin-left:0; }
   .kpi-grid, .kpi-grid-5 { grid-template-columns:repeat(2,1fr); }
   .two-col { grid-template-columns:1fr; }
-  /* [v170] 스케줄러 페이지 — 좁은 화면에서는 1열로 (main 위, side1·side2 아래) */
-  #page-scheduler > div[style*="grid-template-areas"] {
-    grid-template-columns:1fr !important;
-    grid-template-areas:'main' 'side1' 'side2' !important;
-  }
 }
 
 /* ── 컬럼 리사이즈 ── */
@@ -798,137 +749,6 @@ body.light-mode .filter-pill.active { color:#fff; }
 .topic-act-btn:hover { color:var(--gold); }
 .topic-act-del:hover { color:#F87171; }
 
-/* ════════════════════════════════════════════════════════════ */
-/* [v165] 알림 관리 — 솔라피 콘솔 동일 디자인 미리보기                  */
-/* ════════════════════════════════════════════════════════════ */
-.notify-preview-shell {
-  width:380px;
-  max-width:100%;
-  margin:0 auto;
-  background:#E8E9F0;         /* 솔라피 외곽 회색-라벤더 */
-  border-radius:12px;
-  padding:18px 16px 14px;
-  box-sizing:border-box;
-  display:flex;
-  flex-direction:column;
-  gap:10px;
-}
-body.light-mode .notify-preview-shell {
-  background:#E8E9F0;          /* 라이트 모드도 동일 */
-}
-/* 다크 모드용 외곽 — 어두운 차콜 */
-body:not(.light-mode) .notify-preview-shell {
-  background:#2a2c34;
-}
-
-.np-date {
-  text-align:center;
-  font-size:11px;
-  color:#7a7e8a;
-  font-family:'Apple SD Gothic Neo','Malgun Gothic',sans-serif;
-  letter-spacing:.3px;
-}
-body:not(.light-mode) .np-date { color:#9b9eaa; }
-
-.np-profile {
-  display:flex;
-  align-items:center;
-  gap:8px;
-  margin-top:2px;
-}
-.np-avatar {
-  width:36px; height:36px;
-  border-radius:50%;
-  background:#C2C5D0;        /* 빈 아바타 (솔라피와 동일) */
-  flex-shrink:0;
-}
-body:not(.light-mode) .np-avatar { background:#4a4d57; }
-.np-channel {
-  font-size:13px;
-  color:#1a1a1a;
-  font-weight:500;
-  font-family:'Apple SD Gothic Neo','Malgun Gothic',sans-serif;
-}
-body:not(.light-mode) .np-channel { color:#E8E4D9; }
-
-.np-message-row {
-  display:flex;
-  align-items:flex-end;
-  gap:6px;
-  margin-left:44px;             /* 아바타 폭만큼 들여쓰기 */
-}
-
-.np-bubble {
-  flex:0 0 auto;
-  width:260px;
-  background:#FAE100;           /* 카카오 알림톡 노란색 */
-  border-radius:10px;
-  overflow:hidden;
-  display:flex;
-  flex-direction:column;
-  box-shadow:0 1px 2px rgba(0,0,0,.06);
-}
-.np-bubble-head {
-  display:flex;
-  justify-content:space-between;
-  align-items:center;
-  padding:8px 12px 6px;
-  flex-shrink:0;
-}
-.np-bubble-title {
-  font-size:12px;
-  font-weight:700;
-  color:#1a1a1a;
-  font-family:'Apple SD Gothic Neo','Malgun Gothic',sans-serif;
-}
-.np-kakao-badge {
-  background:#3c3c3c;
-  color:#ffffff;
-  font-size:9px;
-  font-weight:600;
-  padding:2px 7px;
-  border-radius:10px;
-  letter-spacing:.3px;
-  font-family:'Apple SD Gothic Neo','Malgun Gothic',sans-serif;
-}
-.np-bubble-body {
-  padding:0 12px 12px;
-  font-size:12.5px;
-  line-height:1.65;
-  color:#1a1a1a;
-  white-space:pre-wrap;
-  word-break:break-word;
-  max-height:380px;             /* 너무 길면 박스 안에서 스크롤 */
-  overflow-y:auto;
-  overflow-x:hidden;
-  font-family:'Apple SD Gothic Neo','Malgun Gothic',sans-serif;
-}
-/* 본문 스크롤바 (말풍선 안에서만, 노란 배경에 어울리도록) */
-/* [v167] 본문 스크롤바 — 박스 우측에 명확히 보이도록 폭 키움 + 상시 표시 */
-.np-bubble-body::-webkit-scrollbar { width:8px; }
-.np-bubble-body::-webkit-scrollbar-thumb { background:rgba(0,0,0,.28); border-radius:4px; }
-.np-bubble-body::-webkit-scrollbar-thumb:hover { background:rgba(0,0,0,.42); }
-.np-bubble-body::-webkit-scrollbar-track { background:rgba(0,0,0,.06); border-radius:4px; }
-.np-bubble-body { scrollbar-width:thin; scrollbar-color:rgba(0,0,0,.28) rgba(0,0,0,.06); }
-
-.np-time {
-  font-size:10px;
-  color:#7a7e8a;
-  flex-shrink:0;
-  padding-bottom:2px;
-  font-family:'Apple SD Gothic Neo','Malgun Gothic',sans-serif;
-  white-space:nowrap;
-}
-body:not(.light-mode) .np-time { color:#9b9eaa; }
-
-.np-footnote {
-  font-size:11px;
-  color:var(--muted);
-  margin-top:8px;
-  text-align:center;
-  font-family:var(--sans);
-}
-
 </style>
 </head>
 <body>
@@ -956,36 +776,10 @@ body:not(.light-mode) .np-time { color:#9b9eaa; }
   </div>
 </div>
 
-<!-- [v167] TOPBAR — 화면 최상단 전체 너비 (┳ 구조의 가로축) -->
-<header class="topbar">
-  <div class="page-title" id="pageTitle">📊 개요</div>
-  <div class="topbar-right">
-    <span class="tb-time" style="display:flex;gap:14px;align-items:center">
-      <span style="display:flex;flex-direction:column;align-items:center;line-height:1.3">
-        <span style="font-size:9px;color:var(--muted);letter-spacing:.5px">🇰🇷 KST</span>
-        <span id="clock-kr">--:--:--</span>
-      </span>
-      <span style="color:var(--b)">|</span>
-      <span style="display:flex;flex-direction:column;align-items:center;line-height:1.3">
-        <span style="font-size:9px;color:var(--muted);letter-spacing:.5px">🇻🇳 VNT</span>
-        <span id="clock-vn">--:--:--</span>
-      </span>
-    </span>
-    <button class="btn-refresh" onclick="loadAll()">↻ 새로고침</button>
-    <button id="themeToggle" onclick="toggleTheme()" class="btn-refresh" title="테마 전환"
-      style="padding:8px 12px;font-size:14px">
-      <span id="themeToggleIco">🌙</span>
-    </button>
-    <button class="btn-send" id="sendNowBtn" onclick="confirmSendNow()">
-      <span>📤</span> 지금 발송
-    </button>
-  </div>
-</header>
-
 <!-- SIDEBAR -->
 <aside class="sidebar">
   <div class="sb-logo">1DAYECO<small>Admin Dashboard</small>
-    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v180</span>
+    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v164</span>
   </div>
   <nav class="sb-nav">
     <div class="sb-group">운영</div>
@@ -1010,6 +804,32 @@ body:not(.light-mode) .np-time { color:#9b9eaa; }
 
 <!-- MAIN -->
 <div class="main">
+
+  <!-- TOPBAR -->
+  <header class="topbar">
+    <div class="page-title" id="pageTitle">📊 개요</div>
+    <div class="topbar-right">
+      <span class="tb-time" style="display:flex;gap:14px;align-items:center">
+        <span style="display:flex;flex-direction:column;align-items:center;line-height:1.3">
+          <span style="font-size:9px;color:var(--muted);letter-spacing:.5px">🇰🇷 KST</span>
+          <span id="clock-kr">--:--:--</span>
+        </span>
+        <span style="color:var(--b)">|</span>
+        <span style="display:flex;flex-direction:column;align-items:center;line-height:1.3">
+          <span style="font-size:9px;color:var(--muted);letter-spacing:.5px">🇻🇳 VNT</span>
+          <span id="clock-vn">--:--:--</span>
+        </span>
+      </span>
+      <button class="btn-refresh" onclick="loadAll()">↻ 새로고침</button>
+      <button id="themeToggle" onclick="toggleTheme()" class="btn-refresh" title="테마 전환"
+        style="padding:8px 12px;font-size:14px">
+        <span id="themeToggleIco">🌙</span>
+      </button>
+      <button class="btn-send" id="sendNowBtn" onclick="confirmSendNow()">
+        <span>📤</span> 지금 발송
+      </button>
+    </div>
+  </header>
 
   <!-- ── PAGE: 개요 ── -->
   <div class="content active" id="page-overview">
@@ -2034,62 +1854,52 @@ body:not(.light-mode) .np-time { color:#9b9eaa; }
 
   <!-- ── PAGE: 스케줄러 ── -->
   <div class="content" id="page-scheduler">
-    <!-- [v179] 우측 사이드:
-         - side1: 콘텐츠 스케줄러 (등록된 부주제 스케줄 리스트 + 각자 토글)
-         - side2: 콘텐츠 자동 생성 (카테고리/부주제 + 시간 선택 후 추가) -->
-    <div style="display:grid;grid-template-columns:minmax(0, 1.6fr) minmax(320px, 1fr);grid-template-areas:'main side1' 'main side2';gap:16px;max-width:1400px;align-items:start">
-      <div class="panel" style="grid-area:side1">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;max-width:900px">
+      <div class="panel" style="grid-column:1/-1">
         <div class="panel-head">
-          <div class="panel-title">📝 콘텐츠 스케줄러</div>
+          <div class="panel-title">⏰ 스케줄러 현황</div>
           <div style="display:flex;gap:8px">
             <span id="schedulerRunningBadge" style="font-size:11px;padding:4px 10px;border-radius:4px;border:1px solid var(--b);color:var(--muted);letter-spacing:.3px">○ 비활성</span>
-            <button onclick="loadSubtopicSchedules()" style="background:none;border:1px solid var(--b);color:var(--muted);padding:4px 10px;border-radius:4px;font-size:11px;cursor:pointer">🔄 새로고침</button>
+            <button onclick="loadSchedulerStatus()" style="background:none;border:1px solid var(--b);color:var(--muted);padding:4px 10px;border-radius:4px;font-size:11px;cursor:pointer">🔄 새로고침</button>
           </div>
         </div>
-        <div style="padding:14px">
-          <div id="subtopicScheduleList" style="display:flex;flex-direction:column;gap:8px;max-height:380px;overflow-y:auto">
-            <div style="color:var(--muted);font-size:12px;padding:14px;text-align:center;background:rgba(255,255,255,.02);border:1px dashed var(--b);border-radius:8px">
-              로딩 중...
-            </div>
-          </div>
-        </div>
+        <div style="padding:20px"><div id="schedulerJobList" style="display:flex;flex-direction:column;gap:10px"></div></div>
       </div>
-      <div class="panel" style="grid-area:side2">
+      <div class="panel" style="grid-column:1/-1">
         <div class="panel-head"><div class="panel-title">📝 콘텐츠 자동 생성</div></div>
-        <div style="padding:18px;display:flex;flex-direction:column;gap:12px">
-          <div style="font-size:11px;color:var(--muted);line-height:1.5;padding:8px 10px;background:rgba(201,168,76,.05);border-radius:6px">
-            💡 한 부주제당 1건만 등록됩니다. 같은 부주제로 다시 저장하면 시간이 덮어쓰기됩니다.
-          </div>
+        <div style="padding:20px;display:flex;flex-direction:column;gap:16px;max-width:640px">
+          <!-- 활성/비활성 명확한 버튼 토글 -->
           <div>
-            <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:6px;letter-spacing:.5px">카테고리</label>
-            <select id="newSchedCategory" onchange="loadSubtopicsForSched(this.value)" style="width:100%;background:var(--s3);border:1px solid var(--b);color:var(--text);padding:10px;border-radius:6px;font-size:13px;outline:none">
-              <option value="">선택해주세요</option>
-            </select>
+            <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:8px;letter-spacing:.5px">자동 생성 상태</label>
+            <div style="display:flex;gap:8px">
+              <button id="autoGenOnBtn" onclick="setAutoGenEnabled(true)"
+                style="flex:1;padding:12px;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;
+                       background:rgba(74,222,128,.12);border:1.5px solid rgba(74,222,128,.4);color:var(--green);
+                       transition:all .2s;letter-spacing:.5px">
+                ● 활성화
+              </button>
+              <button id="autoGenOffBtn" onclick="setAutoGenEnabled(false)"
+                style="flex:1;padding:12px;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;
+                       background:var(--s3);border:1.5px solid var(--b);color:var(--muted);
+                       transition:all .2s;letter-spacing:.5px">
+                ○ 비활성화
+              </button>
+            </div>
+            <input type="checkbox" id="contentEnabled" style="display:none" onchange="onSchedulerToggle()">
           </div>
-          <div>
-            <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:6px;letter-spacing:.5px">부주제</label>
-            <select id="newSchedSubtopic" disabled style="width:100%;background:var(--s3);border:1px solid var(--b);color:var(--text);padding:10px;border-radius:6px;font-size:13px;outline:none">
-              <option value="">카테고리를 먼저 선택</option>
-            </select>
-          </div>
+
           <div>
             <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:6px;letter-spacing:.5px">생성 시각 (매일)</label>
             <div style="display:flex;gap:8px;align-items:center">
-              <select id="newSchedHour" style="flex:1;background:var(--s3);border:1px solid var(--b);color:var(--text);padding:10px;border-radius:6px;font-size:13px;outline:none">
+              <select id="contentHour" style="flex:1;background:var(--s3);border:1px solid var(--b);color:var(--text);padding:10px;border-radius:6px;font-size:13px;outline:none">
                 <option value="5">오전 5시</option>
                 <option value="6">오전 6시</option>
                 <option value="7" selected>오전 7시</option>
                 <option value="8">오전 8시</option>
                 <option value="9">오전 9시</option>
-                <option value="10">오전 10시</option>
-                <option value="11">오전 11시</option>
-                <option value="12">오후 12시</option>
-                <option value="13">오후 1시</option>
-                <option value="14">오후 2시</option>
-                <option value="15">오후 3시</option>
               </select>
               <span style="color:var(--muted)">:</span>
-              <select id="newSchedMinute" style="flex:1;background:var(--s3);border:1px solid var(--b);color:var(--text);padding:10px;border-radius:6px;font-size:13px;outline:none">
+              <select id="contentMinute" style="flex:1;background:var(--s3);border:1px solid var(--b);color:var(--text);padding:10px;border-radius:6px;font-size:13px;outline:none">
                 <option value="0">00분</option>
                 <option value="15">15분</option>
                 <option value="30" selected>30분</option>
@@ -2097,13 +1907,17 @@ body:not(.light-mode) .np-time { color:#9b9eaa; }
               </select>
             </div>
           </div>
-          <button onclick="addSubtopicSchedule()" style="background:var(--gold);color:var(--bg);border:none;padding:11px;border-radius:6px;font-size:13px;font-weight:700;cursor:pointer;letter-spacing:.5px;margin-top:4px">💾 저장</button>
+
+          <div style="display:flex;gap:8px">
+            <button onclick="saveSchedulerConfig()" style="flex:1;background:var(--gold);color:var(--bg);border:none;padding:10px;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;letter-spacing:.5px">💾 저장</button>
+            <button onclick="runJobNow('content_generate')" style="flex:1;background:none;border:1px solid var(--gold);color:var(--gold);padding:10px;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;letter-spacing:.5px">▶ 지금 실행</button>
+          </div>
         </div>
       </div>
-      <!-- ── [v179] 알림 스케줄러 (옛 단일 시간 스케줄러) ── -->
-      <div class="panel" style="grid-area:main">
+      <!-- ── [v157] 단일 시간 스케줄러 4개 + 자동 환불 (설정 페이지에서 이동) ── -->
+      <div class="panel" style="grid-column:1/-1">
         <div class="panel-head">
-          <div class="panel-title">🔔 알림 스케줄러</div>
+          <div class="panel-title">🛎️ 단일 시간 스케줄러</div>
           <span id="schedSingleLastSaved" style="font-size:11px;color:var(--muted)">최근 저장: -</span>
         </div>
         <div style="padding:20px;display:flex;flex-direction:column;gap:12px;max-width:760px">
@@ -2201,6 +2015,83 @@ body:not(.light-mode) .np-time { color:#9b9eaa; }
             </div>
           </div>
 
+          <!-- ════════════════════════════════════════════════════════════ -->
+          <!-- [v163] 🧪 자동 발송 테스트 (1회성 예약)                          -->
+          <!-- 현행 정책 유지: 결제당일 가입자는 자동발송 제외.                 -->
+          <!-- 단, 본인 번호로 자동 발송 흐름을 검증해야 할 때                  -->
+          <!--   force_send 옵션으로 결제당일 차단을 우회한 1회성 발송 예약 가능.-->
+          <!-- 수동 즉시 발송 아님 → 예약된 시각에 APScheduler가 스스로 실행.   -->
+          <!-- ════════════════════════════════════════════════════════════ -->
+          <div style="background:var(--s3);border:1px solid var(--b);border-radius:8px;padding:14px;border-left:3px solid var(--gold)">
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+              <div style="font-size:13px;font-weight:700;color:var(--text);flex:1">🧪 자동 발송 테스트 (1회성 예약)</div>
+              <button onclick="loadSchedTestList()" style="background:transparent;border:1px solid var(--b);color:var(--muted);padding:4px 10px;border-radius:4px;font-size:11px;cursor:pointer">↻ 새로고침</button>
+            </div>
+            <div style="font-size:11px;color:var(--muted);margin-bottom:12px;line-height:1.5">
+              운영용 매일 08:00 발송과 별개로 임의 시각에 1회성 자동 발송을 예약합니다.
+              예약한 시각이 되면 스케줄러가 <strong style="color:var(--gold)">자동으로</strong> 발송을 실행합니다 (수동 클릭 아님).<br>
+              기본 대상은 <strong>결제 당일 가입자 포함 전체 활성 가입자</strong>입니다. 강제 발송 ON 이면 결제 당일 차단 정책이 우회되어 모두 발송됩니다.
+            </div>
+
+            <!-- 예약 폼 -->
+            <div style="background:var(--s2);border:1px solid var(--b);border-radius:6px;padding:12px;display:flex;flex-direction:column;gap:10px">
+              <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+                <span style="font-size:11px;color:var(--muted);min-width:64px">실행 시점</span>
+                <select id="schedTestMode" onchange="onSchedTestModeChange()" style="background:var(--s3);border:1px solid var(--b);border-radius:4px;padding:5px 8px;font-size:12px;color:var(--text)">
+                  <option value="in">N분 뒤</option>
+                  <option value="at">특정 시각</option>
+                </select>
+                <span id="schedTestInWrap" style="display:inline-flex;align-items:center;gap:6px">
+                  <input type="number" id="schedTestInMinutes" min="1" max="1440" value="3" style="width:70px;background:var(--s3);border:1px solid var(--b);border-radius:4px;padding:5px 6px;font-size:12px;color:var(--text);font-family:var(--mono);text-align:center">
+                  <span style="font-size:11px;color:var(--muted)">분 뒤</span>
+                </span>
+                <span id="schedTestAtWrap" style="display:none;align-items:center;gap:6px">
+                  <input type="datetime-local" id="schedTestAtDateTime" style="background:var(--s3);border:1px solid var(--b);border-radius:4px;padding:5px 6px;font-size:12px;color:var(--text);font-family:var(--mono)">
+                  <span style="font-size:11px;color:var(--muted)">KST</span>
+                </span>
+              </div>
+
+              <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+                <span style="font-size:11px;color:var(--muted);min-width:64px">대상</span>
+                <select id="schedTestTargetMode" onchange="onSchedTestTargetChange()" style="background:var(--s3);border:1px solid var(--b);border-radius:4px;padding:5px 8px;font-size:12px;color:var(--text)">
+                  <option value="all" selected>전체 활성 가입자 (결제 당일 포함)</option>
+                  <option value="phone">특정 번호만</option>
+                </select>
+                <input type="text" id="schedTestPhones" placeholder="01012345678 (쉼표로 여러 명)" style="flex:1;min-width:200px;background:var(--s3);border:1px solid var(--b);border-radius:4px;padding:5px 8px;font-size:12px;color:var(--text);font-family:var(--mono)">
+              </div>
+
+              <div style="display:flex;align-items:center;gap:18px;flex-wrap:wrap">
+                <label style="display:inline-flex;align-items:center;gap:6px;font-size:11px;color:var(--text);cursor:pointer">
+                  <input type="checkbox" id="schedTestForceSend" checked style="cursor:pointer">
+                  <span>강제 발송 (결제 당일 가입자 차단 우회)</span>
+                </label>
+                <label style="display:inline-flex;align-items:center;gap:6px;font-size:11px;color:var(--text);cursor:pointer">
+                  <input type="checkbox" id="schedTestDryRun" style="cursor:pointer">
+                  <span>모의 실행 (solapi 호출 X — 대상자만 파악)</span>
+                </label>
+              </div>
+
+              <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+                <span style="font-size:11px;color:var(--muted);min-width:64px">메모</span>
+                <input type="text" id="schedTestLabel" placeholder="예: 5/14 본인번호 강제 자동발송 검증" style="flex:1;min-width:240px;background:var(--s3);border:1px solid var(--b);border-radius:4px;padding:5px 8px;font-size:12px;color:var(--text)">
+              </div>
+
+              <div style="display:flex;align-items:center;gap:8px;justify-content:flex-end;margin-top:4px">
+                <span id="schedTestPreview" style="flex:1;font-size:11px;color:var(--muted)"></span>
+                <button id="schedTestSubmitBtn" onclick="submitSchedTest()" style="background:var(--gold);color:var(--bg);border:none;padding:7px 16px;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer">📅 예약</button>
+              </div>
+              <div id="schedTestErr" style="display:none;font-size:11px;color:var(--red);padding:6px 8px;background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.25);border-radius:4px"></div>
+            </div>
+
+            <!-- 예약/실행 이력 -->
+            <div style="margin-top:12px">
+              <div style="font-size:11px;color:var(--muted);margin-bottom:6px;font-weight:700">예약 / 실행 이력 (최근 30건)</div>
+              <div id="schedTestListWrap" style="background:var(--s2);border:1px solid var(--b);border-radius:6px;overflow:hidden">
+                <div id="schedTestList" style="padding:10px;font-size:11px;color:var(--muted)">로딩 중...</div>
+              </div>
+            </div>
+          </div>
+
           <!-- 스케줄러 현황 -->
           <div id="schedulerStatusPanel" style="margin-top:6px;padding:12px;background:rgba(201,168,76,.05);border:1px dashed rgba(201,168,76,.3);border-radius:6px;font-size:11px;color:var(--muted);line-height:1.7">
             <div style="font-weight:700;color:var(--gold);margin-bottom:6px">📊 등록 상태 (실시간)</div>
@@ -2263,6 +2154,8 @@ body:not(.light-mode) .np-time { color:#9b9eaa; }
           </div>
         </div>
       </div>
+
+      </div><!-- /좌우 flex 컨테이너 -->
 
     </div>
   </div>
@@ -2441,113 +2334,6 @@ body:not(.light-mode) .np-time { color:#9b9eaa; }
   </div>
 </div>
 
-  <!-- ── [v172] PAGE: 알림 관리 — grid로 명확한 좌(360px) + 우(나머지) 배치 ── -->
-  <div class="content" id="page-notify" style="overflow:hidden">
-    <!-- [v176] 좌측 540px (150% 확대) / 양 패널 동일 높이 고정 / 페이지 스크롤 X · 패널 내부 스크롤 -->
-    <div style="display:grid;grid-template-columns:540px minmax(0, 1fr);gap:18px;align-items:stretch;width:100%;max-width:1400px;height:calc(100vh - var(--topbar-h) - 60px)">
-
-    <!-- 좌측: 템플릿 목록 -->
-    <div class="panel" style="min-width:0;display:flex;flex-direction:column;height:100%;overflow:hidden">
-      <div class="panel-head" style="display:flex;justify-content:space-between;align-items:center;flex-shrink:0">
-        <div class="panel-title">알림톡 템플릿</div>
-        <span id="notifyLastSaved" style="font-size:10px;color:var(--muted)">-</span>
-      </div>
-      <div style="padding:12px;flex:1 1 auto;min-height:0;display:flex;flex-direction:column">
-        <div style="font-size:11px;color:var(--muted);margin-bottom:10px;line-height:1.5;padding:8px 10px;background:rgba(201,168,76,.05);border-radius:6px;flex-shrink:0">
-          💡 템플릿 클릭 시 우측에서 발송 ON/OFF + 솔라피 ID를 설정합니다.<br>
-          본문 수정은 <strong>솔라피 콘솔</strong>에서 진행하세요.
-        </div>
-        <div id="notifyTemplateList" style="display:flex;flex-direction:column;gap:4px;flex:1 1 auto;min-height:0;overflow-y:auto"></div>
-      </div>
-    </div>
-
-    <!-- 우측: 선택된 템플릿 상세 + 미리보기 [v177] 저장 버튼 헤더로 — 본문과 겹침 방지 -->
-    <div class="panel" style="min-width:0;max-width:520px;display:flex;flex-direction:column;height:100%;overflow:hidden">
-      <div class="panel-head" style="flex-shrink:0;display:flex;justify-content:space-between;align-items:center;gap:10px">
-        <div style="display:flex;align-items:center;gap:10px;min-width:0;flex:1">
-          <div class="panel-title" id="notifyDetailTitle" style="min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">📋 템플릿 선택</div>
-          <div id="notifyDetailStatus" style="font-size:11px"></div>
-        </div>
-        <!-- [v177] 저장/취소 버튼 — 헤더 우측에 배치, 템플릿 선택 시에만 표시 -->
-        <div id="notifyDetailActions" style="display:none;gap:6px;flex-shrink:0">
-          <button onclick="resetNotifyDetail()" style="background:none;border:1px solid var(--b);color:var(--muted);padding:6px 12px;border-radius:6px;font-size:12px;cursor:pointer">취소</button>
-          <button id="notifyDetailSaveBtn" onclick="saveNotifyDetail()" disabled style="background:var(--gold);color:var(--bg);border:none;padding:6px 14px;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;opacity:.4;transition:opacity .2s">💾 저장</button>
-        </div>
-      </div>
-      <div style="padding:18px;flex:1 1 auto;min-height:0;overflow-y:auto" id="notifyDetailEmpty">
-        <div style="text-align:center;color:var(--muted);padding:60px 0;font-size:13px">
-          좌측에서 템플릿을 선택해주세요.
-        </div>
-      </div>
-      <div style="padding:18px;display:none;flex:1 1 auto;min-height:0;overflow-y:auto;flex-direction:column" id="notifyDetailBody">
-        <!-- 발송 ON/OFF -->
-        <div style="display:flex;align-items:center;justify-content:space-between;padding:14px;background:var(--s3);border:1px solid var(--b);border-radius:8px;margin-bottom:12px">
-          <div style="flex:1">
-            <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:4px">발송 활성화</div>
-            <div style="font-size:11px;color:var(--muted)">OFF로 전환 시 이 종류의 알림톡 발송이 중단됩니다.</div>
-          </div>
-          <label style="position:relative;display:inline-block;width:50px;height:26px;flex-shrink:0">
-            <input type="checkbox" id="notifyDetailToggle" onchange="markNotifyDirty()" style="opacity:0;width:0;height:0">
-            <span id="notifyDetailToggleSlider" style="position:absolute;cursor:pointer;top:0;left:0;right:0;bottom:0;background:#555;transition:.3s;border-radius:26px"></span>
-            <span id="notifyDetailToggleKnob" style="position:absolute;height:20px;width:20px;left:3px;top:3px;background:white;transition:.3s;border-radius:50%;pointer-events:none;box-shadow:0 1px 3px rgba(0,0,0,.3)"></span>
-          </label>
-        </div>
-
-        <!-- 템플릿 ID -->
-        <div style="margin-bottom:12px">
-          <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:6px;letter-spacing:.3px">템플릿 ID</label>
-          <input type="text" id="notifyDetailTplId" placeholder="KA01TP... (비워두면 환경변수 사용)" oninput="markNotifyDirty()" style="width:100%;background:var(--s3);border:1px solid var(--b);border-radius:6px;padding:10px 12px;font-size:12px;color:var(--text);font-family:var(--mono);outline:none">
-          <div id="notifyDetailIdStatus" style="font-size:11px;color:var(--muted);margin-top:6px;line-height:1.4"></div>
-        </div>
-
-        <!-- 변수 안내 -->
-        <div style="margin-bottom:14px">
-          <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:6px;letter-spacing:.3px">템플릿 변수</label>
-          <div id="notifyDetailVars" style="background:var(--s3);border:1px solid var(--b);border-radius:6px;padding:10px 12px;font-size:11px;color:var(--muted);line-height:1.6;font-family:var(--mono)"></div>
-        </div>
-
-        <!-- 발송 시점 + 설명 -->
-        <div style="margin-bottom:14px">
-          <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:6px;letter-spacing:.3px">발송 시점</label>
-          <div id="notifyDetailWhen" style="font-size:12px;color:var(--text);line-height:1.6;padding:8px 12px;background:rgba(201,168,76,.05);border-left:3px solid var(--gold);border-radius:4px"></div>
-        </div>
-
-        <!-- 미리보기 — [v165] 솔라피 콘솔 동일 디자인 (회색 컨테이너 + 날짜 + 프로필 + 카카오 배지 우상단 + 시간 + 면책) -->
-        <div style="margin-bottom:14px">
-          <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:6px;letter-spacing:.3px">템플릿 미리보기</label>
-          <!-- 외곽 회색 컨테이너 (솔라피와 동일) -->
-          <div class="notify-preview-shell">
-            <!-- 날짜 (가운데 정렬) -->
-            <div class="np-date" id="notifyPreviewDate">—</div>
-            <!-- 프로필: 아바타 + 채널명 -->
-            <div class="np-profile">
-              <div class="np-avatar"></div>
-              <div class="np-channel">채널명</div>
-            </div>
-            <!-- 알림톡 말풍선 + 시간 -->
-            <div class="np-message-row">
-              <div class="np-bubble">
-                <!-- 헤더: 알림톡 도착 + kakao 배지(우측 상단) -->
-                <div class="np-bubble-head">
-                  <span class="np-bubble-title">알림톡 도착</span>
-                  <span class="np-kakao-badge">kakao</span>
-                </div>
-                <!-- 본문 -->
-                <div id="notifyDetailPreview" class="np-bubble-body"></div>
-              </div>
-              <!-- 시간 (우측 하단) -->
-              <div class="np-time" id="notifyPreviewTime">—</div>
-            </div>
-          </div>
-          <!-- 면책 문구 (솔라피와 동일) -->
-          <div class="np-footnote">미리보기는 실제 단말기와 차이가 있을 수 있습니다.</div>
-        </div>
-
-      </div>
-    </div>
-
-    </div><!-- /flex wrapper [v172] -->
-  </div>
 </div><!-- /main -->
 
 <!-- 콘텐츠 상세 팝업 -->
@@ -3232,6 +3018,96 @@ body:not(.light-mode) .np-time { color:#9b9eaa; }
 </div>
 HIDDEN_HOUR_PICKER_END -->
 
+  <!-- ── [v162] PAGE: 알림 관리 — nav 깨짐 방지 (min-width 안전화) ── -->
+  <div class="content" id="page-notify">
+    <div style="max-width:1400px;width:100%">
+      <div style="display:flex;gap:18px;align-items:flex-start;flex-wrap:wrap;width:100%">
+
+    <!-- 좌측: 템플릿 목록 -->
+    <div class="panel" style="flex:0 0 360px;max-width:360px;min-width:0">
+      <div class="panel-head" style="display:flex;justify-content:space-between;align-items:center">
+        <div class="panel-title">알림톡 템플릿</div>
+        <span id="notifyLastSaved" style="font-size:10px;color:var(--muted)">-</span>
+      </div>
+      <div style="padding:12px">
+        <div style="font-size:11px;color:var(--muted);margin-bottom:10px;line-height:1.5;padding:8px 10px;background:rgba(201,168,76,.05);border-radius:6px">
+          💡 템플릿 클릭 시 우측에서 발송 ON/OFF + 솔라피 ID를 설정합니다.<br>
+          본문 수정은 <strong>솔라피 콘솔</strong>에서 진행하세요.
+        </div>
+        <div id="notifyTemplateList" style="display:flex;flex-direction:column;gap:4px;max-height:calc(100vh - 240px);overflow-y:auto"></div>
+      </div>
+    </div>
+
+    <!-- 우측: 선택된 템플릿 상세 + 미리보기 -->
+    <div class="panel" style="flex:1 1 0;min-width:0">
+      <div class="panel-head">
+        <div class="panel-title" id="notifyDetailTitle">📋 템플릿 선택</div>
+        <div id="notifyDetailStatus" style="font-size:11px"></div>
+      </div>
+      <div style="padding:18px" id="notifyDetailEmpty">
+        <div style="text-align:center;color:var(--muted);padding:60px 0;font-size:13px">
+          좌측에서 템플릿을 선택해주세요.
+        </div>
+      </div>
+      <div style="padding:18px;display:none" id="notifyDetailBody">
+        <!-- 발송 ON/OFF -->
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:14px;background:var(--s3);border:1px solid var(--b);border-radius:8px;margin-bottom:12px">
+          <div style="flex:1">
+            <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:4px">발송 활성화</div>
+            <div style="font-size:11px;color:var(--muted)">OFF로 전환 시 이 종류의 알림톡 발송이 중단됩니다.</div>
+          </div>
+          <label style="position:relative;display:inline-block;width:50px;height:26px;flex-shrink:0">
+            <input type="checkbox" id="notifyDetailToggle" onchange="markNotifyDirty()" style="opacity:0;width:0;height:0">
+            <span id="notifyDetailToggleSlider" style="position:absolute;cursor:pointer;top:0;left:0;right:0;bottom:0;background:#555;transition:.3s;border-radius:26px"></span>
+            <span id="notifyDetailToggleKnob" style="position:absolute;height:20px;width:20px;left:3px;top:3px;background:white;transition:.3s;border-radius:50%;pointer-events:none;box-shadow:0 1px 3px rgba(0,0,0,.3)"></span>
+          </label>
+        </div>
+
+        <!-- 템플릿 ID -->
+        <div style="margin-bottom:12px">
+          <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:6px;letter-spacing:.3px">템플릿 ID</label>
+          <input type="text" id="notifyDetailTplId" placeholder="KA01TP... (비워두면 환경변수 사용)" oninput="markNotifyDirty()" style="width:100%;background:var(--s3);border:1px solid var(--b);border-radius:6px;padding:10px 12px;font-size:12px;color:var(--text);font-family:var(--mono);outline:none">
+          <div id="notifyDetailIdStatus" style="font-size:11px;color:var(--muted);margin-top:6px;line-height:1.4"></div>
+        </div>
+
+        <!-- 변수 안내 -->
+        <div style="margin-bottom:14px">
+          <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:6px;letter-spacing:.3px">템플릿 변수</label>
+          <div id="notifyDetailVars" style="background:var(--s3);border:1px solid var(--b);border-radius:6px;padding:10px 12px;font-size:11px;color:var(--muted);line-height:1.6;font-family:var(--mono)"></div>
+        </div>
+
+        <!-- 발송 시점 + 설명 -->
+        <div style="margin-bottom:14px">
+          <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:6px;letter-spacing:.3px">발송 시점</label>
+          <div id="notifyDetailWhen" style="font-size:12px;color:var(--text);line-height:1.6;padding:8px 12px;background:rgba(201,168,76,.05);border-left:3px solid var(--gold);border-radius:4px"></div>
+        </div>
+
+        <!-- 미리보기 -->
+        <div style="margin-bottom:14px">
+          <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:6px;letter-spacing:.3px">템플릿 미리보기 (예시 데이터)</label>
+          <div style="border-radius:8px;overflow:hidden;border:1px solid var(--b)">
+            <!-- 카카오톡 헤더 (어두운 골드) -->
+            <div style="background:var(--preview-header-bg);color:var(--preview-header-text);padding:8px 14px;font-size:11px;font-weight:700;display:flex;align-items:center;gap:6px">
+              <span style="background:#ffe300;color:#3c1e1e;padding:1px 6px;border-radius:3px;font-size:10px;font-weight:700">kakao</span>
+              <span>알림톡 도착</span>
+            </div>
+            <!-- 본문 (부드러운 머스타드) -->
+            <div id="notifyDetailPreview" style="background:var(--preview-bg);color:var(--preview-text);padding:14px;font-size:12px;line-height:1.7;white-space:pre-wrap;height:300px;overflow-y:auto;font-family:'Apple SD Gothic Neo','Malgun Gothic',sans-serif;box-sizing:border-box"></div>
+          </div>
+          <div style="font-size:10px;color:var(--muted);margin-top:6px;text-align:right">※ 본문 수정은 솔라피 콘솔에서만 가능합니다.</div>
+        </div>
+
+        <!-- 저장 + 취소 버튼 (sticky bottom) -->
+        <div style="display:flex;gap:8px;justify-content:flex-end;padding:14px 0 4px;border-top:1px solid var(--b);position:sticky;bottom:0;background:var(--s1);margin-top:auto">
+          <button onclick="resetNotifyDetail()" style="background:none;border:1px solid var(--b);color:var(--muted);padding:10px 20px;border-radius:6px;font-size:12px;cursor:pointer">취소</button>
+          <button id="notifyDetailSaveBtn" onclick="saveNotifyDetail()" disabled style="background:var(--gold);color:var(--bg);border:none;padding:10px 24px;border-radius:6px;font-size:13px;font-weight:700;cursor:pointer;opacity:.4;transition:opacity .2s">💾 저장</button>
+        </div>
+      </div>
+    </div>
+
+      </div>
+    </div>
+  </div>
 
 <!-- 발송 확인 모달 -->
 <div class="overlay" id="sendConfirm">
@@ -3492,7 +3368,7 @@ function loadPage(name) {
   }
   if (name === 'payments')     loadPayments();
   if (name === 'settings')     loadSettings();
-  if (name === 'scheduler')    { loadSchedulerStatus(); loadSchedulerSettings(); loadSchedulerStatusPanel(); loadSubtopicSchedules(); loadCategoriesForSched(); }
+  if (name === 'scheduler')    { loadSchedulerStatus(); loadSchedulerSettings(); loadSchedTestList(); initSchedTestForm(); }
   if (name === 'notify')       loadNotifySettings();
 }
 function loadAll() { loadPage(currentPage); showToast('새로고침 완료', 'ok'); }
@@ -4384,7 +4260,7 @@ function renderSubscribersRows(filtered) {
   // [v151] 옵션 B 새 정책
   active:                  '구독중',
   expired:                 '구독종료',
-  refund_protected_ended:  '보장환불',
+  refund_protected_ended:  '환불보장종료',
   refund_requested:        '환불요청',
   refunded:                '환불완료',
   // 옛 값 (혹시 남은 데이터 호환)
@@ -9685,20 +9561,16 @@ async function toggleAutoSend(enabled) {
   }
 }
 
-// [v168] 자동 환불 토글 — 색상/라벨 의미 명확화
-// ON  = 자동 환불 (즉시 환불 완료, 검토 없음)  → 주황(경고)
-// OFF = 수동 환불 (어드민 검토 후 처리)      → 초록(정상 운영 권장)
+// [v155] 자동 환불 토글
 function _updateAutoRefundUI(enabled) {
   const label = document.getElementById('autoRefundStatusLabel');
   const slider = document.getElementById('cfgAutoRefundSlider');
   const knob = document.getElementById('cfgAutoRefundKnob');
   if (label) {
-    // [v178] 사용자 요청: ON=녹색, OFF=주황
-    label.innerHTML = enabled
-      ? '<strong style="color:#10b981">⚡ 자동 환불 ON</strong> <span style="color:var(--muted);font-size:11px">— 즉시 환불 완료 (검토 없음, 테스트용)</span>'
-      : '<strong style="color:#f59e0b">🔍 수동 환불</strong> <span style="color:var(--muted);font-size:11px">— 어드민이 검토 후 환불완료 체크해야 처리됨 (운영 권장)</span>';
+    label.textContent = enabled ? '⚡ 자동 (즉시 환불 완료)' : '🔍 수동 (어드민 검토 후 처리)';
+    label.style.color = enabled ? '#f59e0b' : '#10b981';
   }
-  if (slider) slider.style.background = enabled ? '#10b981' : '#f59e0b';
+  if (slider) slider.style.background = enabled ? '#f59e0b' : '#10b981';
   if (knob) knob.style.transform = enabled ? 'translateX(24px)' : 'translateX(0)';
 }
 
@@ -9749,18 +9621,8 @@ async function toggleScheduler(key, enabled) {
     if (res && res.success) {
       showToast((enabled ? '활성화됨: ' : '비활성화됨: ') + key, 'ok');
       updateServiceSettingsLastSaved();
-      // [v178] APScheduler 재등록 — 토글 즉시 반영
-      try {
-        const rr = await apiFetch('/admin/scheduler/reload', { method:'POST', body:'{}' });
-        if (rr && rr.ok) {
-          const rj = await rr.json();
-          if (rj && rj.success) {
-            console.log('[scheduler reload]', rj.jobs);
-          }
-        }
-      } catch(e) { console.warn('scheduler reload 실패:', e); }
       // 1초 후 현황 새로고침
-      setTimeout(loadSchedulerStatusPanel, 1200);
+      setTimeout(loadSchedulerStatusPanel, 1000);
     } else {
       showToast('저장 실패: ' + (res?.message || 'unknown'), 'ng');
       // 롤백
@@ -9808,11 +9670,7 @@ async function saveSchedulerTime(key, value) {
       if (res && res.success) {
         showToast('시간 변경 저장: ' + key + ' = ' + n, 'ok');
         updateServiceSettingsLastSaved();
-        // [v178] APScheduler 재등록 — 시간 변경 즉시 반영
-        try {
-          await apiFetch('/admin/scheduler/reload', { method:'POST', body:'{}' });
-        } catch(e) { console.warn('scheduler reload 실패:', e); }
-        setTimeout(loadSchedulerStatusPanel, 1200);
+        setTimeout(loadSchedulerStatusPanel, 1000);
       } else {
         showToast('저장 실패: ' + (res?.message || 'unknown'), 'ng');
       }
@@ -9894,6 +9752,305 @@ async function loadSchedulerSettings() {
 
 
 // ════════════════════════════════════════════════════════════
+// [v163] 🧪 자동 발송 테스트 (1회성 예약)
+// ────────────────────────────────────────────────────────────
+// 운영 매일 08:00 스케줄과 별개로 임의 시각에 1회성 자동 발송을 예약.
+// 예약 시각이 되면 백엔드 APScheduler 가 send_daily_content_endpoint 를
+// force_send=true 옵션 등과 함께 자동 호출 → 결제 당일 가입자(본인 등)도
+// 발송 검증할 수 있다.
+// 수동 즉시 발송 버튼 아님 — 시각이 되어야 동작.
+// ════════════════════════════════════════════════════════════
+function initSchedTestForm() {
+  // datetime-local 기본값: 지금으로부터 +5분 (KST 기준)
+  const at = document.getElementById('schedTestAtDateTime');
+  if (at && !at.value) {
+    const kst = new Date(new Date().getTime() + 9 * 3600000);
+    kst.setMinutes(kst.getMinutes() + 5);
+    // YYYY-MM-DDTHH:MM 포맷
+    at.value = kst.toISOString().slice(0, 16);
+  }
+  onSchedTestModeChange();
+  onSchedTestTargetChange();
+  updateSchedTestPreview();
+  // 입력 변화 → 미리보기 갱신
+  ['schedTestMode','schedTestInMinutes','schedTestAtDateTime',
+   'schedTestTargetMode','schedTestPhones','schedTestForceSend','schedTestDryRun'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener('input', updateSchedTestPreview);
+    if (el) el.addEventListener('change', updateSchedTestPreview);
+  });
+}
+
+function onSchedTestModeChange() {
+  const m = document.getElementById('schedTestMode')?.value || 'in';
+  const inWrap = document.getElementById('schedTestInWrap');
+  const atWrap = document.getElementById('schedTestAtWrap');
+  if (inWrap) inWrap.style.display = (m === 'in') ? 'inline-flex' : 'none';
+  if (atWrap) atWrap.style.display = (m === 'at') ? 'inline-flex' : 'none';
+}
+
+function onSchedTestTargetChange() {
+  const t = document.getElementById('schedTestTargetMode')?.value || 'all';
+  const phones = document.getElementById('schedTestPhones');
+  if (phones) {
+    phones.disabled = (t === 'all');
+    phones.style.opacity = (t === 'all') ? '.4' : '1';
+    phones.placeholder = (t === 'all')
+      ? '(전체 활성 가입자에게 발송 — 결제 당일 포함)'
+      : '01012345678 (쉼표로 여러 명)';
+  }
+  updateSchedTestPreview();
+}
+
+function _schedTestComputeRunAtKstStr() {
+  const mode = document.getElementById('schedTestMode')?.value || 'in';
+  if (mode === 'in') {
+    const m = parseInt(document.getElementById('schedTestInMinutes')?.value || '0', 10);
+    if (!m || m < 1) return null;
+    const dt = new Date(new Date().getTime() + m * 60000 + 9 * 3600000);
+    return dt.toISOString().slice(0, 16);  // KST 로컬 시각 표현
+  } else {
+    return (document.getElementById('schedTestAtDateTime')?.value || '').trim() || null;
+  }
+}
+
+function updateSchedTestPreview() {
+  const previewEl = document.getElementById('schedTestPreview');
+  if (!previewEl) return;
+  const runAt = _schedTestComputeRunAtKstStr();
+  const tMode = document.getElementById('schedTestTargetMode')?.value || 'phone';
+  const phones = (document.getElementById('schedTestPhones')?.value || '').trim();
+  const force = document.getElementById('schedTestForceSend')?.checked;
+  const dry   = document.getElementById('schedTestDryRun')?.checked;
+
+  let timePart = runAt ? `${runAt.replace('T',' ')} KST` : '시각 미지정';
+  let tgtPart = '';
+  if (tMode === 'all') {
+    tgtPart = dry ? '전체 활성 가입자 (모의)' : '전체 활성 가입자';
+  } else {
+    const list = phones.split(',').map(s => s.trim()).filter(Boolean);
+    tgtPart = list.length ? `${list.length}명 (${list[0]}${list.length>1?` 외 ${list.length-1}`:''})` : '번호 입력 필요';
+  }
+  const flags = [];
+  if (force) flags.push('강제발송');
+  if (dry)   flags.push('모의실행');
+  previewEl.textContent = `${timePart} · ${tgtPart}${flags.length?` · ${flags.join('·')}`:''}`;
+}
+
+async function submitSchedTest() {
+  const errEl = document.getElementById('schedTestErr');
+  if (errEl) { errEl.style.display = 'none'; errEl.textContent = ''; }
+  const btn = document.getElementById('schedTestSubmitBtn');
+
+  const mode = document.getElementById('schedTestMode')?.value || 'in';
+  const force = !!document.getElementById('schedTestForceSend')?.checked;
+  const dry   = !!document.getElementById('schedTestDryRun')?.checked;
+  const tMode = document.getElementById('schedTestTargetMode')?.value || 'all';
+  const phonesRaw = (document.getElementById('schedTestPhones')?.value || '').trim();
+  const label = (document.getElementById('schedTestLabel')?.value || '').trim();
+
+  const phones = phonesRaw.split(',').map(s => s.replace(/[^\d]/g, '')).filter(p => p && p.length >= 10);
+
+  // 검증
+  if (tMode === 'phone' && phones.length === 0) {
+    if (errEl) { errEl.textContent = '전화번호를 1개 이상 입력하세요 (대상이 "특정 번호만"이므로).'; errEl.style.display = 'block'; }
+    return;
+  }
+  if (tMode === 'all' && !dry) {
+    // 안전 가드: 전체 실제 발송은 한 번 더 확인 (테스트 의도 재확인)
+    const forceTxt = force ? '강제 발송 ON (결제 당일 가입자 포함)' : '강제 발송 OFF (결제 당일 가입자 제외)';
+    const ok = confirm(`전체 활성 가입자에게 자동 발송을 예약합니다.\n\n• ${forceTxt}\n• 예약 시각이 되면 스케줄러가 자동 실행\n\n진행할까요?`);
+    if (!ok) return;
+  }
+
+  // payload
+  const body = {
+    force_send: force,
+    dry_run:    dry,
+    label:      label,
+  };
+  if (tMode === 'phone') {
+    if (phones.length === 1) body.test_phone = phones[0];
+    else                     body.test_phones = phones;
+  } else {
+    body.require_broadcast_confirm = true;
+  }
+
+  if (mode === 'in') {
+    const m = parseInt(document.getElementById('schedTestInMinutes')?.value || '0', 10);
+    if (!m || m < 1) {
+      if (errEl) { errEl.textContent = '몇 분 뒤 실행할지 입력하세요 (1~1440).'; errEl.style.display = 'block'; }
+      return;
+    }
+    body.in_minutes = m;
+  } else {
+    const runAt = (document.getElementById('schedTestAtDateTime')?.value || '').trim();
+    if (!runAt) {
+      if (errEl) { errEl.textContent = '실행 시각을 선택하세요.'; errEl.style.display = 'block'; }
+      return;
+    }
+    body.run_at = runAt;  // "YYYY-MM-DDTHH:MM" (KST 로컬)
+  }
+
+  if (btn) { btn.disabled = true; btn.textContent = '예약 중...'; }
+  try {
+    const res = await apiPost('/admin/scheduler/test/schedule', body);
+    if (res && res.success) {
+      showToast('테스트 발송 예약 완료', 'ok');
+      // 메모 외 입력은 유지, 시각만 약간 미루기
+      await loadSchedTestList();
+    } else {
+      const msg = (res && (res.message || res.error)) || '예약 실패';
+      if (errEl) { errEl.textContent = msg; errEl.style.display = 'block'; }
+    }
+  } catch (e) {
+    if (errEl) { errEl.textContent = '서버 오류: ' + (e.message || e); errEl.style.display = 'block'; }
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '📅 예약'; }
+  }
+}
+
+async function loadSchedTestList() {
+  const wrap = document.getElementById('schedTestList');
+  if (!wrap) return;
+  wrap.innerHTML = '<div style="padding:8px">로딩 중...</div>';
+  try {
+    const res = await apiFetch('/admin/scheduler/test/list?limit=30');
+    if (!res || res.success === false) {
+      const errMsg = res?.message || res?.error || '조회 실패';
+      // 테이블 없으면 안내 표시
+      if (String(errMsg).includes('table_missing') || String(errMsg).toLowerCase().includes('relation') || String(errMsg).toLowerCase().includes('does not exist')) {
+        wrap.innerHTML = '<div style="padding:10px;font-size:11px;color:var(--amber);line-height:1.6">' +
+          '⚠ <code>scheduler_test_runs</code> 테이블이 아직 생성되지 않았습니다.<br>' +
+          'Supabase SQL Editor 에서 <code>scheduler_test_runs.sql</code> 을 실행해 주세요. ' +
+          '테이블 없이도 예약 자체는 동작하지만, 이력 조회는 불가합니다.</div>';
+      } else {
+        wrap.innerHTML = '<div style="padding:10px;color:var(--red);font-size:11px">' + errMsg + '</div>';
+      }
+      return;
+    }
+    const rows = res.data || [];
+    if (rows.length === 0) {
+      wrap.innerHTML = '<div style="padding:10px;font-size:11px;color:var(--muted)">예약 이력 없음</div>';
+      return;
+    }
+    wrap.innerHTML = _renderSchedTestRows(rows);
+  } catch (e) {
+    wrap.innerHTML = '<div style="padding:10px;color:var(--red);font-size:11px">조회 오류: ' + (e.message || e) + '</div>';
+  }
+}
+
+function _renderSchedTestRows(rows) {
+  const STATUS_CONF = {
+    scheduled: { text: '⏳ 대기',   color: '#f59e0b' },
+    running:   { text: '🚀 실행중', color: '#3b82f6' },
+    done:      { text: '✅ 완료',   color: '#10b981' },
+    error:     { text: '❌ 실패',   color: '#ef4444' },
+    cancelled: { text: '⊘ 취소',   color: '#94a3b8' },
+  };
+  let html = '<table style="width:100%;border-collapse:collapse;font-size:11px">';
+  html += '<thead style="background:var(--s3)"><tr>'
+       +  '<th style="text-align:left;padding:6px 8px;color:var(--muted);font-weight:600;width:140px">예정 (KST)</th>'
+       +  '<th style="text-align:left;padding:6px 8px;color:var(--muted);font-weight:600;width:80px">상태</th>'
+       +  '<th style="text-align:left;padding:6px 8px;color:var(--muted);font-weight:600">설정/메모</th>'
+       +  '<th style="text-align:left;padding:6px 8px;color:var(--muted);font-weight:600;width:140px">결과</th>'
+       +  '<th style="text-align:right;padding:6px 8px;color:var(--muted);font-weight:600;width:60px"></th>'
+       + '</tr></thead><tbody>';
+
+  rows.forEach(r => {
+    const conf = STATUS_CONF[r.status] || { text: r.status || '—', color: 'var(--muted)' };
+    const at = r.scheduled_at ? new Date(r.scheduled_at).toLocaleString('ko-KR', {
+      timeZone: 'Asia/Seoul', month: '2-digit', day: '2-digit',
+      hour: '2-digit', minute: '2-digit', hour12: false }) : '—';
+
+    // 설정 요약
+    const flags = [];
+    if (r.force_send) flags.push('강제');
+    if (r.dry_run)    flags.push('모의');
+    if (r.is_targeted && (r.target_phones || []).length) {
+      const ph = r.target_phones || [];
+      flags.push(`📱 ${ph[0]}${ph.length>1?` 외 ${ph.length-1}`:''}`);
+    } else if (!r.is_targeted) {
+      flags.push('전체');
+    }
+    if ((r.categories || []).length) flags.push(`cats:${(r.categories||[]).join(',')}`);
+    const flagsHtml = flags.map(f =>
+      `<span style="display:inline-block;padding:1px 6px;margin-right:4px;background:var(--s3);border:1px solid var(--b);border-radius:3px;font-size:10px;color:var(--muted)">${f}</span>`
+    ).join('');
+    const label = (r.label || '').replace(/</g, '&lt;');
+
+    // 결과
+    let resultHtml = '—';
+    if (r.status === 'done' || r.status === 'error') {
+      const sent = r.result_sent || 0, fail = r.result_failed || 0, skip = r.result_skipped || 0, tot = r.result_total || 0;
+      resultHtml = `<span style="font-family:var(--mono);font-size:10px">총 ${tot} · `
+        + `<span style="color:#10b981">성공 ${sent}</span> / `
+        + `<span style="color:#ef4444">실패 ${fail}</span>`
+        + (skip > 0 ? ` / <span style="color:#94a3b8">스킵 ${skip}</span>` : '')
+        + '</span>';
+      if (r.status === 'error' && r.error_msg) {
+        const errShort = String(r.error_msg).slice(0, 60).replace(/</g, '&lt;');
+        resultHtml += `<div style="font-size:10px;color:var(--red);margin-top:2px" title="${String(r.error_msg).replace(/"/g,'&quot;')}">${errShort}${r.error_msg.length>60?'…':''}</div>`;
+      }
+    } else if (r.status === 'running') {
+      resultHtml = '<span style="color:#3b82f6;font-size:10px">실행 중...</span>';
+    } else if (r.status === 'scheduled') {
+      resultHtml = r._job_registered
+        ? '<span style="color:#10b981;font-size:10px">스케줄러 등록됨 ✓</span>'
+        : '<span style="color:#f59e0b;font-size:10px">⚠ 미등록 (서버 재시작?)</span>';
+    }
+
+    // 취소 버튼 (scheduled 일 때만)
+    const cancelBtn = (r.status === 'scheduled')
+      ? `<button onclick="cancelSchedTest('${r.id}')" style="background:transparent;border:1px solid rgba(239,68,68,.3);color:#ef4444;padding:2px 8px;border-radius:3px;font-size:10px;cursor:pointer">취소</button>`
+      : '';
+
+    html += '<tr style="border-top:1px solid var(--b)">'
+         + `<td style="padding:6px 8px;font-family:var(--mono);color:var(--text)">${at}</td>`
+         + `<td style="padding:6px 8px"><span style="color:${conf.color};font-weight:600">${conf.text}</span></td>`
+         + `<td style="padding:6px 8px">${flagsHtml}${label?`<div style="color:var(--text);margin-top:2px">${label}</div>`:''}</td>`
+         + `<td style="padding:6px 8px">${resultHtml}</td>`
+         + `<td style="padding:6px 8px;text-align:right">${cancelBtn}</td>`
+         + '</tr>';
+  });
+  html += '</tbody></table>';
+  return html;
+}
+
+async function cancelSchedTest(testId) {
+  if (!confirm('예약된 테스트 발송을 취소할까요?')) return;
+  try {
+    const res = await apiFetch('/admin/scheduler/test/' + testId, { method: 'DELETE' });
+    if (res && res.success) {
+      showToast('예약 취소됨', 'ok');
+      loadSchedTestList();
+    } else {
+      showToast('취소 실패: ' + (res?.error || ''), 'ng');
+    }
+  } catch (e) {
+    showToast('서버 오류', 'ng');
+  }
+}
+
+// 페이지 열려있는 동안 30초마다 이력 자동 갱신 (실행중→완료 상태 추적용)
+let _schedTestRefreshTimer = null;
+function _startSchedTestAutoRefresh() {
+  if (_schedTestRefreshTimer) return;
+  _schedTestRefreshTimer = setInterval(function() {
+    // 스케줄러 페이지 보이는 동안만
+    const pg = document.getElementById('page-scheduler');
+    if (pg && pg.classList.contains('active')) {
+      loadSchedTestList();
+    }
+  }, 30000);
+}
+// 자동 실행
+if (typeof window !== 'undefined') {
+  setTimeout(_startSchedTestAutoRefresh, 1000);
+}
+
+
+// ════════════════════════════════════════════════════════════
 // [v158] 알림 관리 — 솔라피 스타일 (좌측 목록 + 우측 상세)
 // ════════════════════════════════════════════════════════════
 const NOTIFY_TEMPLATES = [
@@ -9907,7 +10064,10 @@ const NOTIFY_TEMPLATES = [
     envKey:    'KAKAO_TPL_SIGNUP_COMPLETE',
     when: 'payment/verify 성공 직후 (가입 즉시)',
     vars: ['name', 'amount', 'paid_at', 'category', 'subtopic', 'plan', 'first_send_date', 'plan_end_date'],
-    preview: `#{name}님, 구독 신청이 정상 처리되었습니다.
+    preview: `[1DAYECO]
+구독 신청이 정상 처리되었습니다.
+
+#{name}님, 환영합니다.
 
 ▶ 결제 내역
 - 금액: #{amount}원
@@ -9925,31 +10085,6 @@ const NOTIFY_TEMPLATES = [
 문의: 카카오톡 : @1DAYECO`
   },
   {
-    id: 'payment_paid',
-    group: 'lifecycle',
-    icon: '💳',
-    name: '결제 완료',
-    toggleKey: 'notify_payment_paid_enabled',
-    tplKey:    'kakao_tpl_payment_paid',
-    envKey:    'KAKAO_TPL_PAYMENT_PAID',
-    when: '정기 결제/재결제 성공 직후',
-    vars: ['name', 'plan', 'amount', 'paid_at', 'category', 'end_date'],
-    preview: `#{name}님의 결제가 정상 처리되었습니다.
-
-▶ 결제 내역
-- 상품: #{plan}
-- 금액: #{amount}원
-- 결제일시: #{paid_at}
-
-▶ 구독 정보
-- 카테고리: #{category}
-- 종료일: #{end_date}
-
-영수증 확인 및 환불 신청은 홈페이지에서 가능합니다.
-
-문의 : 카카오톡 @1DAYECO`
-  },
-  {
     id: 'payment_failed',
     group: 'lifecycle',
     icon: '❌',
@@ -9957,41 +10092,21 @@ const NOTIFY_TEMPLATES = [
     toggleKey: 'notify_payment_failed_enabled',
     tplKey:    'kakao_tpl_payment_failed',
     envKey:    'KAKAO_TPL_PAYMENT_FAILED',
-    when: '정기 결제 1·2회차 실패 시 (재시도 예정 알림)',
-    vars: ['name', 'plan', 'amount', 'retry_count'],
-    preview: `#{name}님의 결제 시도가 실패했습니다.
+    when: '결제 시도 실패 또는 사용자가 결제 중단 시',
+    vars: ['name', 'plan', 'amount', 'reason'],
+    preview: `[1DAYECO]
+결제가 정상적으로 처리되지 않았습니다.
+
+#{name}님, 안녕하세요.
 
 ▶ 결제 정보
-- 상품: #{plan}
+- 플랜: #{plan}
 - 금액: #{amount}원
-- 시도: #{retry_count}회 / 3회
+- 사유: #{reason}
 
-▶ 안내사항
-약 10분 후 자동 재시도됩니다. 카드 한도, 잔액, 유효기간을 확인해 주세요.
-3회 실패 시 자동 결제가 중단됩니다.
+다시 신청해주세요.
 
-문의: 카카오톡 @1DAYECO`
-  },
-  {
-    id: 'payment_stopped',
-    group: 'lifecycle',
-    icon: '🛑',
-    name: '결제 중단',
-    toggleKey: 'notify_payment_stopped_enabled',
-    tplKey:    'kakao_tpl_payment_stopped',
-    envKey:    'KAKAO_TPL_PAYMENT_STOPPED',
-    when: '결제 3회 모두 실패 → 자동 결제·구독 중단',
-    vars: ['name', 'plan', 'amount'],
-    preview: `#{name}님, 결제가 3회 모두 실패하여 자동 결제 및 구독이 중단되었습니다.
-
-▶ 미결제 정보
-- 상품: #{plan}
-- 금액: #{amount}원
-
-▶ 안내사항
-구독을 계속 받으시려면 홈페이지에서 다시 신청해 주세요. 카드 정보 확인 후 재신청 시 즉시 발송이 시작됩니다.
-
-문의: 카카오톡 @1DAYECO`
+문의: 카카오톡 : @1DAYECO`
   },
   {
     id: 'expiry_d1',
@@ -10003,18 +10118,19 @@ const NOTIFY_TEMPLATES = [
     envKey:    'KAKAO_TPL_EXPIRY_D1',
     when: '매일 09:00 KST 스케줄러 — 구독 만료 1일 전',
     vars: ['name', 'category', 'subtopic', 'end_date'],
-    preview: `#{name}님의 구독이 내일 종료됩니다.
+    preview: `[1DAYECO]
+구독이 내일 만료됩니다.
+
+#{name}님, 안녕하세요.
 
 ▶ 구독 정보
 - 카테고리: #{category}
 - 주제: #{subtopic}
 - 종료일: #{end_date}
 
-▶ 안내사항
-종료 후에는 콘텐츠가 발송되지 않습니다.
-이용해주셔서 감사합니다.
+계속 받아보시려면 1DAYECO에서 재신청해주세요.
 
-홈페이지 : https://onedayeco.com`
+문의: 카카오톡 : @1DAYECO`
   },
   {
     id: 'refund_complete',
@@ -10026,17 +10142,19 @@ const NOTIFY_TEMPLATES = [
     envKey:    'KAKAO_TPL_REFUND_COMPLETE',
     when: '환불 완료 처리 직후',
     vars: ['name', 'refund_amount', 'reason', 'refunded_at'],
-    preview: `#{name}님의 환불 요청이 정상 처리되었습니다.
+    preview: `[1DAYECO]
+환불이 정상 처리되었습니다.
+
+#{name}님, 안녕하세요.
 
 ▶ 환불 내역
 - 환불 금액: #{refund_amount}원
-- 환불 사유: #{reason}
-- 처리 일시: #{refunded_at}
+- 사유: #{reason}
+- 처리일시: #{refunded_at}
 
-▶ 안내사항
-결제하신 카드/수단으로 영업일 5~7일 이내 입금됩니다. 콘텐츠 발송은 즉시 중단되었습니다.
+카드사 영업일 기준 3~7일 내 환급됩니다.
 
-문의: 카카오톡 @1DAYECO`
+문의: 카카오톡 : @1DAYECO`
   },
   // ─ 콘텐츠 그룹 6개 ─
   {
@@ -10229,9 +10347,6 @@ function selectNotifyTemplate(id) {
   document.getElementById('notifyDetailEmpty').style.display = 'none';
   document.getElementById('notifyDetailBody').style.display = 'block';
   document.getElementById('notifyDetailTitle').textContent = t.name;
-  // [v177] 저장/취소 버튼 헤더에 표시
-  const actions = document.getElementById('notifyDetailActions');
-  if (actions) actions.style.display = 'flex';
 
   // 토글 상태
   const enabled = String(_NOTIFY_CACHE[t.toggleKey]?.value || 'true').toLowerCase() === 'true';
@@ -10266,19 +10381,8 @@ function selectNotifyTemplate(id) {
   document.getElementById('notifyDetailVars').innerHTML = t.vars.map(v => `<span style="background:rgba(201,168,76,.1);color:var(--gold);padding:2px 6px;border-radius:3px;margin-right:4px;display:inline-block">#{${v}}</span>`).join('');
   document.getElementById('notifyDetailWhen').textContent = t.when;
 
-  // 미리보기 — [v165] 솔라피 스타일: 본문 + 오늘 날짜 + 현재 시간
+  // 미리보기
   document.getElementById('notifyDetailPreview').textContent = t.preview;
-  // 날짜 + 시간 (KST 기준)
-  const _nowKst = new Date(new Date().getTime() + (new Date().getTimezoneOffset() + 9*60) * 60000);
-  const _y = _nowKst.getFullYear();
-  const _m = String(_nowKst.getMonth() + 1).padStart(2,'0');
-  const _d = String(_nowKst.getDate()).padStart(2,'0');
-  document.getElementById('notifyPreviewDate').textContent = `${_y}년 ${_m}월 ${_d}일`;
-  const _h24 = _nowKst.getHours();
-  const _min = String(_nowKst.getMinutes()).padStart(2,'0');
-  const _ampm = _h24 < 12 ? '오전' : '오후';
-  const _h12 = _h24 % 12 === 0 ? 12 : _h24 % 12;
-  document.getElementById('notifyPreviewTime').textContent = `${_ampm} ${_h12}:${_min}`;
 
   // 저장 버튼 비활성화 (방금 로드했으니 dirty=false)
   _NOTIFY_DIRTY = false;
@@ -10401,186 +10505,6 @@ async function loadSchedulerStatusPanel() {
   } catch (e) {
     const container = document.getElementById('schedulerJobsList');
     if (container) container.innerHTML = '<span style="color:#ef4444">조회 실패: ' + (e?.message || e) + '</span>';
-  }
-}
-
-// ════════════════════════════════════════════════════════════
-// [v179] 콘텐츠 스케줄러 — 부주제 단위 다건 등록
-// ════════════════════════════════════════════════════════════
-let _SCHED_CATEGORIES = [];
-
-async function loadCategoriesForSched() {
-  try {
-    const r = await apiFetch('/admin/categories');
-    const cats = (r && r.data) ? r.data : (Array.isArray(r) ? r : []);
-    _SCHED_CATEGORIES = cats;
-    const sel = document.getElementById('newSchedCategory');
-    if (!sel) return;
-    sel.innerHTML = '<option value="">선택해주세요</option>' +
-      cats.map(c => `<option value="${c.id}">${c.name || c.id}</option>`).join('');
-  } catch (e) {
-    console.warn('loadCategoriesForSched:', e);
-  }
-}
-
-async function loadSubtopicsForSched(categoryId) {
-  const subSel = document.getElementById('newSchedSubtopic');
-  if (!subSel) return;
-  if (!categoryId) {
-    subSel.innerHTML = '<option value="">카테고리를 먼저 선택</option>';
-    subSel.disabled = true;
-    return;
-  }
-  subSel.disabled = false;
-  subSel.innerHTML = '<option value="">로딩 중...</option>';
-  try {
-    const r = await apiFetch('/admin/subtopics?category_id=' + encodeURIComponent(categoryId));
-    const subs = (r && r.data) ? r.data : (Array.isArray(r) ? r : []);
-    if (!subs.length) {
-      subSel.innerHTML = '<option value="">부주제 없음</option>';
-      return;
-    }
-    subSel.innerHTML = '<option value="">선택해주세요</option>' +
-      subs.map(s => `<option value="${s.id}">${s.name || ('#' + s.id)}</option>`).join('');
-  } catch (e) {
-    subSel.innerHTML = '<option value="">조회 실패</option>';
-    console.warn('loadSubtopicsForSched:', e);
-  }
-}
-
-async function loadSubtopicSchedules() {
-  const list = document.getElementById('subtopicScheduleList');
-  if (!list) return;
-  list.innerHTML = '<div style="color:var(--muted);font-size:12px;padding:14px;text-align:center">로딩 중...</div>';
-  try {
-    const r = await apiFetch('/admin/subtopic-schedules');
-    const items = (r && r.items) ? r.items : [];
-    // 활성 배지 업데이트
-    const enabledCount = items.filter(x => x.enabled).length;
-    const badge = document.getElementById('schedulerRunningBadge');
-    if (badge) {
-      if (enabledCount > 0) {
-        badge.textContent = '● 활성 ' + enabledCount + '개';
-        badge.style.color = 'var(--green)';
-        badge.style.borderColor = 'rgba(74,222,128,.3)';
-      } else {
-        badge.textContent = '○ 비활성';
-        badge.style.color = 'var(--muted)';
-        badge.style.borderColor = 'var(--b)';
-      }
-    }
-    if (!items.length) {
-      list.innerHTML = '<div style="color:var(--muted);font-size:12px;padding:14px;text-align:center;background:rgba(255,255,255,.02);border:1px dashed var(--b);border-radius:8px">등록된 콘텐츠 스케줄이 없습니다</div>';
-      return;
-    }
-    list.innerHTML = items.map(it => {
-      const hh = String(it.hour).padStart(2, '0');
-      const mm = String(it.minute).padStart(2, '0');
-      const onColor = it.enabled ? '#10b981' : '#94a3b8';
-      const knobPos = it.enabled ? 'translateX(16px)' : 'translateX(0)';
-      return `
-        <div style="display:flex;align-items:center;gap:10px;padding:12px;background:rgba(255,255,255,.02);border:1px solid var(--b);border-radius:8px">
-          <div style="flex:1;min-width:0">
-            <div style="font-size:12px;color:var(--muted);margin-bottom:2px">${it.category_name || it.category_id}</div>
-            <div style="font-size:13px;color:var(--text);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${it.subtopic_name || ('#' + it.subtopic_id)}</div>
-            <div style="font-size:11px;color:var(--gold);font-family:var(--mono);margin-top:3px">${hh}:${mm} KST</div>
-          </div>
-          <label style="position:relative;display:inline-block;width:38px;height:22px;cursor:pointer;flex-shrink:0">
-            <input type="checkbox" ${it.enabled ? 'checked' : ''} onchange="toggleSubtopicSchedule(${it.id}, this.checked)" style="opacity:0;width:0;height:0">
-            <span style="position:absolute;inset:0;background:${onColor};border-radius:22px;transition:.2s"></span>
-            <span style="position:absolute;left:3px;top:3px;width:16px;height:16px;background:#fff;border-radius:50%;transform:${knobPos};transition:transform .2s"></span>
-          </label>
-          <button onclick="runSubtopicScheduleNow(${it.id})" title="지금 실행" style="background:none;border:1px solid var(--b);color:var(--muted);padding:4px 8px;border-radius:4px;font-size:11px;cursor:pointer;flex-shrink:0">▶</button>
-          <button onclick="deleteSubtopicSchedule(${it.id})" title="삭제" style="background:none;border:1px solid rgba(248,113,113,.25);color:var(--red);padding:4px 8px;border-radius:4px;font-size:11px;cursor:pointer;flex-shrink:0">✕</button>
-        </div>
-      `;
-    }).join('');
-  } catch (e) {
-    list.innerHTML = '<div style="color:#ef4444;font-size:12px;padding:14px;text-align:center">조회 실패: ' + (e?.message || e) + '</div>';
-  }
-}
-
-async function addSubtopicSchedule() {
-  const catEl = document.getElementById('newSchedCategory');
-  const subEl = document.getElementById('newSchedSubtopic');
-  const hourEl = document.getElementById('newSchedHour');
-  const minEl  = document.getElementById('newSchedMinute');
-  const cat = catEl?.value;
-  const sub = subEl?.value;
-  if (!cat) { showToast('카테고리를 선택해주세요', 'ng'); return; }
-  if (!sub) { showToast('부주제를 선택해주세요', 'ng'); return; }
-  const payload = {
-    category_id: cat,
-    subtopic_id: parseInt(sub, 10),
-    hour: parseInt(hourEl.value, 10),
-    minute: parseInt(minEl.value, 10),
-    enabled: true,
-  };
-  try {
-    const r = await apiFetch('/admin/subtopic-schedules', {
-      method: 'POST', body: JSON.stringify(payload),
-    });
-    if (r && r.success) {
-      // [v180] upsert — action='inserted' or 'updated'
-      const msg = r.action === 'updated'
-        ? '같은 부주제가 있어 시간이 덮어쓰기 되었습니다'
-        : '콘텐츠 스케줄이 저장되었습니다';
-      showToast(msg, 'ok');
-      catEl.value = ''; subEl.innerHTML = '<option value="">카테고리를 먼저 선택</option>'; subEl.disabled = true;
-      hourEl.value = '7'; minEl.value = '30';
-      await loadSubtopicSchedules();
-    } else {
-      showToast('실패: ' + (r?.error || 'unknown'), 'ng');
-    }
-  } catch (e) {
-    showToast('네트워크 오류: ' + (e?.message || e), 'ng');
-  }
-}
-
-async function toggleSubtopicSchedule(id, enabled) {
-  try {
-    const r = await apiFetch('/admin/subtopic-schedules/' + id, {
-      method: 'PUT', body: JSON.stringify({ enabled }),
-    });
-    if (r && r.success) {
-      showToast((enabled ? '활성화: ' : '비활성화: ') + '#' + id, 'ok');
-      await loadSubtopicSchedules();
-    } else {
-      showToast('변경 실패', 'ng');
-    }
-  } catch (e) {
-    showToast('네트워크 오류', 'ng');
-  }
-}
-
-async function deleteSubtopicSchedule(id) {
-  if (!confirm('이 콘텐츠 스케줄을 삭제하시겠습니까?')) return;
-  try {
-    const r = await apiFetch('/admin/subtopic-schedules/' + id, { method: 'DELETE' });
-    if (r && r.success) {
-      showToast('삭제되었습니다', 'ok');
-      await loadSubtopicSchedules();
-    } else {
-      showToast('삭제 실패', 'ng');
-    }
-  } catch (e) {
-    showToast('네트워크 오류', 'ng');
-  }
-}
-
-async function runSubtopicScheduleNow(id) {
-  if (!confirm('이 콘텐츠를 지금 생성하시겠습니까? (수 분 소요)')) return;
-  try {
-    const r = await apiFetch('/admin/subtopic-schedules/' + id + '/run', {
-      method: 'POST', body: '{}',
-    });
-    if (r && r.success) {
-      showToast('콘텐츠 생성을 시작했습니다 (백그라운드)', 'ok');
-    } else {
-      showToast('실패: ' + (r?.error || 'unknown'), 'ng');
-    }
-  } catch (e) {
-    showToast('네트워크 오류', 'ng');
   }
 }
 
@@ -13032,40 +12956,23 @@ function setSubFilter(val) {
 }
 
 
-// ── 환불 요청 ──────────────────────────────────────────
-// [v168] 사유 입력 받아서 백엔드에 전달 — 기존엔 default 사유로만 들어가던 버그 수정
+// ── 환불 요청 경고창 ──────────────────────────────────────────
 function confirmRefundRequest(subscriberId, subscriberName) {
   const confirmed = confirm(
     '⚠️ 환불 요청 안내\n\n' +
     subscriberName + '님의 환불을 요청하시겠습니까?\n\n' +
     '• 요청 즉시 컨텐츠 발송이 중지됩니다\n' +
-    '• 일할 계산 후 잔여 금액이 환불됩니다\n' +
-    '• 다음 단계에서 환불 사유를 입력해주세요\n\n' +
+    '• 빠른 시일 내 고객센터에서 환불을 처리해드립니다\n' +
+    '• 일할 계산 후 잔여 금액이 환불됩니다\n\n' +
     '계속하시겠습니까?'
   );
   if (!confirmed) return;
 
-  // 사유 입력
-  const reason = prompt(
-    '환불 사유를 입력해주세요:\n\n' +
-    '예시:\n' +
-    '- 고객 단순 변심\n' +
-    '- 콘텐츠 품질 불만\n' +
-    '- 결제 오류\n' +
-    '- 서비스 미사용\n' +
-    '- 기타',
-    '고객 단순 변심'
-  );
-  if (reason === null) return;  // 취소
-  const trimmedReason = (reason || '').trim() || '고객 요청 환불';
-
-  apiPost('/api/admin/refund-request', {
-    subscriber_id: subscriberId,
-    reason: trimmedReason,
-  })
+  // 발송 즉시 중지: status → payment_failed 임시 처리
+  apiPost('/api/admin/refund-request', { subscriber_id: subscriberId })
     .then(res => {
       if (res && res.success) {
-        showToast('환불 요청 완료. 사유: ' + trimmedReason, 'ok');
+        showToast('환불 요청 완료. 컨텐츠 발송이 중지되었습니다.', 'ok');
         loadSubscribers();
       } else {
         showToast(res?.message || '환불 요청 처리 중 오류', 'ng');
