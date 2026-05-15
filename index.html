@@ -985,7 +985,7 @@ body:not(.light-mode) .np-time { color:#9b9eaa; }
 <!-- SIDEBAR -->
 <aside class="sidebar">
   <div class="sb-logo">1DAYECO<small>Admin Dashboard</small>
-    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v188</span>
+    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v190</span>
   </div>
   <nav class="sb-nav">
     <div class="sb-group">운영</div>
@@ -2161,7 +2161,7 @@ body:not(.light-mode) .np-time { color:#9b9eaa; }
             <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
               <div style="font-size:13px;font-weight:700;color:var(--text);flex:1">🔔 D-1 만료 알림</div>
               <label style="position:relative;display:inline-block;width:46px;height:24px;flex-shrink:0">
-                <input type="checkbox" id="schedExpiryD1" onchange="toggleScheduler('send_expiry_d1_enabled', this.checked)" style="opacity:0;width:0;height:0">
+                <input type="checkbox" id="schedExpiryD1" onchange="toggleScheduler('notify_expiry_d1_enabled', this.checked)" style="opacity:0;width:0;height:0">
                 <span id="schedExpiryD1Slider" style="position:absolute;cursor:pointer;top:0;left:0;right:0;bottom:0;background:#555;transition:.3s;border-radius:24px"></span>
                 <span id="schedExpiryD1Knob" style="position:absolute;height:18px;width:18px;left:3px;top:3px;background:white;transition:.3s;border-radius:50%;pointer-events:none;box-shadow:0 1px 2px rgba(0,0,0,.3)"></span>
               </label>
@@ -2172,6 +2172,21 @@ body:not(.light-mode) .np-time { color:#9b9eaa; }
               <span>:</span>
               <input type="number" id="schedExpiryD1Minute" min="0" max="59" value="0" onchange="saveSchedulerTime('send_expiry_d1_minute', this.value)" style="width:55px;background:var(--s3);border:1px solid var(--b);border-radius:4px;padding:5px 6px;font-size:12px;color:var(--text);font-family:var(--mono);text-align:center;outline:none">
               <span>KST에 만료 1일 전 알림톡 발송</span>
+            </div>
+          </div>
+
+          <!-- 구독 만료 완료 알림 (v189) -->
+          <div style="background:var(--s3);border:1px solid var(--b);border-radius:8px;padding:14px">
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+              <div style="font-size:13px;font-weight:700;color:var(--text);flex:1">🏁 구독 만료 완료 알림</div>
+              <label style="position:relative;display:inline-block;width:46px;height:24px;flex-shrink:0">
+                <input type="checkbox" id="schedExpiryComplete" onchange="toggleScheduler('notify_expiry_complete_enabled', this.checked)" style="opacity:0;width:0;height:0">
+                <span id="schedExpiryCompleteSlider" style="position:absolute;cursor:pointer;top:0;left:0;right:0;bottom:0;background:#555;transition:.3s;border-radius:24px"></span>
+                <span id="schedExpiryCompleteKnob" style="position:absolute;height:18px;width:18px;left:3px;top:3px;background:white;transition:.3s;border-radius:50%;pointer-events:none;box-shadow:0 1px 2px rgba(0,0,0,.3)"></span>
+              </label>
+            </div>
+            <div style="font-size:12px;color:var(--muted);line-height:1.5">
+              구독 만료 처리 시 함께 발송 (위 ⏳ 구독 만료 처리와 같은 시각). 알림 관리 페이지의 '구독 만료 완료' 토글과 동일한 키를 제어합니다.
             </div>
           </div>
 
@@ -9639,9 +9654,12 @@ async function loadSystemSettings() {
     const expireHour    = parseInt(data.expire_subscriptions_hour?.value     || '0', 10);
     const expireMinute  = parseInt(data.expire_subscriptions_minute?.value   || '10', 10);
 
-    const d1Enabled = String(data.send_expiry_d1_enabled?.value || 'true').toLowerCase() === 'true';
+    const d1Enabled = String(data.notify_expiry_d1_enabled?.value || 'true').toLowerCase() === 'true';
     const d1Hour    = parseInt(data.send_expiry_d1_hour?.value     || '9', 10);
     const d1Minute  = parseInt(data.send_expiry_d1_minute?.value   || '0', 10);
+
+    // [v189] 구독 만료 완료 알림 (알림 관리 토글과 동일 키, 시각 불필요)
+    const expCmplEnabled = String(data.notify_expiry_complete_enabled?.value || 'true').toLowerCase() === 'true';
 
     const retryEnabled = String(data.retry_failed_refunds_enabled?.value || 'true').toLowerCase() === 'true';
     const retryMinute  = parseInt(data.retry_failed_refunds_minute?.value || '15', 10);
@@ -9662,7 +9680,11 @@ async function loadSystemSettings() {
     _setCheckbox('schedExpiryD1', d1Enabled);
     _setField('schedExpiryD1Hour', d1Hour);
     _setField('schedExpiryD1Minute', d1Minute);
-    _updateSchedToggleUI('send_expiry_d1_enabled', d1Enabled);
+    _updateSchedToggleUI('notify_expiry_d1_enabled', d1Enabled);
+
+    // [v189] 구독 만료 완료 알림 UI 적용 (토글만, 시각은 만료 처리 시각을 따라감)
+    _setCheckbox('schedExpiryComplete', expCmplEnabled);
+    _updateSchedToggleUI('notify_expiry_complete_enabled', expCmplEnabled);
 
     _setCheckbox('schedRetryRefunds', retryEnabled);
     _setField('schedRetryRefundsMinute', retryMinute);
@@ -9774,10 +9796,11 @@ async function toggleAutoRefund(enabled) {
 // [v156] 스케줄러 (4개 단일 시간 job) — 토글 + 시간 설정
 // ════════════════════════════════════════════════════════════
 const _SCHED_UI_MAP = {
-  daily_send_enabled:           { knob: 'schedDailySendKnob',     slider: 'schedDailySendSlider' },
-  expire_subscriptions_enabled: { knob: 'schedExpireSubsKnob',    slider: 'schedExpireSubsSlider' },
-  send_expiry_d1_enabled:       { knob: 'schedExpiryD1Knob',      slider: 'schedExpiryD1Slider' },
-  retry_failed_refunds_enabled: { knob: 'schedRetryRefundsKnob',  slider: 'schedRetryRefundsSlider' },
+  daily_send_enabled:             { knob: 'schedDailySendKnob',        slider: 'schedDailySendSlider' },
+  expire_subscriptions_enabled:   { knob: 'schedExpireSubsKnob',       slider: 'schedExpireSubsSlider' },
+  notify_expiry_d1_enabled:         { knob: 'schedExpiryD1Knob',         slider: 'schedExpiryD1Slider' },
+  notify_expiry_complete_enabled: { knob: 'schedExpiryCompleteKnob',   slider: 'schedExpiryCompleteSlider' },
+  retry_failed_refunds_enabled:   { knob: 'schedRetryRefundsKnob',     slider: 'schedRetryRefundsSlider' },
 };
 
 function _updateSchedToggleUI(key, enabled) {
@@ -9815,7 +9838,8 @@ async function toggleScheduler(key, enabled) {
       const checkboxIdMap = {
         daily_send_enabled: 'schedDailySend',
         expire_subscriptions_enabled: 'schedExpireSubs',
-        send_expiry_d1_enabled: 'schedExpiryD1',
+        notify_expiry_d1_enabled: 'schedExpiryD1',
+        notify_expiry_complete_enabled: 'schedExpiryComplete',
         retry_failed_refunds_enabled: 'schedRetryRefunds',
       };
       const cbId = checkboxIdMap[key];
@@ -9884,9 +9908,13 @@ async function loadSchedulerSettings() {
     const expireHour    = parseInt(data.expire_subscriptions_hour?.value     || '0', 10);
     const expireMinute  = parseInt(data.expire_subscriptions_minute?.value   || '10', 10);
 
-    const d1Enabled = String(data.send_expiry_d1_enabled?.value || 'true').toLowerCase() === 'true';
+    const d1Enabled = String(data.notify_expiry_d1_enabled?.value || 'true').toLowerCase() === 'true';
     const d1Hour    = parseInt(data.send_expiry_d1_hour?.value     || '9', 10);
     const d1Minute  = parseInt(data.send_expiry_d1_minute?.value   || '0', 10);
+
+    // [v189] 구독 만료 완료 알림 (알림 관리 토글과 동일 키 notify_expiry_complete_enabled 제어)
+    // 만료 처리 흐름 안에서 발송되므로 별도 cron 시각 불필요
+    const expCmplEnabled = String(data.notify_expiry_complete_enabled?.value || 'true').toLowerCase() === 'true';
 
     const retryEnabled = String(data.retry_failed_refunds_enabled?.value || 'true').toLowerCase() === 'true';
     const retryMinute  = parseInt(data.retry_failed_refunds_minute?.value || '15', 10);
@@ -9909,7 +9937,11 @@ async function loadSchedulerSettings() {
     _setCheckbox('schedExpiryD1', d1Enabled);
     _setField('schedExpiryD1Hour', d1Hour);
     _setField('schedExpiryD1Minute', d1Minute);
-    _updateSchedToggleUI('send_expiry_d1_enabled', d1Enabled);
+    _updateSchedToggleUI('notify_expiry_d1_enabled', d1Enabled);
+
+    // [v189] 구독 만료 완료 알림 UI 적용 (토글만, 시각은 만료 처리 시각을 따라감)
+    _setCheckbox('schedExpiryComplete', expCmplEnabled);
+    _updateSchedToggleUI('notify_expiry_complete_enabled', expCmplEnabled);
 
     _setCheckbox('schedRetryRefunds', retryEnabled);
     _setField('schedRetryRefundsMinute', retryMinute);
@@ -9921,7 +9953,8 @@ async function loadSchedulerSettings() {
     let latestUpdated = null;
     const schedKeys = ['daily_send_enabled','daily_send_hour','daily_send_minute',
       'expire_subscriptions_enabled','expire_subscriptions_hour','expire_subscriptions_minute',
-      'send_expiry_d1_enabled','send_expiry_d1_hour','send_expiry_d1_minute',
+      'notify_expiry_d1_enabled','send_expiry_d1_hour','send_expiry_d1_minute',
+      'notify_expiry_complete_enabled',
       'retry_failed_refunds_enabled','retry_failed_refunds_minute','auto_refund_enabled'];
     for (const k of schedKeys) {
       const u = data[k]?.updated_at;
@@ -10063,6 +10096,32 @@ const NOTIFY_TEMPLATES = [
 이용해주셔서 감사합니다.
 
 홈페이지 : https://onedayeco.com`
+  },
+  {
+    id: 'expiry_complete',
+    group: 'lifecycle',
+    icon: '🏁',
+    name: '구독 만료 완료',
+    toggleKey: 'notify_expiry_complete_enabled',
+    tplKey:    'kakao_tpl_expiry_complete',
+    envKey:    'KAKAO_TPL_EXPIRY_COMPLETE',
+    when: '매일 00:10 KST 스케줄러 — 구독 만료 처리 시 발송',
+    vars: ['name', 'category', 'subtopic', 'end_date'],
+    preview: `#{name}님, 그동안 1DAYECO 구독해주셔서 진심으로 감사드립니다.
+
+▶ 구독 정보
+- 카테고리: #{category}
+- 주제: #{subtopic}
+- 종료일: #{end_date}
+
+▶ 안내사항
+오늘부터 콘텐츠 발송이 종료되었습니다.
+
+#{name}님과 함께한 매일의 한 줄이 작은 지식 한 조각으로 쌓였길 바랍니다. 1DAYECO는 다양한 카테고리의 새로운 콘텐츠를 계속 만들어가고 있으니, 언제든 다시 찾아주시면 더 알찬 한 줄로 인사드리겠습니다.
+
+오늘도 좋은 하루 보내세요.
+
+https://onedayeco.com`
   },
   {
     id: 'refund_complete',
