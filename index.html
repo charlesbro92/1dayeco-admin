@@ -985,7 +985,7 @@ body:not(.light-mode) .np-time { color:#9b9eaa; }
 <!-- SIDEBAR -->
 <aside class="sidebar">
   <div class="sb-logo">1DAYECO<small>Admin Dashboard</small>
-    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v199</span>
+    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v200</span>
   </div>
   <nav class="sb-nav">
     <div class="sb-group">운영</div>
@@ -2123,7 +2123,8 @@ body:not(.light-mode) .np-time { color:#9b9eaa; }
               <span>KST에 가입자에게 카카오톡 콘텐츠 발송</span>
             </div>
             <div style="margin-top:8px;padding:8px 10px;background:rgba(255,255,255,.03);border-radius:5px;font-size:11px;color:#9ca3af;line-height:1.5">
-              <strong style="color:#c9a84c">📌 동작:</strong> 가입자 활성 상태(<code style="font-size:10px">active</code>)일 때 매일 위 시각에 그 날짜의 주제로 알림톡 발송. 일일 콘텐츠 알림 그룹 토글(알림 관리)이 OFF면 발송 생략.
+              <strong style="color:#c9a84c">📌 시점:</strong> <strong>당일</strong> 위 시각.<br>
+              <strong style="color:#c9a84c">📌 대상:</strong> <code style="font-size:10px">시작일(start_date) ≤ 오늘 ≤ 종료일(end_date)</code> 인 활성 가입자.
             </div>
           </div>
 
@@ -2145,7 +2146,8 @@ body:not(.light-mode) .np-time { color:#9b9eaa; }
               <span>KST에 만료된 구독자 status 변경</span>
             </div>
             <div style="margin-top:8px;padding:8px 10px;background:rgba(255,255,255,.03);border-radius:5px;font-size:11px;color:#9ca3af;line-height:1.5">
-              <strong style="color:#c9a84c">📌 동작:</strong> 종료일(<code style="font-size:10px">end_date</code>)이 지난 가입자를 <code style="font-size:10px">expired</code> 상태로 변경. 위 시각에 도래한 만료자만 처리. <em>알림톡은 별도(아래 🏁 만료 완료 알림)</em>.
+              <strong style="color:#c9a84c">📌 시점:</strong> <strong>종료일 다음날</strong> 위 시각 (예: 종료일 11/10 → 11/11 00:10 처리).<br>
+              <strong style="color:#c9a84c">📌 대상:</strong> <code style="font-size:10px">end_date &lt; 현재</code> 인 활성 가입자 → <code style="font-size:10px">expired</code> 로 전환. <em>알림톡은 별도 (🏁 만료 완료 알림)</em>.
             </div>
           </div>
 
@@ -2167,7 +2169,8 @@ body:not(.light-mode) .np-time { color:#9b9eaa; }
               <span>KST에 만료 1일 전 알림톡 발송</span>
             </div>
             <div style="margin-top:8px;padding:8px 10px;background:rgba(255,255,255,.03);border-radius:5px;font-size:11px;color:#9ca3af;line-height:1.5">
-              <strong style="color:#c9a84c">📌 동작:</strong> 종료일 <strong>전날</strong>(예: 11/10 만료 → 11/9 발송)에 위 시각으로 알림톡 발송. 이미 발송된 가입자는 자동 중복 차단.
+              <strong style="color:#c9a84c">📌 시점:</strong> <strong>종료일 전날</strong> 위 시각 (예: 종료일 11/10 → 11/9 09:00 발송).<br>
+              <strong style="color:#c9a84c">📌 대상:</strong> <code style="font-size:10px">end_date 의 KST 날짜 = 내일</code> 인 active/trial/pending_charge 가입자. 한 번 발송 후 <code style="font-size:10px">expiry_d1_sent_at</code> 기록 → 중복 차단.
             </div>
           </div>
 
@@ -2189,7 +2192,8 @@ body:not(.light-mode) .np-time { color:#9b9eaa; }
               <span>KST에 만료 완료 알림 발송 (어제·오늘 만료된 미발송 대상)</span>
             </div>
             <div style="margin-top:8px;padding:8px 10px;background:rgba(255,255,255,.03);border-radius:5px;font-size:11px;color:#9ca3af;line-height:1.5">
-              <strong style="color:#c9a84c">📌 동작:</strong> <code style="font-size:10px">expired</code> 상태이면서 한 번도 알림 못 받은 가입자에게 알림톡 발송. 만료 처리(<code style="font-size:10px">00:10</code>) 이후 사용자 활동 시간대(<code style="font-size:10px">09:00</code>)에 발송. 한 번 발송 시 중복 차단.
+              <strong style="color:#c9a84c">📌 시점:</strong> <strong>만료 처리 후</strong> 첫 도래한 위 시각 (예: 11/11 00:10 만료 처리 → 같은 날 09:00 알림).<br>
+              <strong style="color:#c9a84c">📌 대상:</strong> <code style="font-size:10px">expired AND expiry_complete_sent_at IS NULL</code> 가입자. 한 번 발송 후 <code style="font-size:10px">expiry_complete_sent_at</code> 기록 → 중복 차단.
             </div>
           </div>
 
@@ -2209,7 +2213,8 @@ body:not(.light-mode) .np-time { color:#9b9eaa; }
               <span>분 KST에 실패 환불 row 재시도</span>
             </div>
             <div style="margin-top:8px;padding:8px 10px;background:rgba(255,255,255,.03);border-radius:5px;font-size:11px;color:#9ca3af;line-height:1.5">
-              <strong style="color:#c9a84c">📌 동작:</strong> 환불 실패 row(<code style="font-size:10px">refund_error</code> 있음, 재시도 5회 미만)를 매시간 위 분에 재시도. 5회 초과 시 자동 중단(어드민 수동 처리 필요).
+              <strong style="color:#c9a84c">📌 시점:</strong> <strong>매시간</strong> 위 분 (예: 15분 → 매시 :15).<br>
+              <strong style="color:#c9a84c">📌 대상:</strong> <code style="font-size:10px">payments.refund_error IS NOT NULL AND refund_attempts &lt; 5</code> 인 row. 5회 초과 시 자동 중단 (어드민 수동 처리).
             </div>
           </div>
 
