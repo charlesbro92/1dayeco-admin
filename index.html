@@ -985,7 +985,7 @@ body:not(.light-mode) .np-time { color:#9b9eaa; }
 <!-- SIDEBAR -->
 <aside class="sidebar">
   <div class="sb-logo">1DAYECO<small>Admin Dashboard</small>
-    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v191</span>
+    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v192</span>
   </div>
   <nav class="sb-nav">
     <div class="sb-group">운영</div>
@@ -1293,37 +1293,21 @@ body:not(.light-mode) .np-time { color:#9b9eaa; }
     </div>
 
     <!-- 오늘 발송 통계 카드 -->
-    <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(180px, 1fr));gap:12px;margin-bottom:14px">
-      <div class="panel" style="padding:14px 18px">
-        <div style="font-size:11px;color:var(--muted);margin-bottom:4px">오늘 발송</div>
-        <div style="font-size:24px;font-weight:700;color:var(--gold);font-family:var(--mono)">
-          <span id="todayTotal">0</span><span style="font-size:13px;color:var(--muted)"> 건</span>
-        </div>
-      </div>
-      <div class="panel" style="padding:14px 18px">
-        <div style="font-size:11px;color:var(--muted);margin-bottom:4px">성공</div>
-        <div style="font-size:24px;font-weight:700;color:#5eea91;font-family:var(--mono)">
-          <span id="todaySuccess">0</span><span style="font-size:13px;color:var(--muted)"> 건</span>
-        </div>
-      </div>
-      <div class="panel" style="padding:14px 18px">
-        <div style="font-size:11px;color:var(--muted);margin-bottom:4px">실패</div>
-        <div style="font-size:24px;font-weight:700;color:#ff7676;font-family:var(--mono)">
-          <span id="todayFailed">0</span><span style="font-size:13px;color:var(--muted)"> 건</span>
-        </div>
-      </div>
-      <div class="panel" style="padding:14px 18px">
-        <div style="font-size:11px;color:var(--muted);margin-bottom:4px">알림톡 / SMS</div>
-        <div style="font-size:18px;font-weight:700;color:var(--text);font-family:var(--mono)">
-          <span id="todayAlimtalk" style="color:#fbbf24">0</span>
-          <span style="font-size:13px;color:var(--muted)"> / </span>
-          <span id="todaySms" style="color:#60a5fa">0</span>
-        </div>
-      </div>
+    <!-- [v192] KPI 카드 4개 삭제 (탭 UI로 단순화) -->
+
+    <!-- 일별 통계 / 발송 이력 탭 -->
+    <div style="display:flex;gap:0;margin-bottom:0;border-bottom:1px solid var(--b)">
+      <button id="sendTabStats" onclick="switchSendTab('stats')"
+        style="background:none;border:none;color:var(--gold);padding:12px 20px;font-size:13px;font-weight:700;cursor:pointer;border-bottom:2px solid var(--gold);margin-bottom:-1px;font-family:var(--sans)">📊 일별 발송 통계</button>
+      <button id="sendTabHistory" onclick="switchSendTab('history')"
+        style="background:none;border:none;color:var(--muted);padding:12px 20px;font-size:13px;font-weight:500;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;font-family:var(--sans)">📋 발송 이력</button>
     </div>
 
+    <!-- 탭 컨테이너 시작 -->
+    <div id="sendTabContent" style="margin-top:14px">
+
     <!-- 일별 발송 통계 -->
-    <div class="panel" style="margin-bottom:14px">
+    <div class="panel" id="sendStatsPanel" style="margin-bottom:14px">
       <div class="panel-head">
         <div class="panel-title">📊 일별 발송 통계</div>
         <div style="display:flex;gap:6px;align-items:center">
@@ -1357,13 +1341,23 @@ body:not(.light-mode) .np-time { color:#9b9eaa; }
     </div>
 
     <!-- 발송 이력 (개별 row) -->
-    <div class="panel" style="margin-bottom:14px">
+    <div class="panel" id="sendHistoryPanel" style="margin-bottom:14px;display:none">
       <div class="panel-head" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px">
         <div style="display:flex;align-items:center;gap:12px">
           <div class="panel-title">📋 발송 이력</div>
           <span id="sendLogsCount" style="font-size:11px;color:var(--muted);font-weight:400">전체 0건</span>
         </div>
-        <div style="display:flex;gap:6px;align-items:center">
+        <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+          <!-- [v192] 검색박스 — 이름/전화번호/주제 -->
+          <input id="sendLogsSearch" type="text" placeholder="🔍 이름 · 전화 · 주제 검색"
+            oninput="_debouncedSendLogsSearch()"
+            style="background:var(--s3);border:1px solid var(--b);color:var(--text);padding:5px 10px;font-size:11px;border-radius:6px;font-family:var(--sans);outline:none;width:200px">
+          <!-- [v192] 캘린더 — 기본 오늘 -->
+          <input id="sendLogsDateFrom" type="date" onchange="loadSendLogs()"
+            style="background:var(--s3);border:1px solid var(--b);color:var(--text);padding:5px 8px;font-size:11px;border-radius:6px;font-family:var(--sans);outline:none;color-scheme:dark">
+          <span style="color:var(--muted);font-size:11px">~</span>
+          <input id="sendLogsDateTo" type="date" onchange="loadSendLogs()"
+            style="background:var(--s3);border:1px solid var(--b);color:var(--text);padding:5px 8px;font-size:11px;border-radius:6px;font-family:var(--sans);outline:none;color-scheme:dark">
           <select id="sendLogsFilterChannel" onchange="loadSendLogs()" style="background:var(--s3);border:1px solid var(--b);color:var(--text);padding:5px 8px;font-size:11px;border-radius:6px;font-family:var(--sans);outline:none;cursor:pointer">
             <option value="">전체 채널</option>
             <option value="alimtalk">알림톡만</option>
@@ -1388,11 +1382,13 @@ body:not(.light-mode) .np-time { color:#9b9eaa; }
                 <th style="padding:10px 12px;font-weight:500">주제</th>
                 <th style="padding:10px 12px;font-weight:500;text-align:center;width:80px">채널</th>
                 <th style="padding:10px 12px;font-weight:500;text-align:center;width:80px">상태</th>
-                <th style="padding:10px 12px;font-weight:500;text-align:center;width:80px">작업</th>
+                <th style="padding:10px 12px;font-weight:500;text-align:center;width:90px">작업</th>
+                <!-- [v192] 실패사유 컬럼 추가 -->
+                <th style="padding:10px 12px;font-weight:500;width:200px">실패사유</th>
               </tr>
             </thead>
             <tbody id="sendLogsBody">
-              <tr><td colspan="7" style="padding:30px 0;text-align:center;color:var(--muted)">로딩 중...</td></tr>
+              <tr><td colspan="8" style="padding:30px 0;text-align:center;color:var(--muted)">로딩 중...</td></tr>
             </tbody>
           </table>
         </div>
@@ -1401,6 +1397,7 @@ body:not(.light-mode) .np-time { color:#9b9eaa; }
 
     <!-- 상세 패널: 날짜 클릭 시 동적 생성 -->
     <div id="sendDetailPanel"></div>
+    </div><!-- /sendTabContent -->
   </div>
 
   <!-- ── PAGE: 콘텐츠 ── -->
@@ -3483,7 +3480,8 @@ function loadPage(name) {
       loadSendHistory();
       loadTodaySendStats();
     }).catch(e => console.warn('[send] 구독자 로드 실패:', e));
-    loadSendLogs();
+    // [v192] 기본 탭은 일별 통계. 발송 이력은 사용자가 탭 클릭 시 로드
+    if (typeof switchSendTab === 'function') switchSendTab('stats');
   }
   if (name === 'content')      {
     // 주제 관리 페이지
@@ -4552,13 +4550,20 @@ async function loadSendLogs() {
   const countEl = document.getElementById('sendLogsCount');
   if (!tbody) return;
 
-  // 필터
+  // [v192] 검색/날짜 필터
+  const searchQ      = (document.getElementById('sendLogsSearch')?.value || '').trim().toLowerCase();
+  const dateFromEl   = document.getElementById('sendLogsDateFrom');
+  const dateToEl     = document.getElementById('sendLogsDateTo');
   const channelFilter = document.getElementById('sendLogsFilterChannel')?.value || '';
   const statusFilter  = document.getElementById('sendLogsFilterStatus')?.value || '';
 
+  // 백엔드 쿼리 파라미터 — 날짜는 백엔드에서 미리 필터, 검색은 프론트
+  const params = new URLSearchParams({ limit: '500' });
+  if (dateFromEl?.value) params.set('date_from', dateFromEl.value);
+  if (dateToEl?.value)   params.set('date_to',   dateToEl.value);
+
   try {
-    // 백엔드에서 최근 200건 조회
-    const res = await apiFetch('/admin/send-logs?limit=200');
+    const res = await apiFetch('/admin/send-logs?' + params.toString());
     let logs = (res && res.data) ? res.data : [];
 
     // 필터링
@@ -4566,16 +4571,27 @@ async function loadSendLogs() {
     if (statusFilter === 'success') logs = logs.filter(l => l.success);
     if (statusFilter === 'failed')  logs = logs.filter(l => !l.success);
 
+    // 구독자 정보 매핑 (ID → 이름) — 검색 시 이름 매칭에 사용
+    const subMap = {};
+    STATE.subscribers.forEach(s => { subMap[s.id] = s; });
+
+    // [v192] 검색어 필터 (이름/전화/주제 모두 검사)
+    if (searchQ) {
+      logs = logs.filter(log => {
+        const sub = subMap[log.subscriber_id] || {};
+        const name  = (sub.name || '').toLowerCase();
+        const phone = (log.to_phone || sub.phone || '').toLowerCase();
+        const topic = (log.topic || '').toLowerCase();
+        return name.includes(searchQ) || phone.includes(searchQ) || topic.includes(searchQ);
+      });
+    }
+
     if (countEl) countEl.textContent = `전체 ${logs.length}건`;
 
     if (!logs.length) {
-      tbody.innerHTML = '<tr><td colspan="7" style="padding:30px 0;text-align:center;color:var(--muted)">발송 이력이 없습니다</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="8" style="padding:30px 0;text-align:center;color:var(--muted)">발송 이력이 없습니다</td></tr>';
       return;
     }
-
-    // 구독자 정보 매핑 (ID → 이름)
-    const subMap = {};
-    STATE.subscribers.forEach(s => { subMap[s.id] = s; });
 
     tbody.innerHTML = logs.map(log => {
       const sub = subMap[log.subscriber_id] || {};
@@ -4596,10 +4612,10 @@ async function loadSendLogs() {
           })
         : '-';
 
-      // 카테고리 라벨
+      // 카테고리 라벨 (DB의 categories.name 우선)
       const catCache = (typeof CATEGORIES_CACHE !== 'undefined' ? CATEGORIES_CACHE : []) || [];
       const cat = catCache.find(c => c.id === log.category);
-      const catLabel = cat ? `${cat.emoji} ${cat.name}` : (log.category || '-');
+      const catLabel = cat ? `${cat.emoji || ''} ${cat.name}`.trim() : (log.category || '-');
 
       // 채널 배지
       let channelBadge = '';
@@ -4614,12 +4630,22 @@ async function loadSendLogs() {
       // 상태 배지
       const statusBadge = log.success
         ? '<span style="background:rgba(74,222,128,.15);border:1px solid rgba(74,222,128,.3);color:#5eea91;font-size:10px;font-weight:700;padding:2px 7px;border-radius:4px">성공</span>'
-        : `<span style="background:rgba(255,118,118,.15);border:1px solid rgba(255,118,118,.3);color:#ff7676;font-size:10px;font-weight:700;padding:2px 7px;border-radius:4px" title="${(log.error || '').replace(/"/g,'&quot;')}">실패</span>`;
+        : '<span style="background:rgba(255,118,118,.15);border:1px solid rgba(255,118,118,.3);color:#ff7676;font-size:10px;font-weight:700;padding:2px 7px;border-radius:4px">실패</span>';
 
-      // 작업 버튼 (실패 시 재발송)
-      const retryBtn = !log.success && log.subscriber_id
-        ? `<button onclick="retrySend('${log.subscriber_id}', '${log.category}')" style="background:rgba(201,168,76,.1);border:1px solid rgba(201,168,76,.3);color:var(--gold);padding:3px 8px;border-radius:4px;font-size:10px;cursor:pointer">재발송</button>`
-        : '';
+      // [v192] 작업 컬럼 — 실패 시 '실패' 배지 + 재발송 버튼 / 성공 시 빈칸
+      let actionCell = '';
+      if (log.success) {
+        actionCell = '<span style="color:var(--muted);font-size:10px">—</span>';
+      } else if (log.subscriber_id) {
+        actionCell = `<button onclick="retrySend('${log.subscriber_id}', '${log.category}')" style="background:rgba(201,168,76,.1);border:1px solid rgba(201,168,76,.3);color:var(--gold);padding:3px 8px;border-radius:4px;font-size:10px;cursor:pointer">재발송</button>`;
+      } else {
+        actionCell = '<span style="color:var(--muted);font-size:10px">—</span>';
+      }
+
+      // [v192] 실패사유 컬럼
+      const errorReason = log.success
+        ? '<span style="color:var(--muted);font-size:10px">—</span>'
+        : `<span style="color:#ff9999;font-size:11px" title="${(log.error || '').replace(/"/g,'&quot;')}">${(log.error || '사유 없음').length > 50 ? (log.error || '').slice(0,50) + '…' : (log.error || '사유 없음')}</span>`;
 
       return `
         <tr style="border-bottom:1px solid var(--b)">
@@ -4632,12 +4658,59 @@ async function loadSendLogs() {
           <td style="padding:10px 12px;font-size:11px;color:var(--muted);max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${(log.topic || '').replace(/"/g,'&quot;')}">${log.topic || '-'}</td>
           <td style="padding:10px 12px;text-align:center">${channelBadge}</td>
           <td style="padding:10px 12px;text-align:center">${statusBadge}</td>
-          <td style="padding:10px 12px;text-align:center">${retryBtn}</td>
+          <td style="padding:10px 12px;text-align:center">${actionCell}</td>
+          <td style="padding:10px 12px">${errorReason}</td>
         </tr>`;
     }).join('');
   } catch (e) {
     console.warn('[발송이력] 로드 실패:', e);
-    tbody.innerHTML = '<tr><td colspan="7" style="padding:30px 0;text-align:center;color:var(--red)">로드 실패: ' + (e.message || '') + '</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="8" style="padding:30px 0;text-align:center;color:var(--red)">로드 실패: ' + (e.message || '') + '</td></tr>';
+  }
+}
+
+// [v192] 검색 디바운스 (300ms)
+let _sendLogsSearchTimer = null;
+function _debouncedSendLogsSearch() {
+  if (_sendLogsSearchTimer) clearTimeout(_sendLogsSearchTimer);
+  _sendLogsSearchTimer = setTimeout(loadSendLogs, 300);
+}
+
+// [v192] 발송 현황 페이지 내 탭 전환
+function switchSendTab(tab) {
+  const statsPanel  = document.getElementById('sendStatsPanel');
+  const histPanel   = document.getElementById('sendHistoryPanel');
+  const detailPanel = document.getElementById('sendDetailPanel');
+  const statsTabBtn = document.getElementById('sendTabStats');
+  const histTabBtn  = document.getElementById('sendTabHistory');
+
+  const isStats = (tab === 'stats');
+  if (statsPanel)  statsPanel.style.display  = isStats ? '' : 'none';
+  if (histPanel)   histPanel.style.display   = isStats ? 'none' : '';
+  if (detailPanel) detailPanel.style.display = isStats ? '' : 'none';
+
+  if (statsTabBtn) {
+    statsTabBtn.style.color = isStats ? 'var(--gold)' : 'var(--muted)';
+    statsTabBtn.style.fontWeight = isStats ? '700' : '500';
+    statsTabBtn.style.borderBottomColor = isStats ? 'var(--gold)' : 'transparent';
+  }
+  if (histTabBtn) {
+    histTabBtn.style.color = isStats ? 'var(--muted)' : 'var(--gold)';
+    histTabBtn.style.fontWeight = isStats ? '500' : '700';
+    histTabBtn.style.borderBottomColor = isStats ? 'transparent' : 'var(--gold)';
+  }
+
+  // 발송이력 탭 진입 시 — 캘린더 디폴트(오늘) 채우기 + 로드
+  if (!isStats) {
+    const fromEl = document.getElementById('sendLogsDateFrom');
+    const toEl   = document.getElementById('sendLogsDateTo');
+    if (fromEl && !fromEl.value) {
+      const todayStr = (typeof getKSTDateStr === 'function')
+        ? getKSTDateStr()
+        : new Date(new Date().getTime() + 9*3600000).toISOString().slice(0,10);
+      fromEl.value = todayStr;
+      if (toEl) toEl.value = todayStr;
+    }
+    loadSendLogs();
   }
 }
 
@@ -4880,11 +4953,16 @@ async function loadTodaySendStats() {
   try {
     const res = await apiFetch('/admin/send-stats');
     const data = (res && res.data) ? res.data : {};
-    document.getElementById('todayTotal').textContent    = data.total    || 0;
-    document.getElementById('todaySuccess').textContent  = data.success  || 0;
-    document.getElementById('todayFailed').textContent   = data.failed   || 0;
-    document.getElementById('todayAlimtalk').textContent = data.by_alimtalk || 0;
-    document.getElementById('todaySms').textContent      = data.by_sms      || 0;
+    // [v192] KPI 카드 4개는 삭제됐지만 다른 곳에서 호출될 수 있으니 안전 처리
+    const setText = (id, val) => {
+      const el = document.getElementById(id);
+      if (el) el.textContent = val || 0;
+    };
+    setText('todayTotal',    data.total    || 0);
+    setText('todaySuccess',  data.success  || 0);
+    setText('todayFailed',   data.failed   || 0);
+    setText('todayAlimtalk', data.by_alimtalk || 0);
+    setText('todaySms',      data.by_sms || 0);
   } catch (e) {
     console.warn('[발송통계] 로드 실패:', e);
   }
