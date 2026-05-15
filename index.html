@@ -985,7 +985,7 @@ body:not(.light-mode) .np-time { color:#9b9eaa; }
 <!-- SIDEBAR -->
 <aside class="sidebar">
   <div class="sb-logo">1DAYECO<small>Admin Dashboard</small>
-    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v190</span>
+    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v191</span>
   </div>
   <nav class="sb-nav">
     <div class="sb-group">운영</div>
@@ -2082,26 +2082,10 @@ body:not(.light-mode) .np-time { color:#9b9eaa; }
           <div>
             <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:6px;letter-spacing:.5px">생성 시각 (매일)</label>
             <div style="display:flex;gap:8px;align-items:center">
-              <select id="newSchedHour" style="flex:1;background:var(--s3);border:1px solid var(--b);color:var(--text);padding:10px;border-radius:6px;font-size:13px;outline:none">
-                <option value="5">오전 5시</option>
-                <option value="6">오전 6시</option>
-                <option value="7" selected>오전 7시</option>
-                <option value="8">오전 8시</option>
-                <option value="9">오전 9시</option>
-                <option value="10">오전 10시</option>
-                <option value="11">오전 11시</option>
-                <option value="12">오후 12시</option>
-                <option value="13">오후 1시</option>
-                <option value="14">오후 2시</option>
-                <option value="15">오후 3시</option>
-              </select>
+              <!-- [v191] 시각 0~23 / 분 0~59 전체 (JS로 동적 생성) -->
+              <select id="newSchedHour" style="flex:1;background:var(--s3);border:1px solid var(--b);color:var(--text);padding:10px;border-radius:6px;font-size:13px;outline:none"></select>
               <span style="color:var(--muted)">:</span>
-              <select id="newSchedMinute" style="flex:1;background:var(--s3);border:1px solid var(--b);color:var(--text);padding:10px;border-radius:6px;font-size:13px;outline:none">
-                <option value="0">00분</option>
-                <option value="15">15분</option>
-                <option value="30" selected>30분</option>
-                <option value="45">45분</option>
-              </select>
+              <select id="newSchedMinute" style="flex:1;background:var(--s3);border:1px solid var(--b);color:var(--text);padding:10px;border-radius:6px;font-size:13px;outline:none"></select>
             </div>
           </div>
           <button onclick="addSubtopicSchedule()" style="background:var(--gold);color:var(--bg);border:none;padding:11px;border-radius:6px;font-size:13px;font-weight:700;cursor:pointer;letter-spacing:.5px;margin-top:4px">💾 저장</button>
@@ -10493,6 +10477,18 @@ async function loadSchedulerStatusPanel() {
       send_expiry_d1: '🔔 D-1 알림',
       retry_failed_refunds: '🔄 환불 재시도',
     };
+
+    // [v191] 만료 완료 알림 토글 상태 조회 — 만료 처리 entry 옆에 부가 표시
+    let expCompleteEnabled = true;  // default
+    try {
+      const settingsRes = await apiFetch('/admin/system-settings');
+      const settings = settingsRes?.data || settingsRes || {};
+      const v = settings.notify_expiry_complete_enabled?.value;
+      if (v !== undefined && v !== null) {
+        expCompleteEnabled = String(v).toLowerCase() === 'true';
+      }
+    } catch (e) {}
+
     if (filtered.length === 0) {
       container.innerHTML = '<span style="color:#f59e0b">⚠️ 등록된 단일 시간 job 없음 (모두 비활성화 상태)</span>';
       return;
@@ -10503,7 +10499,11 @@ async function loadSchedulerStatusPanel() {
         timeZone: 'Asia/Seoul', month: '2-digit', day: '2-digit',
         hour: '2-digit', minute: '2-digit', hour12: false
       }) : '—';
-      return `<div>${label}: <span style="color:var(--gold);font-family:var(--mono)">다음 ${nextRun}</span></div>`;
+      // 만료 처리 entry에 만료 완료 알림 상태 부가 표시
+      const suffix = (j.id === 'expire_subscriptions')
+        ? `<div style="margin-left:14px;font-size:11px;color:var(--muted)">┗ 🏁 만료 완료 알림: ${expCompleteEnabled ? '<span style="color:var(--gold)">ON</span> (만료 처리와 함께 발송)' : '<span style="color:#999">OFF</span>'}</div>`
+        : '';
+      return `<div>${label}: <span style="color:var(--gold);font-family:var(--mono)">다음 ${nextRun}</span></div>${suffix}`;
     }).join('');
   } catch (e) {
     const container = document.getElementById('schedulerJobsList');
@@ -10517,6 +10517,29 @@ async function loadSchedulerStatusPanel() {
 let _SCHED_CATEGORIES = [];
 
 async function loadCategoriesForSched() {
+  // [v191] 시각(0~23) / 분(0~59) select 옵션 동적 생성 — 매번 호출돼도 멱등
+  const hourSel = document.getElementById('newSchedHour');
+  if (hourSel && hourSel.options.length === 0) {
+    const hourOpts = [];
+    for (let h = 0; h < 24; h++) {
+      const label = h === 0 ? '오전 12시' :
+                    h < 12  ? `오전 ${h}시` :
+                    h === 12 ? '오후 12시' :
+                              `오후 ${h - 12}시`;
+      const sel = (h === 7) ? ' selected' : '';
+      hourOpts.push(`<option value="${h}"${sel}>${label}</option>`);
+    }
+    hourSel.innerHTML = hourOpts.join('');
+  }
+  const minSel = document.getElementById('newSchedMinute');
+  if (minSel && minSel.options.length === 0) {
+    const minOpts = [];
+    for (let m = 0; m < 60; m++) {
+      const sel = (m === 30) ? ' selected' : '';
+      minOpts.push(`<option value="${m}"${sel}>${String(m).padStart(2,'0')}분</option>`);
+    }
+    minSel.innerHTML = minOpts.join('');
+  }
   try {
     const r = await apiFetch('/admin/categories');
     const cats = (r && r.data) ? r.data : (Array.isArray(r) ? r : []);
