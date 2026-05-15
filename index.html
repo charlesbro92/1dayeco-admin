@@ -985,7 +985,7 @@ body:not(.light-mode) .np-time { color:#9b9eaa; }
 <!-- SIDEBAR -->
 <aside class="sidebar">
   <div class="sb-logo">1DAYECO<small>Admin Dashboard</small>
-    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v192</span>
+    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v193</span>
   </div>
   <nav class="sb-nav">
     <div class="sb-group">운영</div>
@@ -1233,7 +1233,19 @@ body:not(.light-mode) .np-time { color:#9b9eaa; }
 
   <!-- ── PAGE: 발송 현황 ── -->
   <div class="content" id="page-send">
-    <!-- 발송 준비 패널 (미리보기) -->
+    <!-- [v192] 탭 UI: 🚀 오늘 발송 준비 / 📋 발송 이력 -->
+    <div style="display:flex;gap:0;margin-bottom:0;border-bottom:1px solid var(--b)">
+      <button id="sendTabPrepare" onclick="switchSendTab('prepare')"
+        style="background:none;border:none;color:var(--gold);padding:12px 20px;font-size:13px;font-weight:700;cursor:pointer;border-bottom:2px solid var(--gold);margin-bottom:-1px;font-family:var(--sans)">🚀 오늘 발송 준비</button>
+      <button id="sendTabHistory" onclick="switchSendTab('history')"
+        style="background:none;border:none;color:var(--muted);padding:12px 20px;font-size:13px;font-weight:500;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;font-family:var(--sans)">📋 발송 이력</button>
+    </div>
+
+    <!-- 탭 컨테이너 시작 -->
+    <div style="margin-top:14px">
+
+    <!-- [탭 1: 오늘 발송 준비] 패널 -->
+    <div id="sendPreparePanel">
     <div class="panel" style="margin-bottom:14px;border:1px solid rgba(201,168,76,.25)">
       <div class="panel-head" style="background:linear-gradient(135deg, rgba(201,168,76,.08), rgba(201,168,76,.02))">
         <div class="panel-title">🚀 오늘 발송 준비 <span id="prevDateInfo" style="color:var(--muted);font-weight:400;font-size:11px;margin-left:8px"></span></div>
@@ -1294,17 +1306,10 @@ body:not(.light-mode) .np-time { color:#9b9eaa; }
 
     <!-- 오늘 발송 통계 카드 -->
     <!-- [v192] KPI 카드 4개 삭제 (탭 UI로 단순화) -->
+    </div><!-- /sendPreparePanel -->
 
-    <!-- 일별 통계 / 발송 이력 탭 -->
-    <div style="display:flex;gap:0;margin-bottom:0;border-bottom:1px solid var(--b)">
-      <button id="sendTabStats" onclick="switchSendTab('stats')"
-        style="background:none;border:none;color:var(--gold);padding:12px 20px;font-size:13px;font-weight:700;cursor:pointer;border-bottom:2px solid var(--gold);margin-bottom:-1px;font-family:var(--sans)">📊 일별 발송 통계</button>
-      <button id="sendTabHistory" onclick="switchSendTab('history')"
-        style="background:none;border:none;color:var(--muted);padding:12px 20px;font-size:13px;font-weight:500;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;font-family:var(--sans)">📋 발송 이력</button>
-    </div>
-
-    <!-- 탭 컨테이너 시작 -->
-    <div id="sendTabContent" style="margin-top:14px">
+    <!-- [탭 2: 발송 이력 = 일별 통계 + 발송 이력] -->
+    <div id="sendHistoryTabContent" style="display:none">
 
     <!-- 일별 발송 통계 -->
     <div class="panel" id="sendStatsPanel" style="margin-bottom:14px">
@@ -1341,7 +1346,7 @@ body:not(.light-mode) .np-time { color:#9b9eaa; }
     </div>
 
     <!-- 발송 이력 (개별 row) -->
-    <div class="panel" id="sendHistoryPanel" style="margin-bottom:14px;display:none">
+    <div class="panel" id="sendHistoryPanel" style="margin-bottom:14px">
       <div class="panel-head" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px">
         <div style="display:flex;align-items:center;gap:12px">
           <div class="panel-title">📋 발송 이력</div>
@@ -1397,7 +1402,8 @@ body:not(.light-mode) .np-time { color:#9b9eaa; }
 
     <!-- 상세 패널: 날짜 클릭 시 동적 생성 -->
     <div id="sendDetailPanel"></div>
-    </div><!-- /sendTabContent -->
+    </div><!-- /sendHistoryTabContent -->
+    </div><!-- /탭 wrapper -->
   </div>
 
   <!-- ── PAGE: 콘텐츠 ── -->
@@ -3480,8 +3486,8 @@ function loadPage(name) {
       loadSendHistory();
       loadTodaySendStats();
     }).catch(e => console.warn('[send] 구독자 로드 실패:', e));
-    // [v192] 기본 탭은 일별 통계. 발송 이력은 사용자가 탭 클릭 시 로드
-    if (typeof switchSendTab === 'function') switchSendTab('stats');
+    // [v192] 기본 탭은 오늘 발송 준비. 발송 이력은 사용자가 탭 클릭 시 로드
+    if (typeof switchSendTab === 'function') switchSendTab('prepare');
   }
   if (name === 'content')      {
     // 주제 관리 페이지
@@ -4675,32 +4681,30 @@ function _debouncedSendLogsSearch() {
   _sendLogsSearchTimer = setTimeout(loadSendLogs, 300);
 }
 
-// [v192] 발송 현황 페이지 내 탭 전환
+// [v192] 발송 현황 페이지 내 탭 전환 (prepare = 오늘 발송 준비 / history = 발송 이력 = 통계+이력)
 function switchSendTab(tab) {
-  const statsPanel  = document.getElementById('sendStatsPanel');
-  const histPanel   = document.getElementById('sendHistoryPanel');
-  const detailPanel = document.getElementById('sendDetailPanel');
-  const statsTabBtn = document.getElementById('sendTabStats');
-  const histTabBtn  = document.getElementById('sendTabHistory');
+  const prepPanel  = document.getElementById('sendPreparePanel');
+  const histTab    = document.getElementById('sendHistoryTabContent');
+  const prepBtn    = document.getElementById('sendTabPrepare');
+  const histBtn    = document.getElementById('sendTabHistory');
 
-  const isStats = (tab === 'stats');
-  if (statsPanel)  statsPanel.style.display  = isStats ? '' : 'none';
-  if (histPanel)   histPanel.style.display   = isStats ? 'none' : '';
-  if (detailPanel) detailPanel.style.display = isStats ? '' : 'none';
+  const isPrepare = (tab === 'prepare');
+  if (prepPanel) prepPanel.style.display = isPrepare ? '' : 'none';
+  if (histTab)   histTab.style.display   = isPrepare ? 'none' : '';
 
-  if (statsTabBtn) {
-    statsTabBtn.style.color = isStats ? 'var(--gold)' : 'var(--muted)';
-    statsTabBtn.style.fontWeight = isStats ? '700' : '500';
-    statsTabBtn.style.borderBottomColor = isStats ? 'var(--gold)' : 'transparent';
+  if (prepBtn) {
+    prepBtn.style.color = isPrepare ? 'var(--gold)' : 'var(--muted)';
+    prepBtn.style.fontWeight = isPrepare ? '700' : '500';
+    prepBtn.style.borderBottomColor = isPrepare ? 'var(--gold)' : 'transparent';
   }
-  if (histTabBtn) {
-    histTabBtn.style.color = isStats ? 'var(--muted)' : 'var(--gold)';
-    histTabBtn.style.fontWeight = isStats ? '500' : '700';
-    histTabBtn.style.borderBottomColor = isStats ? 'transparent' : 'var(--gold)';
+  if (histBtn) {
+    histBtn.style.color = isPrepare ? 'var(--muted)' : 'var(--gold)';
+    histBtn.style.fontWeight = isPrepare ? '500' : '700';
+    histBtn.style.borderBottomColor = isPrepare ? 'transparent' : 'var(--gold)';
   }
 
-  // 발송이력 탭 진입 시 — 캘린더 디폴트(오늘) 채우기 + 로드
-  if (!isStats) {
+  // 발송이력 탭 진입 시 — 캘린더 디폴트(오늘) + 로드
+  if (!isPrepare) {
     const fromEl = document.getElementById('sendLogsDateFrom');
     const toEl   = document.getElementById('sendLogsDateTo');
     if (fromEl && !fromEl.value) {
@@ -4710,7 +4714,7 @@ function switchSendTab(tab) {
       fromEl.value = todayStr;
       if (toEl) toEl.value = todayStr;
     }
-    loadSendLogs();
+    if (typeof loadSendLogs === 'function') loadSendLogs();
   }
 }
 
@@ -10559,7 +10563,7 @@ async function loadSchedulerStatusPanel() {
     // [v191] 만료 완료 알림 토글 상태 조회 — 만료 처리 entry 옆에 부가 표시
     let expCompleteEnabled = true;  // default
     try {
-      const settingsRes = await apiFetch('/admin/system-settings');
+      const settingsRes = await apiFetch('/admin/settings');
       const settings = settingsRes?.data || settingsRes || {};
       const v = settings.notify_expiry_complete_enabled?.value;
       if (v !== undefined && v !== null) {
@@ -10725,9 +10729,11 @@ async function addSubtopicSchedule() {
     enabled: true,
   };
   try {
-    const r = await apiFetch('/admin/subtopic-schedules', {
+    // [v192] apiFetch는 opts 있을 때 Response 객체 그대로 반환 → .json() 파싱 필요
+    const resp = await apiFetch('/admin/subtopic-schedules', {
       method: 'POST', body: JSON.stringify(payload),
     });
+    const r = (resp && typeof resp.json === 'function') ? await resp.json() : resp;
     if (r && r.success) {
       // [v180] upsert — action='inserted' or 'updated'
       const msg = r.action === 'updated'
