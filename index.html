@@ -985,7 +985,7 @@ body:not(.light-mode) .np-time { color:#9b9eaa; }
 <!-- SIDEBAR -->
 <aside class="sidebar">
   <div class="sb-logo">1DAYECO<small>Admin Dashboard</small>
-    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v193</span>
+    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v194</span>
   </div>
   <nav class="sb-nav">
     <div class="sb-group">운영</div>
@@ -10753,48 +10753,54 @@ async function addSubtopicSchedule() {
 
 async function toggleSubtopicSchedule(id, enabled) {
   try {
-    const r = await apiFetch('/admin/subtopic-schedules/' + id, {
+    // [v194] apiFetch는 opts 있을 때 Response 그대로 반환 → .json() 파싱 필요
+    const resp = await apiFetch('/admin/subtopic-schedules/' + id, {
       method: 'PUT', body: JSON.stringify({ enabled }),
     });
+    const r = (resp && typeof resp.json === 'function') ? await resp.json() : resp;
     if (r && r.success) {
       showToast((enabled ? '활성화: ' : '비활성화: ') + '#' + id, 'ok');
       await loadSubtopicSchedules();
     } else {
-      showToast('변경 실패', 'ng');
+      showToast('변경 실패: ' + (r?.error || 'unknown'), 'ng');
     }
   } catch (e) {
-    showToast('네트워크 오류', 'ng');
+    showToast('네트워크 오류: ' + (e?.message || e), 'ng');
   }
 }
 
 async function deleteSubtopicSchedule(id) {
   if (!confirm('이 콘텐츠 스케줄을 삭제하시겠습니까?')) return;
   try {
-    const r = await apiFetch('/admin/subtopic-schedules/' + id, { method: 'DELETE' });
+    // [v194] apiFetch JSON 파싱
+    const resp = await apiFetch('/admin/subtopic-schedules/' + id, { method: 'DELETE' });
+    const r = (resp && typeof resp.json === 'function') ? await resp.json() : resp;
     if (r && r.success) {
       showToast('삭제되었습니다', 'ok');
       await loadSubtopicSchedules();
     } else {
-      showToast('삭제 실패', 'ng');
+      showToast('삭제 실패: ' + (r?.error || 'unknown'), 'ng');
     }
   } catch (e) {
-    showToast('네트워크 오류', 'ng');
+    showToast('네트워크 오류: ' + (e?.message || e), 'ng');
   }
 }
 
 async function runSubtopicScheduleNow(id) {
   if (!confirm('이 콘텐츠를 지금 생성하시겠습니까? (수 분 소요)')) return;
   try {
-    const r = await apiFetch('/admin/subtopic-schedules/' + id + '/run', {
+    // [v194] apiFetch JSON 파싱
+    const resp = await apiFetch('/admin/subtopic-schedules/' + id + '/run', {
       method: 'POST', body: '{}',
     });
+    const r = (resp && typeof resp.json === 'function') ? await resp.json() : resp;
     if (r && r.success) {
       showToast('콘텐츠 생성을 시작했습니다 (백그라운드)', 'ok');
     } else {
       showToast('실패: ' + (r?.error || 'unknown'), 'ng');
     }
   } catch (e) {
-    showToast('네트워크 오류', 'ng');
+    showToast('네트워크 오류: ' + (e?.message || e), 'ng');
   }
 }
 
