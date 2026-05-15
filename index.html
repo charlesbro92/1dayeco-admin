@@ -985,7 +985,7 @@ body:not(.light-mode) .np-time { color:#9b9eaa; }
 <!-- SIDEBAR -->
 <aside class="sidebar">
   <div class="sb-logo">1DAYECO<small>Admin Dashboard</small>
-    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v198</span>
+    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v199</span>
   </div>
   <nav class="sb-nav">
     <div class="sb-group">운영</div>
@@ -2122,6 +2122,9 @@ body:not(.light-mode) .np-time { color:#9b9eaa; }
               <input type="number" id="schedDailySendMinute" min="0" max="59" value="0" onchange="saveSchedulerTime('daily_send_minute', this.value)" style="width:55px;background:var(--s3);border:1px solid var(--b);border-radius:4px;padding:5px 6px;font-size:12px;color:var(--text);font-family:var(--mono);text-align:center;outline:none">
               <span>KST에 가입자에게 카카오톡 콘텐츠 발송</span>
             </div>
+            <div style="margin-top:8px;padding:8px 10px;background:rgba(255,255,255,.03);border-radius:5px;font-size:11px;color:#9ca3af;line-height:1.5">
+              <strong style="color:#c9a84c">📌 동작:</strong> 가입자 활성 상태(<code style="font-size:10px">active</code>)일 때 매일 위 시각에 그 날짜의 주제로 알림톡 발송. 일일 콘텐츠 알림 그룹 토글(알림 관리)이 OFF면 발송 생략.
+            </div>
           </div>
 
           <!-- 만료 처리 -->
@@ -2140,6 +2143,9 @@ body:not(.light-mode) .np-time { color:#9b9eaa; }
               <span>:</span>
               <input type="number" id="schedExpireSubsMinute" min="0" max="59" value="10" onchange="saveSchedulerTime('expire_subscriptions_minute', this.value)" style="width:55px;background:var(--s3);border:1px solid var(--b);border-radius:4px;padding:5px 6px;font-size:12px;color:var(--text);font-family:var(--mono);text-align:center;outline:none">
               <span>KST에 만료된 구독자 status 변경</span>
+            </div>
+            <div style="margin-top:8px;padding:8px 10px;background:rgba(255,255,255,.03);border-radius:5px;font-size:11px;color:#9ca3af;line-height:1.5">
+              <strong style="color:#c9a84c">📌 동작:</strong> 종료일(<code style="font-size:10px">end_date</code>)이 지난 가입자를 <code style="font-size:10px">expired</code> 상태로 변경. 위 시각에 도래한 만료자만 처리. <em>알림톡은 별도(아래 🏁 만료 완료 알림)</em>.
             </div>
           </div>
 
@@ -2160,6 +2166,9 @@ body:not(.light-mode) .np-time { color:#9b9eaa; }
               <input type="number" id="schedExpiryD1Minute" min="0" max="59" value="0" onchange="saveSchedulerTime('send_expiry_d1_minute', this.value)" style="width:55px;background:var(--s3);border:1px solid var(--b);border-radius:4px;padding:5px 6px;font-size:12px;color:var(--text);font-family:var(--mono);text-align:center;outline:none">
               <span>KST에 만료 1일 전 알림톡 발송</span>
             </div>
+            <div style="margin-top:8px;padding:8px 10px;background:rgba(255,255,255,.03);border-radius:5px;font-size:11px;color:#9ca3af;line-height:1.5">
+              <strong style="color:#c9a84c">📌 동작:</strong> 종료일 <strong>전날</strong>(예: 11/10 만료 → 11/9 발송)에 위 시각으로 알림톡 발송. 이미 발송된 가입자는 자동 중복 차단.
+            </div>
           </div>
 
           <!-- 구독 만료 완료 알림 (v198 — 별도 시각 설정) -->
@@ -2179,6 +2188,9 @@ body:not(.light-mode) .np-time { color:#9b9eaa; }
               <input type="number" id="schedExpiryCompleteMinute" min="0" max="59" value="0" onchange="saveSchedulerTime('send_expiry_complete_minute', this.value)" style="width:55px;background:var(--s3);border:1px solid var(--b);border-radius:4px;padding:5px 6px;font-size:12px;color:var(--text);font-family:var(--mono);text-align:center;outline:none">
               <span>KST에 만료 완료 알림 발송 (어제·오늘 만료된 미발송 대상)</span>
             </div>
+            <div style="margin-top:8px;padding:8px 10px;background:rgba(255,255,255,.03);border-radius:5px;font-size:11px;color:#9ca3af;line-height:1.5">
+              <strong style="color:#c9a84c">📌 동작:</strong> <code style="font-size:10px">expired</code> 상태이면서 한 번도 알림 못 받은 가입자에게 알림톡 발송. 만료 처리(<code style="font-size:10px">00:10</code>) 이후 사용자 활동 시간대(<code style="font-size:10px">09:00</code>)에 발송. 한 번 발송 시 중복 차단.
+            </div>
           </div>
 
           <!-- 환불 재시도 -->
@@ -2195,6 +2207,9 @@ body:not(.light-mode) .np-time { color:#9b9eaa; }
               <span>매시간</span>
               <input type="number" id="schedRetryRefundsMinute" min="0" max="59" value="15" onchange="saveSchedulerTime('retry_failed_refunds_minute', this.value)" style="width:55px;background:var(--s3);border:1px solid var(--b);border-radius:4px;padding:5px 6px;font-size:12px;color:var(--text);font-family:var(--mono);text-align:center;outline:none">
               <span>분 KST에 실패 환불 row 재시도</span>
+            </div>
+            <div style="margin-top:8px;padding:8px 10px;background:rgba(255,255,255,.03);border-radius:5px;font-size:11px;color:#9ca3af;line-height:1.5">
+              <strong style="color:#c9a84c">📌 동작:</strong> 환불 실패 row(<code style="font-size:10px">refund_error</code> 있음, 재시도 5회 미만)를 매시간 위 분에 재시도. 5회 초과 시 자동 중단(어드민 수동 처리 필요).
             </div>
           </div>
 
