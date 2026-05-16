@@ -985,7 +985,7 @@ body:not(.light-mode) .np-time { color:#9b9eaa; }
 <!-- SIDEBAR -->
 <aside class="sidebar">
   <div class="sb-logo">1DAYECO<small>Admin Dashboard</small>
-    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v203</span>
+    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v204</span>
   </div>
   <nav class="sb-nav">
     <div class="sb-group">운영</div>
@@ -5640,6 +5640,21 @@ const SUPER_CATEGORY_MAP = {
 const CATEGORY_LABEL_MAP = {
   economy:'📊 경제', realestate:'🏠 부동산', english:'🇬🇧 영어', trivia:'🧠 상식'
 };
+
+// [v204] 카테고리 ID → "이모지 이름" 동적 라벨 (CATEGORIES_CACHE 우선, 하드코딩 fallback)
+//   주제 관리/아카이브/대량 작업 등 어디서나 사용 가능한 통일 헬퍼
+function catLabelText(catId) {
+  if (!catId) return '';
+  if (typeof CATEGORIES_CACHE !== 'undefined' && CATEGORIES_CACHE && CATEGORIES_CACHE.length) {
+    const found = CATEGORIES_CACHE.find(c => c.id === catId);
+    if (found) {
+      const emoji = found.emoji ? found.emoji + ' ' : '';
+      return (emoji + (found.name || catId)).trim();
+    }
+  }
+  // 옛 하드코딩 매핑 fallback (caching 전, 또는 미등록 카테고리 호환용)
+  return CATEGORY_LABEL_MAP[catId] || catId;
+}
 const SUPER_ICON = {'경제':'📊','부동산':'🏠','영어':'🇬🇧','상식':'🧠'};
 function getSuperCategory(cat){return SUPER_CATEGORY_MAP[cat]||'기타';}
 function onSuperFilterChange(){
@@ -6047,7 +6062,7 @@ async function generateTopics() {
 
     // 청크 개수 계산 (30개씩 나누기)
     const totalChunks = Math.ceil(days / CHUNK_SIZE);
-    const catLabel = (typeof CATEGORY_LABEL_MAP !== 'undefined' && CATEGORY_LABEL_MAP[cat]) || cat;
+    const catLabel = catLabelText(cat);  // [v204] 동적 라벨
 
     // ── 진행 모달 표시 ──
     // 청크 1개 (≤30일) → estimated 모드 (시간 기반 부드럽게 차오름)
@@ -6270,7 +6285,7 @@ async function generateTopics() {
   // API 호출이 있었던 경우 → 모달 finish (2초 후 자동 닫힘)
   // 더미 풀 사용한 경우 → 모달 없이 토스트만
   if (API_BASE && !userAborted) {
-    const catLabel = (typeof CATEGORY_LABEL_MAP !== 'undefined' && CATEGORY_LABEL_MAP[cat]) || cat;
+    const catLabel = catLabelText(cat);  // [v204] 동적 라벨
     finishProgressModal({
       title:    `✅ 주제 ${addedCount + replacedCount}개 생성 완료`,
       subtitle: `${catLabel} ${days}일치 — ${msg}`,
@@ -6472,7 +6487,7 @@ function renderTopicList() {
     return '<tr id="topicRow_' + tid + '">'
       + '<td><input type="checkbox" data-tid="' + tid + '" ' + checked + ' onchange="onTopicCheck(this)"></td>'
       + '<td style="font-family:var(--mono);font-size:11px">' + t.date + '</td>'
-      + '<td style="text-align:center"><span class="badge monthly">' + (CATEGORY_LABEL_MAP[t.cat] || t.cat) + '</span></td>'
+      + '<td style="text-align:center"><span class="badge monthly">' + catLabelText(t.cat) + '</span></td>'
       + '<td style="text-align:center">' + subtopicCell + '</td>'
       + '<td><strong id="topicText_' + tid + '">' + t.topic.replace(/</g,'&lt;') + '</strong></td>'
       + '<td style="color:var(--muted);font-size:11px" id="topicKw_' + tid + '">' + (t.kw||'').replace(/</g,'&lt;') + '</td>'
@@ -7479,7 +7494,7 @@ async function _executeGenerate(items) {
     if (!result || result.success === false) {
       if (!API_BASE) {
         // 백엔드 없을 때 더미 (개발 편의)
-        const dummyBody = '[' + (CATEGORY_LABEL_MAP[t.cat] || t.cat) + '] ' + t.topic + '\n\n'
+        const dummyBody = '[' + catLabelText(t.cat) + '] ' + t.topic + '\n\n'
                         + '(더미 데이터 — 백엔드 미연결)\n— 1DAYECO';
         saveToArchive(t.date, {
           category: t.cat, keyword: t.kw, headline: t.topic,
@@ -8746,7 +8761,7 @@ function _renderArchiveTable() {
           +   ' style="font-family:var(--mono);font-size:11px">' + r.date + aiBadge + hiddenBadge + '</td>'
           // 카테고리
           + '<td onclick="openContentPopupByDate(\'' + r.dateStr + '\', \'' + (r.cat || '') + '\', ' + sidArg + ')"'
-          +   ' style="text-align:center"><span class="badge monthly">' + (CATEGORY_LABEL_MAP[r.cat] || r.cat) + '</span></td>'
+          +   ' style="text-align:center"><span class="badge monthly">' + catLabelText(r.cat) + '</span></td>'
           // 부제목
           + '<td onclick="openContentPopupByDate(\'' + r.dateStr + '\', \'' + (r.cat || '') + '\', ' + sidArg + ')"'
           +   ' style="text-align:center">' + subtopicCell + '</td>'
@@ -8789,7 +8804,7 @@ async function regenerateArchiveItem(dateStr, cat, subtopicId) {
   }
 
   // 사용자 확인
-  const catLabel = CATEGORY_LABEL_MAP[cat] || cat;
+  const catLabel = catLabelText(cat);  // [v204] 동적 라벨
   const topic = item.topic || item.headline || '(주제 없음)';
   if (!confirm(`이 콘텐츠를 재생성하시겠습니까?\n\n날짜: ${dateStr}\n카테고리: ${catLabel}\n주제: ${topic}\n\n⚠️ 기존 본문/헤드라인이 새 AI 생성 결과로 덮어씌워집니다.`)) {
     return;
@@ -13051,7 +13066,7 @@ async function executeCalGenerate() {
 
   if (dupDates.length > 0) {
     const dupList = dupDates.slice(0, 5).join(', ') + (dupDates.length > 5 ? ' 외 ' + (dupDates.length-5) + '건' : '');
-    const catLabel = calCat ? ' (' + (CATEGORY_LABEL_MAP[calCat] || calCat) + ')' : '';
+    const catLabel = calCat ? ' (' + catLabelText(calCat) + ')' : '';  // [v204] 동적 라벨
     const confirmed = confirm(
       '⚠️ 아래 날짜는 이미 생성된 콘텐츠가 있습니다' + catLabel + '.\n\n' + dupList + '\n\n' +
       '계속하면 해당 날짜의 콘텐츠가 새로 생성된 내용으로 덮어씌워집니다.\n생성하시겠습니까?'
