@@ -985,7 +985,7 @@ body:not(.light-mode) .np-time { color:#9b9eaa; }
 <!-- SIDEBAR -->
 <aside class="sidebar">
   <div class="sb-logo">1DAYECO<small>Admin Dashboard</small>
-    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v202</span>
+    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v203</span>
   </div>
   <nav class="sb-nav">
     <div class="sb-group">운영</div>
@@ -3739,10 +3739,10 @@ function loadKPIs() {
   let thisMonthRev = 0;
   let thisMonthRefundFromPay = 0;
   if (payments.length > 0) {
-    // 결제액: paid + refunded 모두 포함 (결제는 됐으므로)
+    // [v203] 결제액: paid + completed(옛) + refunded 모두 포함 (결제는 됐으므로)
     thisMonthRev = payments
       .filter(p => {
-        if (!['paid', 'refunded', 'partial_refunded'].includes(p.status)) return false;
+        if (!['paid', 'completed', 'refunded', 'partial_refunded'].includes(p.status)) return false;
         const ts = p.paid_at || p.created_at || '';
         return ts >= monthStart && ts <= monthEnd;
       })
@@ -3764,7 +3764,7 @@ function loadKPIs() {
   const netRev = thisMonthRev - thisMonthRefundFromPay;
 
   setKPI('kpi-rev', '₩ ' + Math.floor(thisMonthRev).toLocaleString('ko-KR'), 'blue',
-    `결제 기준 · ${payments.filter(p => ['paid','refunded','partial_refunded'].includes(p.status) && (p.paid_at||p.created_at||'') >= monthStart).length}건`);
+    `결제 기준 · ${payments.filter(p => ['paid','completed','refunded','partial_refunded'].includes(p.status) && (p.paid_at||p.created_at||'') >= monthStart).length}건`);
 
   setKPI('kpi-net-rev', '₩ ' + Math.floor(netRev).toLocaleString('ko-KR'), 'green',
     `매출 - 환불`);
@@ -9267,7 +9267,8 @@ async function loadRevenue() {
     const ym = dt.slice(0, 7);
     const slot = months.find(m => m.ym === ym);
     if (slot) {
-      if (p.status === 'paid' || p.status === 'partial_refunded') {
+      // [v203] paid + completed(옛값) 둘 다 매출로 인정
+      if (p.status === 'paid' || p.status === 'completed' || p.status === 'partial_refunded') {
         slot.amount += (p.amount || 0);
         slot.count  += 1;
       }
@@ -9278,10 +9279,11 @@ async function loadRevenue() {
   });
 
   // KPI 계산
-  let totalRevenue = stats ? stats.total_revenue : payments.reduce((s, p) => s + ((p.status === 'paid' || p.status === 'partial_refunded') ? (p.amount || 0) : 0), 0);
+  // [v203] paid + completed(옛값) 둘 다 매출로 인정
+  let totalRevenue = stats ? stats.total_revenue : payments.reduce((s, p) => s + ((p.status === 'paid' || p.status === 'completed' || p.status === 'partial_refunded') ? (p.amount || 0) : 0), 0);
   let totalRefund  = stats ? stats.total_refund  : payments.reduce((s, p) => s + (p.refund_amount || 0), 0);
   let netRevenue   = stats ? stats.net_revenue   : (totalRevenue - totalRefund);
-  let paidCount    = stats ? stats.paid_count    : payments.filter(p => p.status === 'paid').length;
+  let paidCount    = stats ? stats.paid_count    : payments.filter(p => p.status === 'paid' || p.status === 'completed').length;
   let refundCount  = stats ? stats.refund_count  : payments.filter(p => p.status === 'refunded' || p.status === 'partial_refunded').length;
   const thisMonth  = months[months.length - 1]?.amount || 0;
 
@@ -9311,7 +9313,7 @@ async function loadRevenue() {
   payments.forEach(p => {
     const plan = p.subscriber_plan || 'unknown';
     if (!planMap[plan]) planMap[plan] = { count: 0, amount: 0, refund: 0 };
-    if (p.status === 'paid' || p.status === 'partial_refunded') {
+    if (p.status === 'paid' || p.status === 'completed' || p.status === 'partial_refunded') {
       planMap[plan].count  += 1;
       planMap[plan].amount += (p.amount || 0);
     }
