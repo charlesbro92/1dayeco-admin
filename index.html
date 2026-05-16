@@ -985,7 +985,7 @@ body:not(.light-mode) .np-time { color:#9b9eaa; }
 <!-- SIDEBAR -->
 <aside class="sidebar">
   <div class="sb-logo">1DAYECO<small>Admin Dashboard</small>
-    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v201</span>
+    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v202</span>
   </div>
   <nav class="sb-nav">
     <div class="sb-group">운영</div>
@@ -1777,7 +1777,7 @@ body:not(.light-mode) .np-time { color:#9b9eaa; }
       <div class="panel-body" style="padding:18px 20px">
         <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:18px">
           <div style="border:1px solid var(--b);border-radius:8px;padding:12px 14px">
-            <div style="font-size:10px;color:var(--muted);letter-spacing:.3px;margin-bottom:4px">월간 구독 MRR</div>
+            <div style="font-size:10px;color:var(--muted);letter-spacing:.3px;margin-bottom:4px">1개월 매출</div>
             <div id="statMRRMonthly" style="font-size:18px;font-weight:700;color:var(--text);font-family:var(--mono)">₩0</div>
             <div id="statMRRMonthlyCount" style="font-size:10px;color:var(--muted);margin-top:2px">0명 × ₩0</div>
           </div>
@@ -2281,7 +2281,7 @@ body:not(.light-mode) .np-time { color:#9b9eaa; }
                   <th style="padding:8px 6px;font-weight:500;width:40px"></th>
                   <th style="padding:8px 6px;font-weight:500">ID / 이름</th>
                   <th style="padding:8px 6px;font-weight:500;text-align:center;width:90px">대분류</th>
-                  <th style="padding:8px 6px;font-weight:500;text-align:right">월정액</th>
+                  <th style="padding:8px 6px;font-weight:500;text-align:right">1개월</th>
                   <th style="padding:8px 6px;font-weight:500;text-align:right">3개월<br><span style="font-size:9px;opacity:.6">정가/할인</span></th>
                   <th style="padding:8px 6px;font-weight:500;text-align:right">6개월<br><span style="font-size:9px;opacity:.6">정가/할인</span></th>
                   <th style="padding:8px 6px;font-weight:500;text-align:right">1년<br><span style="font-size:9px;opacity:.6">정가/할인</span></th>
@@ -2356,11 +2356,11 @@ body:not(.light-mode) .np-time { color:#9b9eaa; }
           <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:4px">설명 (구독자에게 보이는 카테고리 안내)</label>
           <textarea id="catInputDesc" rows="3" placeholder="예: 주식 시장 동향과 종목 분석을 매일 한 편씩." style="width:100%;background:var(--s3);border:1px solid var(--b);border-radius:6px;padding:9px 12px;font-size:13px;color:var(--text);font-family:var(--sans);outline:none;resize:vertical"></textarea>
         </div>
-        <!-- 가격: 월정액 -->
+        <!-- 가격: 1개월 -->
         <div style="border:1px solid var(--b);border-radius:8px;padding:12px;background:rgba(255,255,255,.01)">
-          <div style="font-size:11px;color:var(--gold);font-weight:700;margin-bottom:8px;letter-spacing:.3px">🔄 월정액 (자동 결제)</div>
+          <div style="font-size:11px;color:var(--gold);font-weight:700;margin-bottom:8px;letter-spacing:.3px">💳 1개월 일시불</div>
           <div>
-            <label style="font-size:10px;color:var(--muted);display:block;margin-bottom:3px">월정액 가격 (원/월)</label>
+            <label style="font-size:10px;color:var(--muted);display:block;margin-bottom:3px">1개월 가격 (원)</label>
             <input type="number" id="catInputMonthly" min="0" step="100" placeholder="9900" style="width:100%;background:var(--s3);border:1px solid var(--b);border-radius:6px;padding:9px 12px;font-size:13px;color:var(--text);font-family:var(--mono);outline:none;text-align:right">
           </div>
         </div>
@@ -2834,7 +2834,7 @@ body:not(.light-mode) .np-time { color:#9b9eaa; }
         <div><label style="font-size:10px;color:var(--muted);letter-spacing:.5px;display:block;margin-bottom:4px">구독 플랜 *</label>
           <select id="addSubPlan" onchange="updateAddSubDates()"
             style="width:100%;background:var(--s3);border:1.5px solid var(--b);border-radius:7px;padding:9px 10px;font-size:13px;color:var(--text);font-family:var(--sans);outline:none">
-            <option value="monthly">월정액 (30일)</option>
+            <option value="monthly">1개월 (30일)</option>
             <option value="pkg3m">3개월 일시불 (90일)</option>
             <option value="pkg6m" selected>6개월 일시불 (180일)</option>
             <option value="pkg1y">1년 일시불 (364일)</option>
@@ -2914,7 +2914,7 @@ body:not(.light-mode) .np-time { color:#9b9eaa; }
         <div>
           <label style="font-size:10px;color:var(--muted);letter-spacing:.5px;display:block;margin-bottom:4px">구독 플랜</label>
           <select id="sdInputPlan" style="width:100%;background:var(--s3);border:1.5px solid var(--b);border-radius:7px;padding:9px 12px;font-size:13px;color:var(--text);font-family:var(--sans);outline:none">
-            <option value="monthly">월정액</option>
+            <option value="monthly">1개월</option>
             <option value="pkg3m">3개월 일시불</option>
             <option value="pkg6m">6개월 일시불</option>
             <option value="pkg1y">1년 일시불</option>
@@ -3322,7 +3322,7 @@ function showDeployInfo() {
 // 공통 헬퍼 (plan 라벨, payment_status 라벨 등) ────────────
 // ════════════════════════════════════════════════════════════
 const PLAN_LABELS = {
-  monthly: '월정액',
+  monthly: '1개월',
   pkg3m:   '3개월',
   pkg6m:   '6개월',
   pkg1y:   '1년',
@@ -3346,13 +3346,14 @@ function fmtPhone(phone) {
 }
 
 const PAYMENT_STATUS_LABELS = {
-  // [v151] 옵션 B 새 정책
+  // [v202] paid / completed — 동일한 의미로 '결제완료' 통일 표시
   paid:                 { text: '결제완료', color: '#10b981', bg: 'rgba(16,185,129,.12)'  },
   refund_requested:     { text: '환불요청', color: '#f59e0b', bg: 'rgba(245,158,11,.12)'  },
   refunded:             { text: '환불완료', color: '#8b5cf6', bg: 'rgba(139,92,246,.12)'  },
   failed:               { text: '결제실패', color: '#ef4444', bg: 'rgba(239,68,68,.12)'   },
+  // [v202] completed도 동일하게 '결제완료' (옛/신 구분 제거)
+  completed:            { text: '결제완료', color: '#10b981', bg: 'rgba(16,185,129,.12)'  },
   // 옛 값 호환 (혹시 남은 데이터)
-  completed:            { text: '결제완료(옛)', color: '#10b981', bg: 'rgba(16,185,129,.12)'  },
   pending:              { text: '대기(옛)',     color: '#94a3b8', bg: 'rgba(148,163,184,.12)' },
   billing_registered:   { text: '카드등록(옛)', color: '#f59e0b', bg: 'rgba(245,158,11,.12)'  },
   cancelled:            { text: '취소(옛)',     color: '#f59e0b', bg: 'rgba(245,158,11,.12)'  },
@@ -11817,7 +11818,7 @@ async function saveCategoryEdit() {
     const payload = {
       name, emoji, description: desc,
       monthly_price:    monthly,
-      monthly_original: monthly,  // 월정액은 정가=가격 (할인 없음)
+      monthly_original: monthly,  // 1개월은 정가=가격 (할인 없음)
       pkg3m_original:   pkg3mOriginal,
       pkg3m_price:      pkg3mPrice,
       pkg6m_original:   pkg6mOriginal,
