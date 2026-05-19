@@ -639,7 +639,7 @@ body.light-mode .filter-pill.active { color:#fff; }
 #loginScreen {
   position:fixed; inset:0; z-index:9999;
   background:var(--bg);
-  display:none; flex-direction:column; align-items:center; justify-content:center;
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
   gap:0;
 }
 .login-logo-wrap {
@@ -681,7 +681,7 @@ body.light-mode .filter-pill.active { color:#fff; }
 }
 .login-btn:hover { background:#e8c97a; }
 .login-err { font-size:12px; color:var(--red); text-align:center; margin-top:8px; display:none; }
-.pw-field-wrap { display:none; }
+.pw-field-wrap { display:block; }  /* [v205] 항상 표시 */
 
 /* ── 커스텀 툴팁 ── */
 .tip-wrap {
@@ -946,7 +946,7 @@ body:not(.light-mode) .np-time { color:#9b9eaa; }
       <label>관리자 아이디</label>
       <input type="text" id="loginId" placeholder="아이디 입력" onkeydown="if(event.key==='Enter')doLogin()">
     </div>
-    <!-- 비밀번호: 로고 5번 클릭 후 활성화 -->
+    <!-- [v205] 비밀번호 필드 — 항상 표시 -->
     <div class="pw-field-wrap login-field" id="pwFieldWrap">
       <label>비밀번호</label>
       <input type="password" id="loginPw" placeholder="비밀번호 입력" onkeydown="if(event.key==='Enter')doLogin()">
@@ -985,7 +985,7 @@ body:not(.light-mode) .np-time { color:#9b9eaa; }
 <!-- SIDEBAR -->
 <aside class="sidebar">
   <div class="sb-logo">1DAYECO<small>Admin Dashboard</small>
-    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v204</span>
+    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v206</span>
   </div>
   <nav class="sb-nav">
     <div class="sb-group">운영</div>
@@ -1005,6 +1005,10 @@ body:not(.light-mode) .np-time { color:#9b9eaa; }
   </nav>
   <div class="sb-bottom">
     <div class="sb-status"><span class="status-dot"></span>서버 정상 운영중</div>
+    <!-- [v206] 로그아웃 버튼 -->
+    <button onclick="doLogout()" style="margin-top:12px;width:100%;padding:8px 12px;background:transparent;border:1px solid var(--b);border-radius:6px;color:var(--muted);font-size:11px;cursor:pointer;transition:all .2s" onmouseover="this.style.borderColor='var(--red)';this.style.color='var(--red)'" onmouseout="this.style.borderColor='var(--b)';this.style.color='var(--muted)'">
+      🔒 로그아웃
+    </button>
   </div>
 </aside>
 
@@ -13199,11 +13203,96 @@ function showToast(msg, type='ok') {
   setTimeout(()=>t.classList.remove('show'), 3500);
 }
 
-// ── 로그인 로직 ──────────────────────────────────────────────
-const ADMIN_ID = 'admin';
-const ADMIN_PW = 'admin';
+// ── [v206] 로그인 로직 — 백엔드 토큰 인증 ──────────────────────
+// 클라이언트에 ID/PW 하드코딩 제거. 백엔드 /admin/login에 검증 위임.
+// 토큰은 sessionStorage('adminToken')에 저장 → fetch 인터셉터에서 자동 헤더 첨부.
+
 let logoClickCount = 0;
-let pwUnlocked = false;
+let pwUnlocked = true;  // [v205] 로고 클릭 없이 바로 ID/PW 로그인 가능
+
+// [v206] 토큰 헬퍼
+function getAdminToken() {
+  try { return sessionStorage.getItem('adminToken') || ''; } catch(e) { return ''; }
+}
+function setAdminToken(token) {
+  try { sessionStorage.setItem('adminToken', token); } catch(e) {}
+}
+function clearAdminToken() {
+  try { sessionStorage.removeItem('adminToken'); } catch(e) {}
+}
+
+// [v206] 401 응답 시 자동 로그아웃 → 로그인 화면 표시
+function forceLogout(reason) {
+  clearAdminToken();
+  const ls = document.getElementById('loginScreen');
+  if (ls) ls.style.display = 'flex';
+  const errEl = document.getElementById('loginErr');
+  if (errEl) {
+    errEl.style.display = 'block';
+    errEl.style.color = 'var(--amber)';
+    errEl.textContent = reason || '세션이 만료되었습니다. 다시 로그인해주세요.';
+  }
+  document.getElementById('loginId')?.focus();
+}
+
+// [v206] 사용자가 명시적으로 로그아웃 클릭
+function doLogout() {
+  if (!confirm('로그아웃하시겠습니까?')) return;
+  clearAdminToken();
+  const ls = document.getElementById('loginScreen');
+  if (ls) ls.style.display = 'flex';
+  // 입력 필드 초기화
+  const idEl = document.getElementById('loginId');
+  const pwEl = document.getElementById('loginPw');
+  if (idEl) idEl.value = '';
+  if (pwEl) pwEl.value = '';
+  const errEl = document.getElementById('loginErr');
+  if (errEl) errEl.style.display = 'none';
+  idEl?.focus();
+}
+
+// [v206] 전역 fetch 인터셉터 — /admin/* 호출 시 X-Admin-Token 헤더 자동 첨부
+//        그리고 401 응답 시 자동 로그아웃
+(function installFetchInterceptor() {
+  const origFetch = window.fetch.bind(window);
+  window.fetch = async function(input, init) {
+    init = init || {};
+    // URL 추출
+    let url = '';
+    try {
+      url = (typeof input === 'string') ? input : (input?.url || '');
+    } catch(e) {}
+    
+    // 어드민 API 호출인지 판정 (/admin/ 포함 또는 /api/admin/complete-refund)
+    const isAdminCall = url && (
+      url.includes('/admin/') && !url.includes('/admin/login') ||
+      url.includes('/api/admin/complete-refund')
+    );
+    
+    if (isAdminCall) {
+      const token = getAdminToken();
+      if (token) {
+        init.headers = init.headers || {};
+        // headers가 Headers 객체일 수도, plain object일 수도
+        if (init.headers instanceof Headers) {
+          init.headers.set('X-Admin-Token', token);
+        } else {
+          init.headers['X-Admin-Token'] = token;
+        }
+      }
+    }
+    
+    const response = await origFetch(input, init);
+    
+    // 401 자동 처리 (로그인 엔드포인트 자체는 401이 정상 흐름이므로 제외)
+    if (response.status === 401 && isAdminCall) {
+      console.warn('[fetch] 401 — 자동 로그아웃');
+      forceLogout('인증이 만료되었습니다. 다시 로그인해주세요.');
+    }
+    
+    return response;
+  };
+})();
 
 function handleLogoClick() {
   logoClickCount++;
@@ -13224,31 +13313,93 @@ function handleLogoClick() {
   }
 }
 
-function doLogin() {
+// [v206] doLogin — 백엔드 /admin/login 호출로 변경
+async function doLogin() {
   const id = document.getElementById('loginId')?.value.trim();
-  const pw = pwUnlocked ? document.getElementById('loginPw')?.value.trim() : ADMIN_PW;
+  const pw = pwUnlocked ? document.getElementById('loginPw')?.value.trim() : '';
   const errEl = document.getElementById('loginErr');
 
   // 비밀번호 활성화 전: 아무 반응 없이 무시
   if (!pwUnlocked) { return; }
-
-  if (id === ADMIN_ID && pw === ADMIN_PW) {
-    document.getElementById('loginScreen').style.display = 'none';
-    loadPage('overview');
-  } else {
-    if (errEl) { errEl.style.display='block'; errEl.style.color='var(--red)'; errEl.textContent='아이디 또는 비밀번호가 올바르지 않습니다'; }
-    document.getElementById('loginId').classList.add('err');
-    setTimeout(() => document.getElementById('loginId').classList.remove('err'), 1500);
+  
+  // 입력값 검증
+  if (!id || !pw) {
+    if (errEl) {
+      errEl.style.display = 'block';
+      errEl.style.color = 'var(--red)';
+      errEl.textContent = '아이디와 비밀번호를 입력해주세요';
+    }
+    return;
+  }
+  
+  // 백엔드 인증 호출 — fetch 직접 사용 (인터셉터는 토큰 헤더만 추가하므로 무영향)
+  const btn = document.querySelector('.login-btn');
+  if (btn) { btn.disabled = true; btn.textContent = '로그인 중...'; }
+  
+  try {
+    const res = await fetch(API_BASE + '/admin/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: id, pw: pw }),
+    });
+    
+    const data = await res.json().catch(() => ({}));
+    
+    if (res.ok && data.success && data.token) {
+      // 로그인 성공
+      setAdminToken(data.token);
+      document.getElementById('loginScreen').style.display = 'none';
+      if (errEl) errEl.style.display = 'none';
+      loadPage('overview');
+    } else if (res.status === 503 && data.error === 'admin_not_configured') {
+      // 백엔드 환경변수 미설정 — 친절한 안내
+      if (errEl) {
+        errEl.style.display = 'block';
+        errEl.style.color = 'var(--amber)';
+        errEl.textContent = '서버 인증이 설정되지 않았습니다. 관리자에게 문의하세요.';
+      }
+    } else {
+      // 인증 실패
+      if (errEl) {
+        errEl.style.display = 'block';
+        errEl.style.color = 'var(--red)';
+        errEl.textContent = data.message || '아이디 또는 비밀번호가 올바르지 않습니다';
+      }
+      document.getElementById('loginId').classList.add('err');
+      setTimeout(() => document.getElementById('loginId').classList.remove('err'), 1500);
+    }
+  } catch (e) {
+    console.error('[doLogin] 네트워크 오류:', e);
+    if (errEl) {
+      errEl.style.display = 'block';
+      errEl.style.color = 'var(--red)';
+      errEl.textContent = '서버 연결에 실패했습니다. 잠시 후 다시 시도해주세요';
+    }
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '로그인'; }
   }
 }
 
 // ── 초기 로드 ─────────────────────────────────────────────────
-// [테스트 모드] 로그인 화면 자동 숨김
-document.getElementById('loginScreen').style.display = 'none';
-loadPage('overview');
+// [v206] 페이지 진입 시 토큰 있으면 자동 로그인 통과
+window.addEventListener('DOMContentLoaded', () => {
+  const token = getAdminToken();
+  if (token) {
+    // 토큰 있으면 로그인 화면 숨기고 바로 overview 로드
+    // (토큰 유효성은 첫 API 호출에서 401 받으면 자동 로그아웃됨)
+    const ls = document.getElementById('loginScreen');
+    if (ls) ls.style.display = 'none';
+    loadPage('overview');
+  } else {
+    document.getElementById('loginId')?.focus();
+  }
+});
 
 // 30초마다 자동 갱신 (개요: KPI + 발송현황 동시)
 setInterval(async () => {
+  // [v205] 로그인 전(loginScreen 표시중)에는 자동 갱신 건너뛰기
+  const loginScreen = document.getElementById('loginScreen');
+  if (loginScreen && loginScreen.style.display !== 'none') return;
   if (currentPage === 'overview') {
     await loadSendStatus();  // updateFailBadge 내부 호출 포함
     await loadKPIs();
