@@ -985,7 +985,7 @@ body:not(.light-mode) .np-time { color:#9b9eaa; }
 <!-- SIDEBAR -->
 <aside class="sidebar">
   <div class="sb-logo">1DAYECO<small>Admin Dashboard</small>
-    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v206</span>
+    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v207</span>
   </div>
   <nav class="sb-nav">
     <div class="sb-group">운영</div>
@@ -10283,6 +10283,32 @@ https://onedayeco.com`
 
 문의: 카카오톡 @1DAYECO`
   },
+  // [v207] 운영 보고 그룹
+  {
+    id: 'daily_report',
+    group: 'admin',
+    icon: '📊',
+    name: '일일 운영 보고',
+    toggleKey: 'notify_daily_report_enabled',
+    tplKey:    'kakao_tpl_daily_report',
+    envKey:    'KAKAO_TPL_DAILY_REPORT',
+    when: '매일 09:00 KST — 관리자에게 어제 운영 데이터 보고',
+    vars: ['report_date', 'sent_success', 'sent_failed', 'new_paid', 'new_free', 'paid_amount', 'refund_requested', 'refund_completed', 'active_count', 'expiring_d1'],
+    preview: `#{report_date} 운영 보고 09:00 KST
+
+▶ 어제 발송 결과
+   성공: #{sent_success}건 / 실패: #{sent_failed}건
+
+▶ 신규 가입 (어제)
+   유료: #{new_paid}건 / 무료: #{new_free}건
+   결제 합계: #{paid_amount}원
+
+▶ 환불 (어제)
+   요청: #{refund_requested}건 / 완료: #{refund_completed}건
+
+▶ 활성 구독자 수: #{active_count}명
+▶ 만료 예정 (D-1): #{expiring_d1}명`
+  },
   // ─ 콘텐츠 그룹 6개 ─
   {
     id: 'content_work', group: 'content', icon: '💼', name: '일·업무 콘텐츠',
@@ -10430,6 +10456,7 @@ function renderNotifyTemplateList() {
 
   const groups = {
     lifecycle: { label: '📋 라이프사이클', items: [] },
+    admin:     { label: '🛡️ 관리자 운영', items: [] },
     content:   { label: '📚 일일 콘텐츠 (6개 그룹)', items: [] },
   };
   NOTIFY_TEMPLATES.forEach(t => groups[t.group].items.push(t));
