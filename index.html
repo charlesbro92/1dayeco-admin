@@ -985,7 +985,7 @@ body:not(.light-mode) .np-time { color:#9b9eaa; }
 <!-- SIDEBAR -->
 <aside class="sidebar">
   <div class="sb-logo">1DAYECO<small>Admin Dashboard</small>
-    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v207</span>
+    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v208</span>
   </div>
   <nav class="sb-nav">
     <div class="sb-group">운영</div>
@@ -10308,6 +10308,26 @@ https://onedayeco.com`
 
 ▶ 활성 구독자 수: #{active_count}명
 ▶ 만료 예정 (D-1): #{expiring_d1}명`
+  },
+  // [v208] 콘텐츠 점검 — 내일 발송 콘텐츠 존재 검사
+  {
+    id: 'content_check',
+    group: 'admin',
+    icon: '🔍',
+    name: '콘텐츠 점검',
+    toggleKey: 'notify_content_check_enabled',
+    tplKey:    'kakao_tpl_content_check',
+    envKey:    'KAKAO_TPL_CONTENT_CHECK',
+    when: '매일 22:00 KST (DB-driven, 어드민 스케줄러에서 조정) — 내일 발송 콘텐츠 존재 검사 → 관리자 카톡',
+    vars: ['report_date', 'target_date', 'ok_count', 'total_count', 'missing_count', 'missing_list'],
+    preview: `#{report_date} 콘텐츠 점검
+
+▶ 검사 대상: 내일 #{target_date} 발송 콘텐츠
+▶ 검사 결과(누락/정상/총): #{missing_count}건/#{ok_count}건/#{total_count}건
+
+누락 컨텐츠
+
+#{missing_list}`
   },
   // ─ 콘텐츠 그룹 6개 ─
   {
