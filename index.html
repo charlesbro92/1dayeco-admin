@@ -985,7 +985,7 @@ body:not(.light-mode) .np-time { color:#9b9eaa; }
 <!-- SIDEBAR -->
 <aside class="sidebar">
   <div class="sb-logo">1DAYECO<small>Admin Dashboard</small>
-    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v212</span>
+    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v213</span>
   </div>
   <nav class="sb-nav">
     <div class="sb-group">운영</div>
@@ -1714,7 +1714,7 @@ body:not(.light-mode) .np-time { color:#9b9eaa; }
           </style>
         </div>
         <div class="panel-body split-body" style="flex:1 1 auto;min-height:0;overflow-y:auto">
-          <table>
+          <table id="archiveDateTable">
             <thead>
               <tr>
                 <th style="background:var(--s1);position:sticky;top:0;z-index:2;text-align:center;width:32px">
@@ -1732,6 +1732,26 @@ body:not(.light-mode) .np-time { color:#9b9eaa; }
             </thead>
             <tbody id="contentBody"><tr><td colspan="9"><div class="empty"><span class="empty-ico">📝</span>생성된 콘텐츠가 없습니다</div></td></tr></tbody>
           </table>
+          <!-- [v213] 순번(sequence) 부주제 전용 리스트 뷰 -->
+          <div id="archiveSeqView" style="display:none">
+            <div style="display:flex;align-items:center;gap:8px;padding:10px 14px;background:rgba(201,168,76,.06);border:1px solid rgba(201,168,76,.25);border-radius:8px;margin-bottom:10px">
+              <span style="font-size:15px">🔢</span>
+              <span style="font-size:12px;color:var(--gold);font-weight:700">순번 발송 콘텐츠</span>
+              <span id="archiveSeqInfo" style="font-size:11px;color:var(--muted)">가입 다음날부터 1편씩 순서대로 발송됩니다</span>
+            </div>
+            <table>
+              <thead>
+                <tr>
+                  <th style="background:var(--s1);position:sticky;top:0;z-index:2;text-align:center;width:60px">순번</th>
+                  <th style="background:var(--s1);position:sticky;top:0;z-index:2">주제</th>
+                  <th style="background:var(--s1);position:sticky;top:0;z-index:2">키워드</th>
+                  <th style="background:var(--s1);position:sticky;top:0;z-index:2">미리보기</th>
+                  <th style="background:var(--s1);position:sticky;top:0;z-index:2;text-align:center;width:80px">액션</th>
+                </tr>
+              </thead>
+              <tbody id="archiveSeqBody"></tbody>
+            </table>
+          </div>
           <!-- hidden input for backward compatibility (모든 카테고리 ID 받을 수 있음) -->
           <input type="hidden" id="contentCatFilter" value="">
         </div>
@@ -2639,8 +2659,9 @@ body:not(.light-mode) .np-time { color:#9b9eaa; }
         <!-- 1행: 날짜 + 카테고리 -->
         <div style="display:flex;gap:10px;margin-bottom:10px">
           <div style="flex:1">
-            <label class="cp-label">날짜 <span class="cp-req">*</span></label>
+            <label class="cp-label" id="cpEditDateLabel">날짜 <span class="cp-req">*</span></label>
             <input type="date" id="cpEditDate" class="cp-input" style="color-scheme:dark">
+            <input type="text" id="cpEditSeqDisplay" class="cp-input" readonly style="display:none;opacity:.7;color:var(--gold)">
           </div>
           <div style="flex:1">
             <label class="cp-label">카테고리 <span class="cp-req">*</span></label>
@@ -6648,6 +6669,8 @@ function selectCatFilter(btnEl) {
 
   // 카테고리 변경 → 부제목 필터 리셋
   _archiveSubtopicFilter = '';
+  // [v213] 순번 뷰였다면 날짜 뷰로 복귀
+  if (typeof _showArchiveDateView === 'function') _showArchiveDateView();
   // 부제목 pill 영역 갱신
   _renderArchiveSubtopicPills(cat);
 
@@ -6657,14 +6680,116 @@ function selectCatFilter(btnEl) {
 
 function selectSubtopicFilter(btnEl) {
   const sid = btnEl.dataset.subtopic || '';
+  const mode = btnEl.dataset.mode || 'date';
   document.querySelectorAll('#subtopicPillFilter .cat-pill').forEach(function(b) {
     b.classList.remove('active');
   });
   btnEl.classList.add('active');
   _archiveSubtopicFilter = sid;
-  // 아카이브만 다시 그리기 (백엔드 재호출 불필요 — 클라이언트 필터)
-  if (typeof _renderArchiveTable === 'function') {
-    _renderArchiveTable();
+  // [v213] 순번 부주제 선택 시 별도 리스트 뷰, 아니면 기존 날짜 테이블
+  if (sid && mode === 'sequence') {
+    _renderArchiveSequenceView(Number(sid), (btnEl.textContent || '').replace(' 🔢','').trim());
+  } else {
+    _showArchiveDateView();
+    if (typeof _renderArchiveTable === 'function') {
+      _renderArchiveTable();
+    }
+  }
+}
+
+// [v213] 날짜 테이블 뷰 / 순번 리스트 뷰 전환
+function _showArchiveDateView() {
+  const dateTable = document.getElementById('archiveDateTable');
+  const seqView   = document.getElementById('archiveSeqView');
+  if (dateTable) dateTable.style.display = '';
+  if (seqView)   seqView.style.display = 'none';
+}
+function _showArchiveSeqView() {
+  const dateTable = document.getElementById('archiveDateTable');
+  const seqView   = document.getElementById('archiveSeqView');
+  if (dateTable) dateTable.style.display = 'none';
+  if (seqView)   seqView.style.display = 'block';
+}
+
+// [v213] 순번 부주제 콘텐츠 리스트 렌더 (백엔드 /admin/contents/sequence)
+async function _renderArchiveSequenceView(subtopicId, subName) {
+  _showArchiveSeqView();
+  const body = document.getElementById('archiveSeqBody');
+  const info = document.getElementById('archiveSeqInfo');
+  if (info) info.textContent = (subName || '') + ' · 가입 다음날부터 1편씩 순서대로 발송';
+  if (body) body.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:20px">불러오는 중…</td></tr>';
+  const cntEl = document.getElementById('archiveResultCount');
+  try {
+    const showHidden = (typeof _archiveShowHidden !== 'undefined' && _archiveShowHidden) ? '&include_hidden=1' : '';
+    const res = await apiFetch('/admin/contents/sequence?subtopic_id=' + subtopicId + showHidden);
+    const rows = (res && res.data) || [];
+    if (cntEl) cntEl.textContent = '— 순번 ' + rows.length + '건';
+    if (rows.length === 0) {
+      if (body) body.innerHTML = '<tr><td colspan="5"><div class="empty"><span class="empty-ico">🔢</span>생성된 순번 콘텐츠가 없습니다</div></td></tr>';
+      return;
+    }
+    body.innerHTML = rows.map(function(r) {
+      const seq = r.seq;
+      const headline = (r.headline || '').replace(/</g,'&lt;');
+      const kw = (r.keyword || '').replace(/</g,'&lt;');
+      const bodyPrev = (r.body || '').slice(0, 40).replace(/</g,'&lt;').replace(/\n/g,' ');
+      const hiddenBadge = r.hidden
+        ? ' <span style="background:rgba(248,113,113,.12);border:1px solid rgba(248,113,113,.3);color:#f87171;font-size:9px;padding:1px 4px;border-radius:3px">숨김</span>'
+        : '';
+      return '<tr class="arch-row' + (r.hidden ? ' is-hidden' : '') + '" style="cursor:pointer"'
+        + ' ondblclick="openSeqContentEditor(' + subtopicId + ',' + seq + ')"'
+        + ' title="더블클릭: 편집"'
+        + ' onmouseover="this.style.background=\'rgba(201,168,76,.04)\'" onmouseout="this.style.background=\'\'">'
+        + '<td style="text-align:center;font-family:var(--mono);color:var(--gold);font-weight:700">#' + seq + '</td>'
+        + '<td><strong>' + (headline || '<span style="color:var(--muted)">(제목 없음)</span>') + '</strong>' + hiddenBadge + '</td>'
+        + '<td style="color:var(--muted);font-size:11px">' + kw + '</td>'
+        + '<td style="color:var(--muted);font-size:11px">' + bodyPrev + (r.body && r.body.length > 40 ? '…' : '') + '</td>'
+        + '<td style="text-align:center;white-space:nowrap">'
+        +   '<button class="arch-act-btn" onclick="event.stopPropagation();openSeqContentEditor(' + subtopicId + ',' + seq + ')" title="편집">✏</button>'
+        + '</td>'
+        + '</tr>';
+    }).join('');
+  } catch (e) {
+    console.warn('[archive-seq] 조회 실패:', e);
+    if (body) body.innerHTML = '<tr><td colspan="5" style="text-align:center;color:#f87171;padding:20px">조회 실패</td></tr>';
+  }
+}
+
+// [v213] 순번 콘텐츠 편집 — 기존 콘텐츠 팝업 재사용 (seq 기반)
+async function openSeqContentEditor(subtopicId, seq) {
+  try {
+    const res = await apiFetch('/admin/contents/sequence?subtopic_id=' + subtopicId + '&include_hidden=1');
+    const rows = (res && res.data) || [];
+    const row = rows.find(r => Number(r.seq) === Number(seq));
+    if (!row) { showToast('콘텐츠를 찾을 수 없습니다', 'ng'); return; }
+    // 팝업용 객체 구성 (순번 메타 포함)
+    const obj = {
+      cat:          row.category,
+      subtopic_id:  row.subtopic_id,
+      subtopic_name: row.subtopic_name || '',
+      kw:           row.keyword || '',
+      topic:        row.headline || '',
+      headline:     row.headline || '',
+      body:         row.body || '',
+      tags:         row.tags || [],
+      tok:          row.token_used || 0,
+      source:       'generated',
+      hidden:       !!row.hidden,
+      is_seq:       true,
+      seq:          Number(row.seq),
+      dateStr:      '',   // 순번은 날짜 없음
+    };
+    MOCK_CONTENT.unshift(obj);
+    openContentPopup(0);
+    // 편집 모드로 전환
+    setTimeout(function() {
+      if (typeof toggleCpEdit === 'function' && typeof cpEditMode !== 'undefined' && !cpEditMode) {
+        toggleCpEdit();
+      }
+    }, 100);
+  } catch (e) {
+    console.warn('[seq-edit] 실패:', e);
+    showToast('편집 열기 실패', 'ng');
   }
 }
 
@@ -6688,10 +6813,12 @@ async function _renderArchiveSubtopicPills(catId) {
     let html = '<button class="cat-pill active" data-subtopic="" onclick="selectSubtopicFilter(this)">전체</button>';
     sortedList.forEach(s => {
       const isInactive = s.active === false;
+      const mode = (s.delivery_mode === 'sequence') ? 'sequence' : 'date';
+      const modeTag = mode === 'sequence' ? ' 🔢' : '';
       const styleStr = isInactive ? 'opacity:.45;text-decoration:line-through;cursor:not-allowed' : '';
-      const titleStr = isInactive ? '비활성 부제목 (신규 가입 차단)' : '';
+      const titleStr = isInactive ? '비활성 부제목 (신규 가입 차단)' : (mode === 'sequence' ? '순번 발송 부제목' : '');
       const onclickStr = isInactive ? '' : 'onclick="selectSubtopicFilter(this)"';
-      html += `<button class="cat-pill${isInactive ? ' disabled' : ''}" data-subtopic="${s.id}" style="${styleStr}" title="${titleStr}" ${onclickStr}${isInactive ? ' disabled' : ''}>${(s.name||'').replace(/"/g,'&quot;')}${isInactive ? ' (OFF)' : ''}</button>`;
+      html += `<button class="cat-pill${isInactive ? ' disabled' : ''}" data-subtopic="${s.id}" data-mode="${mode}" style="${styleStr}" title="${titleStr}" ${onclickStr}${isInactive ? ' disabled' : ''}>${(s.name||'').replace(/"/g,'&quot;')}${modeTag}${isInactive ? ' (OFF)' : ''}</button>`;
     });
     pills.innerHTML = html;
   }
@@ -8990,7 +9117,7 @@ function openContentPopup(idx) {
   if (!c) return;
   const d = new Date(); d.setDate(d.getDate()-idx);
 
-  document.getElementById('cpDate').textContent         = d.toLocaleDateString('ko-KR') + ' · ' + c.cat;
+  document.getElementById('cpDate').textContent         = (c.is_seq ? ('순번 #' + c.seq) : (d.toLocaleDateString('ko-KR'))) + ' · ' + c.cat;
   document.getElementById('cpKeyword').textContent      = c.kw;
   document.getElementById('cpHeadlineView').textContent = c.headline;
   document.getElementById('cpHeadline').value           = c.headline;
@@ -9004,6 +9131,10 @@ function openContentPopup(idx) {
   // 카카오톡 미리보기: 날짜 라벨 + 발송 시간
   const kakaoDateLabel = document.getElementById('cpKakaoDateLabel');
   if (kakaoDateLabel) {
+    if (c.is_seq) {
+      // [v213] 순번 콘텐츠는 날짜 개념이 없으므로 순번 표기
+      kakaoDateLabel.textContent = '순번 #' + c.seq;
+    } else {
     const today  = new Date();
     today.setHours(0, 0, 0, 0);
     const target = new Date(c.dateStr + 'T00:00:00+09:00');
@@ -9018,6 +9149,7 @@ function openContentPopup(idx) {
       label = (target.getMonth()+1) + '월 ' + target.getDate() + '일 ' + ko[target.getDay()] + '요일';
     }
     kakaoDateLabel.textContent = label;
+    }
   }
   // 발송 시간 (기본 8시)
   const kakaoTime = document.getElementById('cpKakaoTime');
@@ -9122,6 +9254,21 @@ function syncCpEditMetaFields() {
   }
   if (labelEl) labelEl.textContent = isNew ? '🆕 신규 추가' : '✏️ 편집 모드';
 
+  // [v213] 순번 콘텐츠: 날짜 칸 숨기고 순번 표시, 카테고리 잠금
+  const seqDisplay = document.getElementById('cpEditSeqDisplay');
+  const dateLabel  = document.getElementById('cpEditDateLabel');
+  if (c.is_seq) {
+    if (dateEl)     dateEl.style.display = 'none';
+    if (seqDisplay) { seqDisplay.style.display = ''; seqDisplay.value = '순번 #' + c.seq; }
+    if (dateLabel)  dateLabel.innerHTML = '순번';
+    if (catEl)      { catEl.setAttribute('disabled', 'disabled'); catEl.style.opacity = '.6'; }
+    return;  // 순번은 날짜/카테고리 잠금이므로 아래 일반 잠금 로직 불필요
+  } else {
+    if (dateEl)     dateEl.style.display = '';
+    if (seqDisplay) seqDisplay.style.display = 'none';
+    if (dateLabel)  dateLabel.innerHTML = '날짜 <span class="cp-req">*</span>';
+  }
+
   // 편집 모드(기존 행)는 날짜/카테고리 잠금 (PK 변경 방지)
   if (dateEl) {
     if (isNew) { dateEl.removeAttribute('readonly'); dateEl.style.opacity = ''; }
@@ -9184,6 +9331,7 @@ async function saveContentEdit() {
   const tagsEl      = document.getElementById('cpEditTags');
 
   // 신규는 메타 필드에서 값 사용, 편집은 기존 c.* 사용 + 메타 필드(주제/키워드/태그) 갱신
+  const isSeq    = !!c.is_seq;   // [v213] 순번 콘텐츠 편집 여부
   const date_str = isNew ? (dateEl?.value || '') : (c.dateStr || '');
   const category = isNew ? (catEl?.value || '') : (c.cat || '');
   const topic    = (topicEl?.value || c.topic || '').trim();
@@ -9191,7 +9339,8 @@ async function saveContentEdit() {
   const tagsRaw  = (tagsEl?.value || (Array.isArray(c.tags) ? c.tags.join(' ') : '')).trim();
 
   // 검증
-  if (!date_str) { showToast('날짜를 선택해 주세요', 'ng'); return; }
+  // [v213] 순번 콘텐츠는 날짜 대신 seq를 키로 쓰므로 날짜 검증 면제
+  if (!isSeq && !date_str) { showToast('날짜를 선택해 주세요', 'ng'); return; }
   if (!category || !getAllCatIds().includes(category)) {
     showToast('카테고리를 선택해 주세요', 'ng'); return;
   }
@@ -9210,8 +9359,8 @@ async function saveContentEdit() {
   if (txt) txt.textContent = '저장 중...';
 
   try {
-    const res = await apiPost('/admin/contents/upsert', {
-      date_str: date_str,
+    // [v213] 순번 콘텐츠는 seq + subtopic_id 로 저장, 일자 콘텐츠는 date_str
+    const upsertPayload = {
       category: category,
       headline: newHeadline,
       topic:    topic,
@@ -9219,7 +9368,15 @@ async function saveContentEdit() {
       tags:     tags,
       body:     newBody,
       mode:     isNew ? 'create' : 'edit',
-    });
+    };
+    if (isSeq) {
+      upsertPayload.seq = c.seq;
+      upsertPayload.subtopic_id = c.subtopic_id;
+    } else {
+      upsertPayload.date_str = date_str;
+      if (c.subtopic_id) upsertPayload.subtopic_id = c.subtopic_id;
+    }
+    const res = await apiPost('/admin/contents/upsert', upsertPayload);
     if (res && res.success) {
       const action = res.action === 'updated' ? '수정' : '저장';
       showToast(`콘텐츠 ${action} 완료`, 'ok');
@@ -9245,22 +9402,32 @@ async function saveContentEdit() {
       const kwEl = document.getElementById('cpKeyword');
       if (kwEl) kwEl.textContent = keyword;
 
-      // 로컬 캐시 갱신
-      const k = archKey(date_str, category);
-      CONTENT_ARCHIVE[k] = {
-        cat:         category,
-        kw:          keyword,
-        topic:       topic || newHeadline,
-        headline:    newHeadline || topic,
-        body:        newBody,
-        tags:        tags,
-        tok:         c.tok || 0,
-        source:      'manual',
-        generatedAt: new Date().toISOString(),
-        hidden:      false,
-      };
-      saveArchiveToStorage();
-      loadContentArchive();
+      // [v213] 순번 콘텐츠는 날짜 캐시/달력에 안 들어가므로 캐시 갱신 건너뜀.
+      //         순번 리스트 뷰만 다시 그린다.
+      if (isSeq) {
+        if (typeof _renderArchiveSequenceView === 'function' && c.subtopic_id) {
+          _renderArchiveSequenceView(Number(c.subtopic_id), c.subtopic_name || '');
+        }
+      } else {
+        // 로컬 캐시 갱신 (일자 콘텐츠)
+        const k = archKey(date_str, category, c.subtopic_id);
+        CONTENT_ARCHIVE[k] = {
+          cat:         category,
+          subtopic_id: c.subtopic_id || null,
+          subtopic_name: c.subtopic_name || '',
+          kw:          keyword,
+          topic:       topic || newHeadline,
+          headline:    newHeadline || topic,
+          body:        newBody,
+          tags:        tags,
+          tok:         c.tok || 0,
+          source:      'manual',
+          generatedAt: new Date().toISOString(),
+          hidden:      false,
+        };
+        saveArchiveToStorage();
+        loadContentArchive();
+      }
 
       // 저장 버튼 비활성화 (저장됨 표시)
       if (btn) {
