@@ -985,7 +985,7 @@ body:not(.light-mode) .np-time { color:#9b9eaa; }
 <!-- SIDEBAR -->
 <aside class="sidebar">
   <div class="sb-logo">1DAYECO<small>Admin Dashboard</small>
-    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v211</span>
+    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v212</span>
   </div>
   <nav class="sb-nav">
     <div class="sb-group">운영</div>
@@ -6930,8 +6930,9 @@ function _getFilteredTopics() {
   const toEl   = document.getElementById('topicListDateTo');
   const fromVal = fromEl ? fromEl.value : '';
   const toVal   = toEl   ? toEl.value   : '';
-  if (fromVal) filtered = filtered.filter(t => (t.dateStr || t.date) >= fromVal);
-  if (toVal)   filtered = filtered.filter(t => (t.dateStr || t.date) <= toVal);
+  // [v212] 순번 주제(is_seq)는 날짜 범위 필터에서 면제 — renderTopicList와 동일하게 맞춤
+  if (fromVal) filtered = filtered.filter(t => t.is_seq || (t.dateStr || t.date) >= fromVal);
+  if (toVal)   filtered = filtered.filter(t => t.is_seq || (t.dateStr || t.date) <= toVal);
   // v130: 생성된 주제 숨김
   if (_hideGeneratedTopics) {
     filtered = filtered.filter(t => t.status !== 'generated');
