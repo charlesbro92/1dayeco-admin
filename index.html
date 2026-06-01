@@ -985,7 +985,7 @@ body:not(.light-mode) .np-time { color:#9b9eaa; }
 <!-- SIDEBAR -->
 <aside class="sidebar">
   <div class="sb-logo">1DAYECO<small>Admin Dashboard</small>
-    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v210</span>
+    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v211</span>
   </div>
   <nav class="sb-nav">
     <div class="sb-group">운영</div>
@@ -1500,12 +1500,13 @@ body:not(.light-mode) .np-time { color:#9b9eaa; }
             </select>
           </div>
           <div style="flex:.8;min-width:100px">
-            <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:6px;letter-spacing:.5px">기간 (일) <span style="color:var(--gold);font-size:10px">권장 30</span></label>
+            <label id="topicGenDaysLabel" style="font-size:11px;color:var(--muted);display:block;margin-bottom:6px;letter-spacing:.5px">기간 (일) <span style="color:var(--gold);font-size:10px">권장 30</span></label>
             <input type="number" id="topicGenDays" min="1" max="365" value="30"
               oninput="updateTopicEndDate()"
               style="width:100%;background:var(--s3);border:1px solid var(--b);color:var(--text);
                      padding:10px;border-radius:6px;font-size:13px;outline:none;font-family:var(--sans)">
           </div>
+          <div id="topicGenDateWrap" style="display:flex;gap:12px;flex:2;min-width:280px">
           <div style="flex:1;min-width:140px">
             <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:6px;letter-spacing:.5px">시작일</label>
             <input type="date" id="topicGenStart" onchange="updateTopicEndDate()" onclick="this.showPicker && this.showPicker()"
@@ -1519,6 +1520,15 @@ body:not(.light-mode) .np-time { color:#9b9eaa; }
               style="width:100%;background:rgba(201,168,76,.06);border:1px solid var(--b);color:var(--gold);
                      padding:10px;border-radius:6px;font-size:13px;outline:none;font-family:var(--sans);
                      cursor:not-allowed">
+          </div>
+          </div><!-- /topicGenDateWrap -->
+          <div id="topicGenSeqWrap" style="display:none;flex:2;min-width:280px">
+            <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:6px;letter-spacing:.5px">발송 방식</label>
+            <div style="display:flex;align-items:center;gap:8px;background:rgba(201,168,76,.06);border:1px solid rgba(201,168,76,.3);border-radius:6px;padding:10px 12px;min-height:42px">
+              <span style="font-size:14px">🔢</span>
+              <span style="font-size:12px;color:var(--gold);font-weight:700">순번 발송</span>
+              <span id="topicGenSeqInfo" style="font-size:11px;color:var(--muted)">다음 순번부터 이어서 생성됩니다</span>
+            </div>
           </div>
           <button class="btn-send" onclick="generateTopics()" style="font-size:12px;padding:10px 18px;letter-spacing:.5px">
             🎯 주제 생성
@@ -2453,9 +2463,10 @@ body:not(.light-mode) .np-time { color:#9b9eaa; }
     <div style="padding:18px 20px;display:flex;flex-direction:column;gap:14px;overflow-y:auto;flex:1">
       <input type="hidden" id="topicEditId">
       <div>
-        <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:5px;letter-spacing:.5px">날짜 <span style="font-size:10px;color:var(--muted);font-weight:400">(변경 불가)</span></label>
+        <label id="topicEditDateLabel" style="font-size:11px;color:var(--muted);display:block;margin-bottom:5px;letter-spacing:.5px">날짜 <span style="font-size:10px;color:var(--muted);font-weight:400">(변경 불가)</span></label>
         <input type="date" id="topicEditDate" readonly disabled
           style="width:100%;background:var(--s2);border:1px solid var(--b);border-radius:6px;padding:8px 10px;font-size:13px;color:var(--muted);font-family:var(--sans);outline:none;color-scheme:dark;cursor:not-allowed;opacity:.6">
+        <input type="text" id="topicEditSeq" readonly disabled style="display:none;width:100%;background:var(--s2);border:1px solid var(--b);border-radius:6px;padding:8px 10px;font-size:13px;color:var(--gold);font-family:var(--sans);outline:none;cursor:not-allowed;opacity:.8">
       </div>
       <div>
         <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:5px;letter-spacing:.5px">주제 <span style="color:var(--gold)">필수</span></label>
@@ -5956,13 +5967,24 @@ async function syncTopicsFromBackend() {
     // GENERATED_TOPICS 형식으로 변환
     GENERATED_TOPICS = rows.map(function(r) {
       const dateStr = r.date_str;
-      // [v149] timeZone 명시 — 사용자 로컬 타임존이 KST 아닐 때 발생하던 ±1일 버그 fix
-      const dispDate = new Date(dateStr + 'T00:00:00+09:00').toLocaleDateString('ko-KR', { timeZone: 'Asia/Seoul' });
+      const seq = (r.seq !== undefined && r.seq !== null) ? Number(r.seq) : null;
+      const isSeq = (seq !== null) && !dateStr;
+      // [v149] timeZone 명시 — ±1일 버그 fix. [v211] 순번 주제는 #seq 표기
+      let dispDate;
+      if (isSeq) {
+        dispDate = '#' + seq;
+      } else if (dateStr) {
+        dispDate = new Date(dateStr + 'T00:00:00+09:00').toLocaleDateString('ko-KR', { timeZone: 'Asia/Seoul' });
+      } else {
+        dispDate = '—';
+      }
       return {
         id:           'db_' + r.id,         // 어드민 내부 ID (DB id 식별)
         db_id:        r.id,                  // 진짜 DB id (콘텐츠 생성 시 백엔드로 전달)
         date:         dispDate,
-        dateStr:      dateStr,
+        dateStr:      dateStr || '',
+        seq:          seq,                   // [v211] 순번 (없으면 null)
+        is_seq:       isSeq,
         cat:          r.category,
         subtopic_id:  r.subtopic_id || null,
         subtopic_name: r.subtopic_name || '',
@@ -6014,6 +6036,9 @@ async function generateTopics() {
   const subtopicEl = document.getElementById('topicGenSubtopic');
   const subtopicId = subtopicEl ? subtopicEl.value : '';
   const subtopicName = subtopicEl ? (subtopicEl.options[subtopicEl.selectedIndex]?.textContent || '') : '';
+  // [v211] 부주제 발송 모드
+  const selOpt = subtopicEl ? subtopicEl.options[subtopicEl.selectedIndex] : null;
+  const isSeqMode = (selOpt?.dataset?.mode === 'sequence');
   const days  = parseInt(document.getElementById('topicGenDays').value);
   let startStr = document.getElementById('topicGenStart').value;
 
@@ -6023,16 +6048,16 @@ async function generateTopics() {
     return;
   }
   if (!days || days < 1) {
-    showToast('기간을 1일 이상으로 입력해주세요', 'ng');
+    showToast(isSeqMode ? '생성할 편수를 1개 이상으로 입력해주세요' : '기간을 1일 이상으로 입력해주세요', 'ng');
     return;
   }
   if (days > 365) {
-    showToast('기간은 365일을 넘을 수 없습니다', 'ng');
+    showToast(isSeqMode ? '편수는 365개를 넘을 수 없습니다' : '기간은 365일을 넘을 수 없습니다', 'ng');
     return;
   }
 
-  if (!startStr) {
-    // [v148] 시작일 미입력 시 KST 기준 오늘 날짜 (UTC 변환 버그 fix)
+  if (!isSeqMode && !startStr) {
+    // [v148] 일자 모드만 시작일 필요. 미입력 시 KST 기준 오늘 날짜
     startStr = getKSTDateStr();
     document.getElementById('topicGenStart').value = startStr;
     updateTopicEndDate();
@@ -6125,15 +6150,17 @@ async function generateTopics() {
         // exclude는 1000개로 제한 (1년치 365개 부제목 단위 운영 + 중복 5% 미만 목표)
         const excludeForChunk = runningExclude.slice(0, 1000);
         // [v150] 본인이 입력한 시작 날짜 사용 (서버 시간 의존 X, 사용자 명시 X)
-        const res = await apiPost('/admin/topics/generate', {
+        // [v211] 순번 모드는 start_date 불필요 (백엔드가 max seq+1 자동 부여)
+        const genBody = {
           category: cat,
           count: chunkCount,
           use_ai: true,
           exclude_topics: excludeForChunk,
           subtopic_id: subtopicId ? Number(subtopicId) : null,
           subtopic_name: subtopicName || '',
-          start_date: startStr,
-        }, { signal: ctrl.signal });
+        };
+        if (!isSeqMode) genBody.start_date = startStr;
+        const res = await apiPost('/admin/topics/generate', genBody, { signal: ctrl.signal });
 
         if (res && res.success && Array.isArray(res.topics) && res.topics.length > 0) {
           // 응답 받은 주제 누적
@@ -6215,8 +6242,18 @@ async function generateTopics() {
 
   // 날짜와 매핑 (누적 모드: 기존 GENERATED_TOPICS 유지하고 추가)
   // 같은 (날짜+카테고리) 조합이 이미 있으면 새 주제로 교체 (다른 카테고리는 그대로 둠)
-  const startDate = new Date(startStr);
+  // [v211] 순번 모드는 백엔드가 seq를 부여하므로 로컬 날짜매핑을 건너뛰고
+  //         syncTopicsFromBackend()로 실제 seq 포함 데이터를 받아 렌더한다.
   let addedCount = 0, replacedCount = 0;
+  if (isSeqMode) {
+    hideProgressModal();
+    await syncTopicsFromBackend();
+    renderTopicList();
+    toggleTopicWorkPanel(true);
+    showToast(`순번 주제 ${topics.length}개 생성됨 (${catLabelText(cat)})`, 'ok');
+    return;
+  }
+  const startDate = new Date(startStr);
   for (let i = 0; i < days; i++) {
     const t = topics[i] || topics[i % topics.length];
     const d = new Date(startDate);
@@ -6450,16 +6487,24 @@ function renderTopicList() {
   }
   const fromVal = fromEl ? fromEl.value : '';
   const toVal   = toEl   ? toEl.value   : '';
-  if (fromVal) filtered = filtered.filter(t => (t.dateStr || t.date) >= fromVal);
-  if (toVal)   filtered = filtered.filter(t => (t.dateStr || t.date) <= toVal);
+  // [v211] 순번 주제(is_seq)는 날짜 범위 필터에서 면제 (date_str이 없음)
+  if (fromVal) filtered = filtered.filter(t => t.is_seq || (t.dateStr || t.date) >= fromVal);
+  if (toVal)   filtered = filtered.filter(t => t.is_seq || (t.dateStr || t.date) <= toVal);
   // v130: 생성됨 숨김 토글
   if (_hideGeneratedTopics) {
     filtered = filtered.filter(t => t.status !== 'generated');
   }
 
-  // 가까운 날짜 오름차순 정렬 (오늘과 가까운 것이 위)
-  const todayStr = getKSTDateStr();
+  // 정렬: 순번 주제는 (subtopic, seq) 오름차순, 일자 주제는 날짜 오름차순. 순번은 뒤로.
   filtered.sort((a, b) => {
+    if (a.is_seq && b.is_seq) {
+      if (String(a.subtopic_id) !== String(b.subtopic_id)) {
+        return String(a.subtopic_id).localeCompare(String(b.subtopic_id));
+      }
+      return (a.seq || 0) - (b.seq || 0);
+    }
+    if (a.is_seq) return 1;   // 순번은 일자 뒤로
+    if (b.is_seq) return -1;
     const da = a.dateStr || a.date || '';
     const db = b.dateStr || b.date || '';
     return da.localeCompare(db);
@@ -6752,7 +6797,19 @@ function openTopicEditModal(tid) {
   const t = GENERATED_TOPICS.find(x => x.id === tid);
   if (!t) return;
   document.getElementById('topicEditId').value   = tid;
-  document.getElementById('topicEditDate').value  = t.dateStr || t.date || '';
+  // [v211] 순번 주제는 날짜 대신 #순번 표시
+  const dateEl  = document.getElementById('topicEditDate');
+  const seqEl   = document.getElementById('topicEditSeq');
+  const labelEl = document.getElementById('topicEditDateLabel');
+  if (t.is_seq) {
+    if (dateEl) dateEl.style.display = 'none';
+    if (seqEl)  { seqEl.style.display = ''; seqEl.value = '순번 #' + t.seq; }
+    if (labelEl) labelEl.innerHTML = '순번 <span style="font-size:10px;color:var(--muted);font-weight:400">(변경 불가)</span>';
+  } else {
+    if (dateEl) { dateEl.style.display = ''; dateEl.value = t.dateStr || t.date || ''; }
+    if (seqEl)  seqEl.style.display = 'none';
+    if (labelEl) labelEl.innerHTML = '날짜 <span style="font-size:10px;color:var(--muted);font-weight:400">(변경 불가)</span>';
+  }
   document.getElementById('topicEditText').value  = t.topic || '';
   document.getElementById('topicEditKw').value    = t.kw || '';
   document.getElementById('topicEditErr').style.display = 'none';
@@ -7456,18 +7513,24 @@ async function _executeGenerate(items) {
       try {
         if (API_BASE) {
           const signal = _progressState.abortCtrl ? _progressState.abortCtrl.signal : undefined;
-          // [v148] 콘텐츠 생성 디버그 로그 — 날짜 추적
-          const payloadDate = t.dateStr || t.date;
-          console.log(`[content-gen] 주제: "${t.topic}" | t.dateStr="${t.dateStr}" | t.date="${t.date}" | 전송할 date="${payloadDate}" | cat=${t.cat} | subtopic=${t.subtopic_id}`);
-          result = await apiPost('/admin/content/generate-from-topic', {
-            date:     payloadDate,
+          // [v211] 순번 주제는 date 대신 seq 전달 (백엔드는 부주제 모드로 분기)
+          const genPayload = {
             category: t.cat,
             subtopic_id: t.subtopic_id || null,
             topic:    t.topic,
             keywords: t.kw,
-            topic_id: t.db_id || null,        // 새: topics 테이블 row id
+            topic_id: t.db_id || null,        // topics 테이블 row id
             overwrite: true,
-          }, { signal: signal });
+          };
+          if (t.is_seq) {
+            genPayload.seq = t.seq;
+            console.log(`[content-gen][seq] "${t.topic}" | seq=#${t.seq} | cat=${t.cat} | subtopic=${t.subtopic_id}`);
+          } else {
+            const payloadDate = t.dateStr || t.date;
+            genPayload.date = payloadDate;
+            console.log(`[content-gen] "${t.topic}" | date="${payloadDate}" | cat=${t.cat} | subtopic=${t.subtopic_id}`);
+          }
+          result = await apiPost('/admin/content/generate-from-topic', genPayload, { signal: signal });
 
           // 응답이 success=true면 진짜 성공 → 재시도 불필요
           if (result && result.success !== false) {
@@ -11126,14 +11189,33 @@ async function onTopicGenCategoryChange() {
   subtopicEl.innerHTML = '<option value="">— 선택 —</option>'
     + sortedList.map(s => {
         const isInactive = s.active === false;
-        const label = (s.name || '').replace(/"/g,'&quot;') + (isInactive ? ' (OFF)' : '');
-        return `<option value="${s.id}" data-name="${(s.name || '').replace(/"/g,'&quot;')}"${isInactive ? ' disabled' : ''}>${label}</option>`;
+        const mode = (s.delivery_mode === 'sequence') ? 'sequence' : 'date';
+        const modeTag = mode === 'sequence' ? ' 🔢' : '';
+        const label = (s.name || '').replace(/"/g,'&quot;') + modeTag + (isInactive ? ' (OFF)' : '');
+        return `<option value="${s.id}" data-name="${(s.name || '').replace(/"/g,'&quot;')}" data-mode="${mode}"${isInactive ? ' disabled' : ''}>${label}</option>`;
       }).join('');
   subtopicEl.onchange = () => {
     const sel = subtopicEl.options[subtopicEl.selectedIndex];
     _updateTopicBuilderBadge(cat, sel?.dataset?.name || '');
+    _applyTopicGenMode(sel?.dataset?.mode || 'date');
   };
   _updateTopicBuilderBadge(cat, '');
+  _applyTopicGenMode('date');  // 카테고리 변경 시 기본 일자 모드로 리셋
+}
+
+// [v211] 주제 생성 폼: 순번 모드 / 일자 모드 UI 토글
+function _applyTopicGenMode(mode) {
+  const isSeq = (mode === 'sequence');
+  const dateWrap = document.getElementById('topicGenDateWrap');
+  const seqWrap  = document.getElementById('topicGenSeqWrap');
+  const daysLabel = document.getElementById('topicGenDaysLabel');
+  if (dateWrap) dateWrap.style.display = isSeq ? 'none' : 'flex';
+  if (seqWrap)  seqWrap.style.display  = isSeq ? 'block' : 'none';
+  if (daysLabel) {
+    daysLabel.innerHTML = isSeq
+      ? '개수 <span style="color:var(--gold);font-size:10px">생성할 편수</span>'
+      : '기간 (일) <span style="color:var(--gold);font-size:10px">권장 30</span>';
+  }
 }
 
 function _updateTopicBuilderBadge(catId, subName) {
