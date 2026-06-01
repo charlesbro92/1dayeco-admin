@@ -985,7 +985,7 @@ body:not(.light-mode) .np-time { color:#9b9eaa; }
 <!-- SIDEBAR -->
 <aside class="sidebar">
   <div class="sb-logo">1DAYECO<small>Admin Dashboard</small>
-    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v209</span>
+    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v210</span>
   </div>
   <nav class="sb-nav">
     <div class="sb-group">운영</div>
@@ -11226,6 +11226,11 @@ function _renderSubtopicList() {
             placeholder="부제목 이름"
             style="flex:1;background:transparent;border:none;color:var(--text);font-size:13px;outline:none;padding:4px 0${s.active === false ? ';text-decoration:line-through' : ''}">
           ${badge}
+          <select data-sid-mode="${s.id}" onchange="_setSubtopicMode(${s.id}, this.value)" title="발송 방식 (일자별=날짜별 콘텐츠 / 순번=가입 다음날부터 1편씩 순서대로)"
+            style="background:var(--s2);border:1px solid ${(s.delivery_mode||'date')==='sequence' ? 'rgba(201,168,76,.45)' : 'var(--b)'};border-radius:4px;color:${(s.delivery_mode||'date')==='sequence' ? 'var(--gold)' : 'var(--text)'};font-size:10px;font-weight:700;padding:3px 4px;line-height:1;flex-shrink:0;outline:none;cursor:pointer;letter-spacing:.2px">
+            <option value="date" ${(s.delivery_mode||'date')!=='sequence' ? 'selected' : ''}>📅 일자별</option>
+            <option value="sequence" ${(s.delivery_mode||'date')==='sequence' ? 'selected' : ''}>🔢 순번</option>
+          </select>
           <button type="button" onclick="_toggleSubtopicActive(${s.id}, ${s.active === false ? 'true' : 'false'})"
             title="${s.active === false ? '활성화' : '비활성화'}"
             style="background:${s.active === false ? 'transparent' : 'rgba(74,222,128,.12)'};border:1px solid ${s.active === false ? 'rgba(248,113,113,.3)' : 'rgba(74,222,128,.3)'};border-radius:4px;color:${s.active === false ? '#ff7676' : 'var(--green)'};cursor:pointer;font-size:10px;font-weight:700;padding:3px 8px;line-height:1;flex-shrink:0;letter-spacing:.3px">
@@ -11453,6 +11458,43 @@ async function _saveSubtopicDesc(subtopicId, desc) {
   } catch (e) {
     console.warn('[subtopics] 설명 저장 실패:', e);
     showToast('네트워크 오류', 'ng');
+  }
+}
+
+// [v171] 부제목 발송 방식(일자별/순번) 변경 — 즉시 저장
+async function _setSubtopicMode(subtopicId, mode) {
+  if (mode !== 'date' && mode !== 'sequence') return;
+  const s = _modalSubtopics.find(x => x.id === subtopicId);
+  if (s && (s.delivery_mode || 'date') === mode) return;  // 변경 없음
+  // 순번으로 바꿀 때 경고 (이미 일자별 콘텐츠/구독자가 있으면 영향)
+  if (mode === 'sequence') {
+    if (!confirm('이 부제목을 "순번" 발송으로 전환합니다.\n\n· 가입 다음날부터 1편→2편 순서대로 발송됩니다.\n· 콘텐츠는 날짜가 아니라 순번(1,2,3…)으로 등록해야 합니다.\n· 기존 일자별 콘텐츠는 발송에 사용되지 않습니다.\n\n전환할까요?')) {
+      _renderSubtopicList();  // 셀렉트 원복
+      return;
+    }
+  }
+  try {
+    const res = await fetch(API_BASE + '/admin/subtopics/' + subtopicId, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ delivery_mode: mode }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || data.success === false) {
+      showToast(data.message || data.error || '발송 방식 변경 실패', 'ng');
+      _renderSubtopicList();  // 원복
+      return;
+    }
+    if (s) s.delivery_mode = mode;
+    if (_modalCurrentCategoryId) {
+      _SUBTOPIC_CACHE[_modalCurrentCategoryId] = _modalSubtopics.slice();
+    }
+    _renderSubtopicList();
+    showToast(mode === 'sequence' ? '순번 발송으로 전환됨' : '일자별 발송으로 전환됨', 'ok');
+  } catch (e) {
+    console.warn('[subtopics] 발송 방식 변경 실패:', e);
+    showToast('네트워크 오류', 'ng');
+    _renderSubtopicList();
   }
 }
 
