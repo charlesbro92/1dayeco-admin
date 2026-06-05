@@ -985,7 +985,7 @@ body:not(.light-mode) .np-time { color:#9b9eaa; }
 <!-- SIDEBAR -->
 <aside class="sidebar">
   <div class="sb-logo">1DAYECO<small>Admin Dashboard</small>
-    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v214</span>
+    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v215</span>
   </div>
   <nav class="sb-nav">
     <div class="sb-group">운영</div>
@@ -998,6 +998,7 @@ body:not(.light-mode) .np-time { color:#9b9eaa; }
     <div class="sb-group">수익</div>
     <a class="sb-item" onclick="showPage('revenue')"><span class="ico">💰</span>매출</a>
     <a class="sb-item" onclick="showPage('payments')"><span class="ico">💳</span>결제 이력</a>
+    <a class="sb-item" onclick="showPage('coupons')"><span class="ico">🎟️</span>이벤트 쿠폰</a>
     <div class="sb-group">설정</div>
     <a class="sb-item" onclick="showPage('scheduler')"><span class="ico">⏰</span>스케줄러</a>
     <a class="sb-item" onclick="showPage('settings')"><span class="ico">🗂️</span>카테고리 관리</a>
@@ -2005,6 +2006,71 @@ body:not(.light-mode) .np-time { color:#9b9eaa; }
           </thead>
           <tbody id="payBody">
             <tr><td colspan="12"><div class="empty"><span class="empty-ico">💳</span>결제 이력이 없습니다</div></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── PAGE: 이벤트 쿠폰 ── -->
+  <div class="content" id="page-coupons">
+    <!-- KPI 요약 -->
+    <div class="kpi-grid kpi-grid-5" style="margin-bottom:14px">
+      <div class="kpi">
+        <div class="kpi-label"><span class="kpi-icon">🎟️</span>쿠폰번호</div>
+        <div class="kpi-value gold" id="cpnCode" style="font-size:18px">—</div>
+        <div class="kpi-change" id="cpnDiscount" style="color:var(--muted)"></div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-label"><span class="kpi-icon">📦</span>발급</div>
+        <div class="kpi-value blue" id="cpnIssued">—</div>
+        <div class="kpi-change" id="cpnLimit" style="color:var(--muted)"></div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-label"><span class="kpi-icon">✅</span>사용</div>
+        <div class="kpi-value green" id="cpnUsed">—</div>
+        <div class="kpi-change" style="color:var(--muted)">결제·가입 완료</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-label"><span class="kpi-icon">⏳</span>미사용</div>
+        <div class="kpi-value purple" id="cpnUnused">—</div>
+        <div class="kpi-change" style="color:var(--muted)">발급만 받은 상태</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-label"><span class="kpi-icon">🔢</span>남은 수량</div>
+        <div class="kpi-value gold" id="cpnRemaining">—</div>
+        <div class="kpi-change" id="cpnStatus" style="color:var(--muted)"></div>
+      </div>
+    </div>
+
+    <!-- 발급 내역 테이블 -->
+    <div class="panel">
+      <div class="panel-head" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+        <div class="panel-title">🎟️ 쿠폰 발급/사용 내역</div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <input type="text" id="cpnSearch" placeholder="이름·전화번호 검색" oninput="renderCouponTable()"
+            style="background:var(--s3);border:1px solid var(--b);color:var(--text);padding:7px 10px;border-radius:6px;font-size:12px;width:160px;font-family:var(--sans)">
+          <button class="filter-pill active" data-cpn-filter="" onclick="filterCoupons('')">전체</button>
+          <button class="filter-pill" data-cpn-filter="used" onclick="filterCoupons('used')">사용</button>
+          <button class="filter-pill" data-cpn-filter="unused" onclick="filterCoupons('unused')">미사용</button>
+          <span class="panel-act" onclick="loadCoupons()">🔄 새로고침</span>
+        </div>
+      </div>
+      <div class="panel-body" style="overflow-x:auto">
+        <table>
+          <thead>
+            <tr>
+              <th>이름</th>
+              <th>전화번호</th>
+              <th>발급일시</th>
+              <th style="text-align:center">사용여부</th>
+              <th>사용일시</th>
+              <th>사용플랜</th>
+              <th style="text-align:right">할인액</th>
+            </tr>
+          </thead>
+          <tbody id="cpnBody">
+            <tr><td colspan="7"><div class="empty"><span class="empty-ico">🎟️</span>발급 내역이 없습니다</div></td></tr>
           </tbody>
         </table>
       </div>
@@ -3484,6 +3550,7 @@ const pageTitles = {
   archive:'📚 콘텐츠 아카이브',
   stats:'📈 통계 분석',
   revenue:'💰 매출 현황', payments:'💳 결제 이력',
+  coupons:'🎟️ 이벤트 쿠폰',
   scheduler:'⏰ 스케줄러', settings:'🗂️ 카테고리 관리', notify:'🔔 알림 관리',
 };
 // 아카이브 영역은 이제 page-archive 안에 정적으로 있음 — 동적 이동 불필요
@@ -3588,6 +3655,7 @@ function loadPage(name) {
     loadSubscribers({silent: true}).then(loadRevenue).catch(e => { loadRevenue(); });
   }
   if (name === 'payments')     loadPayments();
+  if (name === 'coupons')      loadCoupons();
   if (name === 'settings')     loadSettings();
   if (name === 'scheduler')    { loadSchedulerStatus(); loadSchedulerSettings(); loadSchedulerStatusPanel(); loadSubtopicSchedules(); loadCategoriesForSched(); }
   if (name === 'notify')       loadNotifySettings();
@@ -9597,6 +9665,101 @@ async function loadRevenue() {
 // ── 결제 이력 ─────────────────────────────────────────────────
 let _allPayments    = [];
 let _payFilter      = '';
+
+// ── [v215] 이벤트 쿠폰 발급/사용 내역 ──────────────────────
+let COUPON_DATA = [];
+let _cpnFilter = '';
+
+async function loadCoupons() {
+  const tbody = document.getElementById('cpnBody');
+  if (tbody) tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:30px">로딩 중...</td></tr>';
+  try {
+    const r = await fetch(API_BASE + '/admin/coupons');
+    const d = await r.json();
+    if (!d || d.success === false) {
+      if (tbody) tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--red);padding:30px">불러오기 실패</td></tr>';
+      return;
+    }
+    COUPON_DATA = d.items || [];
+    // KPI
+    setText('cpnCode', d.code || '—');
+    setText('cpnDiscount', '₩' + (d.discount || 0).toLocaleString() + ' 할인');
+    setText('cpnIssued', (d.issued || 0).toLocaleString());
+    setText('cpnLimit', '/ ' + (d.limit || 0).toLocaleString() + ' 한정');
+    setText('cpnUsed', (d.used || 0).toLocaleString());
+    setText('cpnUnused', ((d.issued || 0) - (d.used || 0)).toLocaleString());
+    setText('cpnRemaining', (d.remaining || 0).toLocaleString());
+    setText('cpnStatus', d.enabled ? (d.remaining > 0 ? '발급 가능' : '발급 마감') : '이벤트 OFF');
+    renderCouponTable();
+  } catch (e) {
+    console.warn('[loadCoupons] 실패:', e);
+    if (tbody) tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--red);padding:30px">네트워크 오류</td></tr>';
+  }
+}
+
+function setText(id, txt) { const el = document.getElementById(id); if (el) el.textContent = txt; }
+
+function filterCoupons(f) {
+  _cpnFilter = f;
+  document.querySelectorAll('[data-cpn-filter]').forEach(b => {
+    b.classList.toggle('active', (b.getAttribute('data-cpn-filter') || '') === f);
+  });
+  renderCouponTable();
+}
+
+function renderCouponTable() {
+  const tbody = document.getElementById('cpnBody');
+  if (!tbody) return;
+  const q = (document.getElementById('cpnSearch')?.value || '').trim().toLowerCase();
+  const planLabels = { monthly:'1개월', pkg3m:'3개월', pkg6m:'6개월', pkg1y:'1년', yearly:'1년' };
+
+  let rows = COUPON_DATA.slice();
+  if (_cpnFilter === 'used')   rows = rows.filter(r => r.used);
+  if (_cpnFilter === 'unused') rows = rows.filter(r => !r.used);
+  if (q) rows = rows.filter(r =>
+    (r.name || '').toLowerCase().includes(q) || (r.phone || '').includes(q));
+
+  if (!rows.length) {
+    tbody.innerHTML = '<tr><td colspan="7"><div class="empty"><span class="empty-ico">🎟️</span>해당하는 내역이 없습니다</div></td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = rows.map(r => {
+    const usedPill = r.used
+      ? '<span class="payment-pill" style="color:#5eea91;background:rgba(94,234,145,.12)">✅ 사용</span>'
+      : '<span class="payment-pill" style="color:#f59e0b;background:rgba(245,158,11,.12)">⏳ 미사용</span>';
+    return `<tr>
+      <td>${escapeHtml(r.name || '-')}</td>
+      <td>${escapeHtml(fmtPhoneDisplay(r.phone))}</td>
+      <td style="font-size:11px">${fmtDateTime(r.issued_at)}</td>
+      <td style="text-align:center">${usedPill}</td>
+      <td style="font-size:11px">${r.used_at ? fmtDateTime(r.used_at) : '-'}</td>
+      <td>${planLabels[r.used_plan] || r.used_plan || '-'}</td>
+      <td style="text-align:right">${r.discount_amount ? '₩' + Number(r.discount_amount).toLocaleString() : '-'}</td>
+    </tr>`;
+  }).join('');
+}
+
+// 전화번호 표시용 하이픈 (010-xxxx-xxxx)
+function fmtPhoneDisplay(p) {
+  const d = (p || '').replace(/[^0-9]/g, '');
+  if (d.length === 11) return d.slice(0,3) + '-' + d.slice(3,7) + '-' + d.slice(7);
+  if (d.length === 10) return d.slice(0,3) + '-' + d.slice(3,6) + '-' + d.slice(6);
+  return p || '-';
+}
+
+// 날짜시각 표시 (KST 그대로)
+function fmtDateTime(iso) {
+  if (!iso) return '-';
+  try {
+    const dt = new Date(iso);
+    if (isNaN(dt)) return iso;
+    const y = dt.getFullYear(), m = String(dt.getMonth()+1).padStart(2,'0'),
+          d = String(dt.getDate()).padStart(2,'0'),
+          hh = String(dt.getHours()).padStart(2,'0'), mm = String(dt.getMinutes()).padStart(2,'0');
+    return `${y}-${m}-${d} ${hh}:${mm}`;
+  } catch (e) { return iso; }
+}
 
 async function loadPayments() {
   const tbody = document.getElementById('payBody');
