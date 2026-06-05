@@ -985,7 +985,7 @@ body:not(.light-mode) .np-time { color:#9b9eaa; }
 <!-- SIDEBAR -->
 <aside class="sidebar">
   <div class="sb-logo">1DAYECO<small>Admin Dashboard</small>
-    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v213</span>
+    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v214</span>
   </div>
   <nav class="sb-nav">
     <div class="sb-group">운영</div>
@@ -7167,8 +7167,13 @@ async function generateContentFromTopics() {
   const duplicates = [];
 
   selected.forEach(function(t) {
-    // 같은 (날짜, 카테고리)만 충돌
-    const existing = getArchiveItem(t.date, t.cat);
+    // [v214] 순번(sequence) 주제는 날짜 기반 충돌검사 대상이 아니다.
+    //   순번 콘텐츠는 date_str이 없고 (subtopic_id, seq)로 식별되며,
+    //   중복/덮어쓰기 판정은 백엔드 upsert가 (subtopic_id, seq) 키로 정확히 처리한다.
+    //   날짜 기반 archive 키로 비교하면 같은 카테고리 다른 부주제끼리 오충돌이 난다.
+    if (t.is_seq) return;
+    // 같은 (날짜, 카테고리, 부주제)만 충돌 — subtopic_id까지 포함해야 부주제 경계가 지켜짐
+    const existing = getArchiveItem(t.date, t.cat, t.subtopic_id || t.subtopicId);
     if (existing) {
       overwrites.push({
         topic: t,
