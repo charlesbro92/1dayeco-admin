@@ -985,7 +985,7 @@ body:not(.light-mode) .np-time { color:#9b9eaa; }
 <!-- SIDEBAR -->
 <aside class="sidebar">
   <div class="sb-logo">1DAYECO<small>Admin Dashboard</small>
-    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v216</span>
+    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v217</span>
   </div>
   <nav class="sb-nav">
     <div class="sb-group">운영</div>
@@ -1413,8 +1413,8 @@ body:not(.light-mode) .np-time { color:#9b9eaa; }
 
   <!-- ── PAGE: 콘텐츠 ── -->
   <div class="content" id="page-content">
-    <!-- AI 사용량 위젯 (콘텐츠 페이지 전용 상세) -->
-    <div class="panel usage-widget" style="margin-bottom:14px;flex-shrink:0">
+    <!-- AI 사용량 위젯 (콘텐츠 페이지 전용 상세) — [v217] 임시 숨김 (display:none 제거하면 복구) -->
+    <div class="panel usage-widget" style="margin-bottom:14px;flex-shrink:0;display:none">
       <div class="panel-head" style="padding:12px 18px">
         <div class="panel-title" style="font-size:13px">🤖 AI 사용량 <span id="usageMonthLabel" style="color:var(--muted);font-weight:400;font-size:11px;margin-left:6px"></span></div>
         <button onclick="toggleUsageDetail()" id="usageToggleBtn" style="background:none;border:1px solid var(--b);color:var(--muted);padding:4px 10px;border-radius:5px;font-size:10px;cursor:pointer;letter-spacing:.5px">▼ 상세</button>
@@ -1586,7 +1586,7 @@ body:not(.light-mode) .np-time { color:#9b9eaa; }
             <span style="font-size:24px;display:block;margin-bottom:6px;opacity:.6">🎯</span>
             위에서 카테고리·기간을 선택하고 주제 생성 버튼을 눌러주세요
           </div>
-          <div id="topicListTableWrap" style="display:none;overflow-y:auto;max-height:420px">
+          <div id="topicListTableWrap" style="display:none;overflow-y:auto;max-height:calc(100vh - 340px);min-height:200px">
             <table>
               <thead>
                 <tr>
@@ -6626,7 +6626,7 @@ function renderTopicList() {
     return;
   }
   if (emptyEl)   emptyEl.style.display   = 'none';
-  if (tableWrap) tableWrap.style.display = 'flex';
+  if (tableWrap) tableWrap.style.display = 'block';
 
   tbody.innerHTML = filtered.map(function(t) {
     const checked = t.selected ? 'checked' : '';
