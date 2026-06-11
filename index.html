@@ -985,7 +985,7 @@ body:not(.light-mode) .np-time { color:#9b9eaa; }
 <!-- SIDEBAR -->
 <aside class="sidebar">
   <div class="sb-logo">1DAYECO<small>Admin Dashboard</small>
-    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v215</span>
+    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v216</span>
   </div>
   <nav class="sb-nav">
     <div class="sb-group">운영</div>
@@ -3407,12 +3407,27 @@ let API_BASE = (function() {
 })();
 
 // 배포 정보 표시 (사이드바 로고 옆 배지 클릭 시)
-function showDeployInfo() {
+async function showDeployInfo() {
   const badge = document.getElementById('deployBadge');
   const v = badge ? badge.textContent : 'unknown';
+  // 백엔드 /version 에서 api·prompts 버전 조회 (실패해도 어드민 정보는 표시)
+  let apiVer = '(조회 실패)';
+  let promptsVer = '(조회 실패)';
+  if (API_BASE) {
+    try {
+      const r = await fetch(API_BASE + '/version');
+      const d = await r.json();
+      apiVer = d.version || '(없음)';
+      promptsVer = d.prompts_version || '(없음)';
+    } catch (e) {
+      apiVer = promptsVer = '(네트워크 오류)';
+    }
+  }
   alert(
     '배포 정보\n' +
-    '버전: ' + v + '\n' +
+    '어드민: ' + v + '\n' +
+    'API: ' + apiVer + '\n' +
+    'Prompts: ' + promptsVer + '\n' +
     '도메인: ' + location.hostname + '\n' +
     'API_BASE: ' + API_BASE + '\n' +
     '경로: ' + location.pathname + '\n' +
