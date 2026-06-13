@@ -985,7 +985,7 @@ body:not(.light-mode) .np-time { color:#9b9eaa; }
 <!-- SIDEBAR -->
 <aside class="sidebar">
   <div class="sb-logo">1DAYECO<small>Admin Dashboard</small>
-    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v219</span>
+    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v220</span>
   </div>
   <nav class="sb-nav">
     <div class="sb-group">운영</div>
@@ -1262,16 +1262,24 @@ body:not(.light-mode) .np-time { color:#9b9eaa; }
         </div>
       </div>
       <div class="panel-body" style="padding:16px">
-        <!-- 1+2. 좌우 5:5 배치 (좌: 카테고리, 우: 콘텐츠) -->
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px">
-          <!-- 좌측: 카테고리별 발송 대상 -->
+        <!-- [v220] 좌우 배치 (좌: 카테고리·부주제 현황 / 우: 콘텐츠 미리보기 — 미리보기 폭 축소) -->
+        <div style="display:grid;grid-template-columns:1.7fr 1fr;gap:14px;margin-bottom:14px;align-items:start">
+          <!-- 좌측: 카테고리별 발송 대상 + 부주제별 현황 -->
           <div>
             <div style="font-size:11px;color:var(--muted);margin-bottom:8px;font-weight:500">📊 카테고리별 발송 대상</div>
             <div id="prevCategoriesGrid" style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
               <div style="padding:14px;text-align:center;color:var(--muted);font-size:12px;grid-column:span 2">로딩 중...</div>
             </div>
+
+            <!-- [v220] 부주제별 콘텐츠·발송 현황 -->
+            <div id="prevSubtopicSection" style="margin-top:14px">
+              <div style="font-size:11px;color:var(--muted);margin-bottom:8px;font-weight:500">📋 부주제별 콘텐츠 · 발송 준비 현황</div>
+              <div id="prevSubtopicBreakdown">
+                <div style="padding:10px;text-align:center;color:var(--muted);font-size:12px">로딩 중...</div>
+              </div>
+            </div>
           </div>
-          <!-- 우측: 콘텐츠 미리보기 (탭) -->
+          <!-- 우측: 콘텐츠 미리보기 (탭) — 폭 축소 -->
           <div>
             <div style="font-size:11px;color:var(--muted);margin-bottom:8px;font-weight:500">📝 콘텐츠 미리보기</div>
             <div id="prevTabBar" style="display:flex;gap:4px;border-bottom:1px solid var(--b);margin-bottom:10px;flex-wrap:wrap;min-height:32px">
@@ -4937,6 +4945,8 @@ async function loadSendPreview() {
     let sendableByCat = {};      // {category: 발송가능 인원}
     let drSkipReasons = {};      // {reason: count} — 발송 제외 사유
     let drTruncated = false;     // results가 50건으로 잘렸는지 (대규모 시 부분 집계)
+    let sendableBySub = {};      // [v220] {subscriber_id: 1} — 발송 가능 구독자 (부주제 집계용)
+    let skipReasonBySub = {};    // [v220] {subscriber_id: reason} — 제외 사유 (부주제 집계용)
     try {
       const dr = await apiPost('/admin/send-daily-content', { dry_run: true });
       if (dr && dr.success !== false) {
@@ -4944,8 +4954,12 @@ async function loadSendPreview() {
         drSent = dr.sent || 0;
         drSkipReasons = dr.skip_reasons || {};
         (dr.results || []).forEach(r => {
-          if (r.would_send && r.category) {
-            sendableByCat[r.category] = (sendableByCat[r.category] || 0) + 1;
+          const sid = (r.subscriber_id != null) ? r.subscriber_id : r.sub_id;
+          if (r.would_send) {
+            if (r.category) sendableByCat[r.category] = (sendableByCat[r.category] || 0) + 1;
+            if (sid != null) sendableBySub[sid] = (sendableBySub[sid] || 0) + 1;
+          } else if (r.reason && sid != null) {
+            skipReasonBySub[sid] = r.reason;
           }
         });
         drTruncated = (dr.results || []).length >= 50 && (dr.total || 0) > 50;
@@ -5105,8 +5119,110 @@ async function loadSendPreview() {
     document.getElementById('sendAllBtn').style.opacity = sendableCount === 0 ? '0.4' : '1';
     document.getElementById('sendAllBtn').style.cursor = sendableCount === 0 ? 'not-allowed' : 'pointer';
 
+    // 9. [v220] 부주제별 콘텐츠·발송 준비 현황 렌더 (카테고리별 그룹)
+    await renderSubtopicBreakdown({
+      categories, todayStr, activeSubs,
+      sendableBySub, skipReasonBySub, drOk, drTruncated,
+    });
+
   } catch (e) {
     console.warn('[발송미리보기] 로드 실패:', e);
+  }
+}
+
+// [v220] 부주제별 콘텐츠·발송 준비 현황
+//  - 카테고리별로 부주제를 나열하고 각 부주제의 구독자 수 / 콘텐츠 존재(O/X) / 발송 준비 상태 표시
+//  - 데이터: /admin/subtopics(전체 부주제) + dry-run(구독자별 발송가능/사유) + CONTENT_ARCHIVE(일자 콘텐츠)
+async function renderSubtopicBreakdown(ctx) {
+  const box = document.getElementById('prevSubtopicBreakdown');
+  if (!box) return;
+  const { categories, todayStr, activeSubs, sendableBySub, skipReasonBySub, drOk, drTruncated } = ctx;
+
+  // 전체 부주제 로드
+  let allSubtopics = [];
+  try {
+    const r = await apiFetch('/admin/subtopics');
+    allSubtopics = (r && r.success && Array.isArray(r.data)) ? r.data : [];
+  } catch (e) {
+    console.warn('[부주제현황] 로드 실패:', e);
+  }
+
+  // 부주제별 활성 구독자 그룹
+  const subsBySubtopic = {};
+  activeSubs.forEach(s => {
+    const sid = s.subtopic_id;
+    if (sid != null) (subsBySubtopic[sid] = subsBySubtopic[sid] || []).push(s);
+  });
+
+  const REASON_SHORT = {
+    sequence_exhausted: '순번 소진', no_matching_content_for_subtopic: '콘텐츠 없음',
+    no_matching_category: '콘텐츠 없음', already_sent_today: '오늘 발송됨',
+    no_start_date: '시작일 전', before_start_date: '시작일 전',
+    no_end_date: '구독 만료', already_expired: '구독 만료',
+  };
+
+  let html = '';
+  categories.forEach(cat => {
+    const meta = CATEGORY_META[cat] || { emoji: getCatEmoji(cat), label: getCatShortName(cat) };
+    let sts = allSubtopics.filter(st => String(st.category_id) === String(cat));
+    // 비활성이어도 활성 구독자가 있으면 표시 (발송 대상이 남아있을 수 있음)
+    sts = sts.filter(st => (st.active !== false) || (subsBySubtopic[st.id] || []).length > 0);
+    sts.sort((a, b) => (a.display_order || 0) - (b.display_order || 0));
+    if (sts.length === 0) return;
+
+    html += `<div style="margin-bottom:10px">`;
+    html += `<div style="font-size:12px;font-weight:700;color:var(--text);margin-bottom:4px">${meta.emoji} ${meta.label}</div>`;
+    html += `<div style="border:1px solid var(--b);border-radius:8px;overflow:hidden">`;
+
+    sts.forEach((st, i) => {
+      const sid = st.id;
+      const mode = (st.delivery_mode === 'sequence') ? 'sequence' : 'date';
+      const subList = subsBySubtopic[sid] || [];
+      const subCount = subList.length;
+      const sendable = subList.reduce((n, s) => n + (sendableBySub[s.id] ? 1 : 0), 0);
+      const reasons = subList.map(s => skipReasonBySub[s.id]).filter(Boolean);
+
+      // 콘텐츠 존재 표기
+      let contentMark, contentColor;
+      if (mode === 'date') {
+        const has = !!getArchiveItem(todayStr, cat, sid);
+        contentMark = has ? 'O' : 'X';
+        contentColor = has ? 'var(--green)' : '#ff9999';
+      } else {
+        if (sendable > 0) { contentMark = 'O'; contentColor = 'var(--green)'; }
+        else if (subCount > 0) {
+          contentMark = reasons.includes('sequence_exhausted') ? '소진' : 'X';
+          contentColor = '#ff9999';
+        } else { contentMark = '—'; contentColor = 'var(--muted)'; }
+      }
+
+      // 발송 준비 상태
+      let sendLabel, sendColor;
+      if (!drOk) { sendLabel = '— 확인 불가'; sendColor = 'var(--muted)'; }
+      else if (sendable > 0) { sendLabel = `✅ ${sendable}명 발송가능`; sendColor = 'var(--green)'; }
+      else if (subCount > 0) {
+        const rl = reasons.length ? (REASON_SHORT[reasons[0]] || reasons[0]) : (mode === 'date' ? '콘텐츠 없음' : '대기');
+        sendLabel = `⚠️ 발송불가 (${rl})`; sendColor = '#ff9999';
+      } else { sendLabel = '⏸ 대상 없음'; sendColor = 'var(--muted)'; }
+
+      const modeBadge = mode === 'sequence'
+        ? `<span style="font-size:9px;background:rgba(201,168,76,.15);color:var(--gold);padding:1px 5px;border-radius:4px;margin-left:4px">순번</span>`
+        : `<span style="font-size:9px;background:rgba(255,255,255,.06);color:var(--muted);padding:1px 5px;border-radius:4px;margin-left:4px">일자</span>`;
+
+      html += `<div style="display:flex;align-items:center;gap:8px;padding:7px 10px;${i > 0 ? 'border-top:1px solid var(--b);' : ''}font-size:11px">
+        <span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text)">${escapeHtml(st.name || ('부주제 ' + sid))}${modeBadge}</span>
+        <span style="color:var(--muted);width:58px;text-align:right">구독자 ${subCount}</span>
+        <span style="width:36px;text-align:center;color:${contentColor};font-weight:700" title="콘텐츠 존재 여부">${contentMark}</span>
+        <span style="width:130px;text-align:right;color:${sendColor}">${sendLabel}</span>
+      </div>`;
+    });
+
+    html += `</div></div>`;
+  });
+
+  box.innerHTML = html || '<div style="padding:10px;color:var(--muted);font-size:12px">표시할 부주제가 없습니다.</div>';
+  if (drTruncated) {
+    box.innerHTML += `<div style="font-size:10px;color:var(--muted);margin-top:6px">※ 구독자 50명 초과 — 발송가능 집계는 상위 50건 기준(부분)</div>`;
   }
 }
 
