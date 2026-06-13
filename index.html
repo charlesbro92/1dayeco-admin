@@ -985,7 +985,7 @@ body:not(.light-mode) .np-time { color:#9b9eaa; }
 <!-- SIDEBAR -->
 <aside class="sidebar">
   <div class="sb-logo">1DAYECO<small>Admin Dashboard</small>
-    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v217</span>
+    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v218</span>
   </div>
   <nav class="sb-nav">
     <div class="sb-group">운영</div>
@@ -4927,6 +4927,38 @@ async function loadSendPreview() {
     _prevState.contents = todayItems;
     _prevState.subsByCategory = subsByCategory;
 
+    // [v218] ── 순번(sequence) 발송 반영 ───────────────────────────
+    //  기존 버그: 발송 가능 여부를 '오늘 날짜 아카이브(todayItems) + 카테고리'로만 판단.
+    //  실제 발송(send-daily-content)은 부주제(subtopic)+순번(seq) 기준으로 동작하므로
+    //  순번 발송 콘텐츠가 있어도 '콘텐츠 없음 / 발송 대상 없음'으로 오인됐다.
+    //  → 백엔드 dry-run(실 발송 X)을 호출해 '실제 발송 가능 대상'을 그대로 사용한다.
+    let drOk = false;            // dry-run 성공 여부
+    let drSent = 0;              // 실제 발송 가능 총 건수 (순번+일자+레거시 모두 정확)
+    let sendableByCat = {};      // {category: 발송가능 인원}
+    let drSkipReasons = {};      // {reason: count} — 발송 제외 사유
+    let drTruncated = false;     // results가 50건으로 잘렸는지 (대규모 시 부분 집계)
+    try {
+      const dr = await apiPost('/admin/send-daily-content', { dry_run: true });
+      if (dr && dr.success !== false) {
+        drOk = true;
+        drSent = dr.sent || 0;
+        drSkipReasons = dr.skip_reasons || {};
+        (dr.results || []).forEach(r => {
+          if (r.would_send && r.category) {
+            sendableByCat[r.category] = (sendableByCat[r.category] || 0) + 1;
+          }
+        });
+        drTruncated = (dr.results || []).length >= 50 && (dr.total || 0) > 50;
+      }
+    } catch (e) {
+      console.warn('[발송미리보기] dry-run 실패 → 날짜 아카이브 기준 폴백:', e);
+    }
+    _prevState.sendableByCat = sendableByCat;
+    _prevState.drOk = drOk;
+    // 카테고리 발송 가능 판정: 순번 발송분(sendableByCat) 또는 오늘 날짜 콘텐츠(todayItems)
+    const isCatDeliverable = (cat) =>
+      (sendableByCat[cat] > 0) || !!todayItems[cat];
+
     // 4. 헤더 정보 표시
     const totalSubs = activeSubs.length;
     document.getElementById('prevDateInfo').textContent =
@@ -4944,7 +4976,8 @@ async function loadSendPreview() {
     grid.innerHTML = categories.map(cat => {
       const meta = CATEGORY_META[cat] || { emoji: getCatEmoji(cat), label: getCatShortName(cat) };
       const count = (subsByCategory[cat] || []).length;
-      const hasContent = !!todayItems[cat];
+      // [v218] 순번 발송 반영: dry-run 성공 시 실제 발송 가능 여부로 판단
+      const hasContent = drOk ? isCatDeliverable(cat) : !!todayItems[cat];
       const isOk = hasContent && count > 0;
       const isWarn = !hasContent && count > 0;
       const isEmpty = count === 0;
@@ -4977,7 +5010,8 @@ async function loadSendPreview() {
     }).join('');
 
     // 6. 탭 바 + 콘텐츠 박스
-    const availableTabs = categories.filter(cat => todayItems[cat]);
+    // [v218] 날짜 콘텐츠가 없어도 순번 발송 가능한 카테고리는 탭에 표시 (안내문 노출)
+    const availableTabs = categories.filter(cat => todayItems[cat] || (drOk && sendableByCat[cat] > 0));
     const tabBar = document.getElementById('prevTabBar');
 
     if (availableTabs.length === 0) {
@@ -5008,16 +5042,20 @@ async function loadSendPreview() {
     }
 
     // 7. 경고 메시지
+    // [v218] 발송 가능 판정을 순번 발송까지 반영(isCatDeliverable). dry-run 미동작 시 폴백.
+    //   결과가 50건으로 잘린 대규모 상황(drTruncated)에선 카테고리별 오탐을 막기 위해 경고 생략.
     const warnEl = document.getElementById('prevWarnings');
     const warnings = [];
-    categories.forEach(cat => {
-      const count = (subsByCategory[cat] || []).length;
-      const hasContent = !!todayItems[cat];
-      if (count > 0 && !hasContent) {
-        const m = CATEGORY_META[cat] || { emoji: getCatEmoji(cat), label: getCatShortName(cat) };
-        warnings.push(`${m.emoji} <strong>${m.label}</strong> 카테고리 콘텐츠가 없어 ${count}명에게 발송 불가`);
-      }
-    });
+    if (!drTruncated) {
+      categories.forEach(cat => {
+        const count = (subsByCategory[cat] || []).length;
+        const deliverable = drOk ? isCatDeliverable(cat) : !!todayItems[cat];
+        if (count > 0 && !deliverable) {
+          const m = CATEGORY_META[cat] || { emoji: getCatEmoji(cat), label: getCatShortName(cat) };
+          warnings.push(`${m.emoji} <strong>${m.label}</strong> 카테고리 콘텐츠가 없어 ${count}명에게 발송 불가`);
+        }
+      });
+    }
     if (warnings.length > 0) {
       warnEl.style.display = 'block';
       warnEl.innerHTML = warnings.map(w => '⚠️ ' + w).join('<br>');
@@ -5026,13 +5064,39 @@ async function loadSendPreview() {
     }
 
     // 8. 요약 + 발송 버튼 라벨
-    const sendableCount = categories.reduce((sum, cat) => {
-      return sum + (todayItems[cat] ? subsByCategory[cat].length : 0);
-    }, 0);
+    // [v218] 발송 가능 건수 = dry-run의 실제 발송 가능 총합(drSent). 순번 발송 포함 정확.
+    //   dry-run 실패 시에만 기존 날짜 아카이브 기준으로 폴백.
+    const sendableCount = drOk
+      ? drSent
+      : categories.reduce((sum, cat) => sum + (todayItems[cat] ? subsByCategory[cat].length : 0), 0);
+
+    // [v218] 발송 가능 대상이 0일 때 '왜 없는지' 사유를 함께 표시
+    //   (구독자는 있는데 만료/시작일 이전/순번 소진/오늘 이미 발송 등으로 제외된 경우 구분)
+    const SKIP_REASON_LABEL = {
+      no_end_date:                     '구독 만료(종료일 없음)',
+      already_expired:                 '구독 만료',
+      no_start_date:                   '발송 시작일 미설정',
+      before_start_date:               '발송 시작일 이전',
+      already_sent_today:              '오늘 이미 발송됨',
+      sequence_exhausted:              '순번 콘텐츠 소진',
+      no_matching_content_for_subtopic:'해당 부주제의 오늘 콘텐츠 없음',
+      no_matching_category:            '콘텐츠 없는 카테고리',
+    };
+    let reasonHint = '';
+    if (sendableCount === 0 && drOk) {
+      const parts = Object.entries(drSkipReasons)
+        .filter(([, n]) => n > 0)
+        .map(([k, n]) => `${SKIP_REASON_LABEL[k] || k} ${n}명`);
+      if (parts.length > 0) {
+        reasonHint = `<div style="font-size:11px;color:var(--muted);margin-top:4px">사유: ${parts.join(' · ')}</div>`;
+      } else if (totalSubs === 0) {
+        reasonHint = `<div style="font-size:11px;color:var(--muted);margin-top:4px">활성 구독자가 없습니다.</div>`;
+      }
+    }
     document.getElementById('prevSummary').innerHTML =
       sendableCount > 0
         ? `발송 메시지: <strong style="color:var(--text)">${sendableCount}건</strong> / 활성 구독자 ${totalSubs}명`
-        : '<span style="color:#ff9999">⚠️ 발송 가능한 대상이 없습니다</span>';
+        : '<span style="color:#ff9999">⚠️ 지금 발송 가능한 대상이 없습니다</span>' + reasonHint;
 
     document.getElementById('sendAllBtnLabel').textContent =
       sendableCount > 0 ? `${sendableCount}건 발송 시작` : '발송 시작';
@@ -5057,8 +5121,20 @@ function renderPrevContent() {
   if (!cat) return;
   const content = _prevState.contents[cat];
   if (!content) {
-    document.getElementById('prevContentBox').innerHTML =
-      '<span style="color:var(--muted)">콘텐츠가 없습니다.</span>';
+    // [v218] 날짜 콘텐츠는 없지만 순번 발송이 가능한 카테고리 안내
+    const seqCnt = (_prevState.sendableByCat && _prevState.sendableByCat[cat]) || 0;
+    if (_prevState.drOk && seqCnt > 0) {
+      document.getElementById('prevContentBox').innerHTML =
+        `<div style="font-size:13px;line-height:1.6;color:var(--text)">` +
+        `🔢 <strong>순번 발송 콘텐츠</strong>입니다. 구독자마다 진도(순번)가 달라 ` +
+        `발송 콘텐츠가 개별적으로 다릅니다.<br>` +
+        `<span style="color:var(--green)">현재 ${seqCnt}명에게 발송 가능</span> · ` +
+        `<span style="color:var(--muted)">개별 콘텐츠는 '주제 관리 → 순번 발송 콘텐츠'에서 확인하세요.</span>` +
+        `</div>`;
+    } else {
+      document.getElementById('prevContentBox').innerHTML =
+        '<span style="color:var(--muted)">콘텐츠가 없습니다.</span>';
+    }
     return;
   }
   const topic = content.topic || content.headline || '제목 없음';
