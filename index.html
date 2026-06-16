@@ -985,7 +985,7 @@ body:not(.light-mode) .np-time { color:#9b9eaa; }
 <!-- SIDEBAR -->
 <aside class="sidebar">
   <div class="sb-logo">1DAYECO<small>Admin Dashboard</small>
-    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v222</span>
+    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v223</span>
   </div>
   <nav class="sb-nav">
     <div class="sb-group">운영</div>
@@ -5222,6 +5222,18 @@ async function renderSubtopicBreakdown(ctx) {
   const _sentToday = (sentTodaySet instanceof Set) ? sentTodaySet : new Set();
   const _sendableT = sendableBySubT || {};
   const _skipT     = skipReasonBySubT || {};
+  // [v223] 날짜(KST) 라벨: 'YYYY-MM-DD(요일)'
+  const _fmtDateKST = (ds) => {
+    if (!ds) return '';
+    let wd = '';
+    try {
+      wd = new Date(ds + 'T12:00:00+09:00')
+        .toLocaleDateString('ko-KR', { weekday: 'short', timeZone: 'Asia/Seoul' });
+    } catch (e) {}
+    return wd ? `${ds}(${wd})` : ds;
+  };
+  const _todayLabelDate = _fmtDateKST(todayStr);
+  const _tmrLabelDate   = _fmtDateKST(tomorrowStr);
 
   // 전체 부주제 로드
   let allSubtopics = [];
@@ -5247,6 +5259,8 @@ async function renderSubtopicBreakdown(ctx) {
   };
 
   let html = '';
+  // [v223] 한국시간(KST) 기준 안내
+  html += `<div style="font-size:10px;color:var(--muted);margin-bottom:6px">🇰🇷 모든 날짜·시간은 한국시간(KST) 기준</div>`;
   categories.forEach(cat => {
     const meta = CATEGORY_META[cat] || { emoji: getCatEmoji(cat), label: getCatShortName(cat) };
     let sts = allSubtopics.filter(st => String(st.category_id) === String(cat));
@@ -5263,8 +5277,8 @@ async function renderSubtopicBreakdown(ctx) {
     html += `<div style="display:flex;align-items:center;gap:8px;padding:6px 10px;font-size:10px;font-weight:700;color:var(--muted);background:rgba(255,255,255,.03);border-bottom:1px solid var(--b)">
       <span style="flex:1;min-width:0">부주제</span>
       <span style="width:52px;text-align:right">구독자</span>
-      <span style="width:140px;text-align:right">📤 오늘 발송 현황</span>
-      <span style="width:140px;text-align:right">📅 내일 발송 현황</span>
+      <span style="width:140px;text-align:right">📤 ${_todayLabelDate}</span>
+      <span style="width:140px;text-align:right">📅 ${_tmrLabelDate}</span>
     </div>`;
 
     sts.forEach((st, i) => {
