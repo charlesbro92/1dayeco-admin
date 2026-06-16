@@ -985,7 +985,7 @@ body:not(.light-mode) .np-time { color:#9b9eaa; }
 <!-- SIDEBAR -->
 <aside class="sidebar">
   <div class="sb-logo">1DAYECO<small>Admin Dashboard</small>
-    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v221</span>
+    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v222</span>
   </div>
   <nav class="sb-nav">
     <div class="sb-group">운영</div>
@@ -5010,6 +5010,43 @@ async function loadSendPreview() {
     } catch (e) {
       console.warn('[발송미리보기] dry-run 실패 → 날짜 아카이브 기준 폴백:', e);
     }
+
+    // [v222] ── 내일(date_str) dry-run + 오늘 실제 발송완료 집합 ─────────────
+    //  '오늘 발송 현황' / '내일 발송 현황' 2개 컬럼 분리용.
+    //  - 내일 dry-run: 백엔드가 date_str을 지원 → 오늘과 100% 동일 로직으로 내일 판정.
+    //    (순번은 current_seq+1, 중복가드는 send_date=내일 기준이라 비어있어 '내일 준비여부'만 봄)
+    //  - 오늘 완료: send_logs(오늘, 성공) 기준 — 일자/순번 모드 모두 정확.
+    const tomorrowStr = (typeof getKSTDateStr === 'function')
+      ? getKSTDateStr(1)
+      : new Date(new Date().getTime() + 33 * 3600000).toISOString().slice(0, 10);
+    let drOkT = false;            // 내일 dry-run 성공 여부
+    let sendableBySubT = {};      // {subscriber_id: 1} — 내일 발송 가능
+    let skipReasonBySubT = {};    // {subscriber_id: reason} — 내일 제외 사유
+    try {
+      const drT = await apiPost('/admin/send-daily-content', { dry_run: true, date_str: tomorrowStr });
+      if (drT && drT.success !== false) {
+        drOkT = true;
+        (drT.results || []).forEach(r => {
+          const sid = (r.subscriber_id != null) ? r.subscriber_id : r.sub_id;
+          if (sid == null) return;
+          if (r.would_send) sendableBySubT[sid] = (sendableBySubT[sid] || 0) + 1;
+          else if (r.reason) skipReasonBySubT[sid] = r.reason;
+        });
+      }
+    } catch (e) {
+      console.warn('[발송미리보기] 내일 dry-run 실패:', e);
+    }
+
+    let sentTodaySet = new Set();  // 오늘 실제 발송 성공한 subscriber_id
+    try {
+      const lg = await apiFetch('/admin/send-logs?date_from=' + todayStr + '&date_to=' + todayStr + '&limit=500');
+      ((lg && lg.data) || []).forEach(l => {
+        if (l.success && l.subscriber_id != null) sentTodaySet.add(l.subscriber_id);
+      });
+    } catch (e) {
+      console.warn('[발송미리보기] 오늘 발송로그 조회 실패:', e);
+    }
+
     _prevState.sendableByCat = sendableByCat;
     _prevState.drOk = drOk;
     // 카테고리 발송 가능 판정: 순번 발송분(sendableByCat) 또는 오늘 날짜 콘텐츠(todayItems)
@@ -5163,8 +5200,9 @@ async function loadSendPreview() {
 
     // 9. [v220] 부주제별 콘텐츠·발송 준비 현황 렌더 (카테고리별 그룹)
     await renderSubtopicBreakdown({
-      categories, todayStr, activeSubs,
+      categories, todayStr, tomorrowStr, activeSubs,
       sendableBySub, skipReasonBySub, drOk, drTruncated,
+      sendableBySubT, skipReasonBySubT, drOkT, sentTodaySet,
     });
 
   } catch (e) {
@@ -5178,7 +5216,12 @@ async function loadSendPreview() {
 async function renderSubtopicBreakdown(ctx) {
   const box = document.getElementById('prevSubtopicBreakdown');
   if (!box) return;
-  const { categories, todayStr, activeSubs, sendableBySub, skipReasonBySub, drOk, drTruncated } = ctx;
+  const { categories, todayStr, tomorrowStr, activeSubs,
+          sendableBySub, skipReasonBySub, drOk, drTruncated,
+          sendableBySubT, skipReasonBySubT, drOkT, sentTodaySet } = ctx;
+  const _sentToday = (sentTodaySet instanceof Set) ? sentTodaySet : new Set();
+  const _sendableT = sendableBySubT || {};
+  const _skipT     = skipReasonBySubT || {};
 
   // 전체 부주제 로드
   let allSubtopics = [];
@@ -5216,46 +5259,62 @@ async function renderSubtopicBreakdown(ctx) {
     html += `<div style="font-size:12px;font-weight:700;color:var(--text);margin-bottom:4px">${meta.emoji} ${meta.label}</div>`;
     html += `<div style="border:1px solid var(--b);border-radius:8px;overflow:hidden">`;
 
+    // [v222] 컬럼 헤더 행
+    html += `<div style="display:flex;align-items:center;gap:8px;padding:6px 10px;font-size:10px;font-weight:700;color:var(--muted);background:rgba(255,255,255,.03);border-bottom:1px solid var(--b)">
+      <span style="flex:1;min-width:0">부주제</span>
+      <span style="width:52px;text-align:right">구독자</span>
+      <span style="width:140px;text-align:right">📤 오늘 발송 현황</span>
+      <span style="width:140px;text-align:right">📅 내일 발송 현황</span>
+    </div>`;
+
     sts.forEach((st, i) => {
       const sid = st.id;
       const mode = (st.delivery_mode === 'sequence') ? 'sequence' : 'date';
       const subList = subsBySubtopic[sid] || [];
       const subCount = subList.length;
-      const sendable = subList.reduce((n, s) => n + (sendableBySub[s.id] ? 1 : 0), 0);
-      const reasons = subList.map(s => skipReasonBySub[s.id]).filter(Boolean);
 
-      // 콘텐츠 존재 표기
-      let contentMark, contentColor;
-      if (mode === 'date') {
-        const has = !!getArchiveItem(todayStr, cat, sid);
-        contentMark = has ? 'O' : 'X';
-        contentColor = has ? 'var(--green)' : '#ff9999';
-      } else {
-        if (sendable > 0) { contentMark = 'O'; contentColor = 'var(--green)'; }
-        else if (subCount > 0) {
-          contentMark = reasons.includes('sequence_exhausted') ? '소진' : 'X';
-          contentColor = '#ff9999';
-        } else { contentMark = '—'; contentColor = 'var(--muted)'; }
+      // ── 오늘 발송 현황 ──────────────────────────────
+      //  완료 = 오늘 send_logs 성공 또는 dry-run already_sent_today
+      const sendableToday = subList.reduce((n, s) => n + (sendableBySub[s.id] ? 1 : 0), 0);
+      const reasonsToday  = subList.map(s => skipReasonBySub[s.id]).filter(Boolean);
+      const completed = subList.reduce((n, s) =>
+        n + ((_sentToday.has(s.id) || skipReasonBySub[s.id] === 'already_sent_today') ? 1 : 0), 0);
+
+      let todayLabel, todayColor;
+      if (subCount === 0) { todayLabel = '—'; todayColor = 'var(--muted)'; }
+      else if (completed >= subCount) { todayLabel = '✅ 발송 완료'; todayColor = 'var(--green)'; }
+      else if (completed > 0) { todayLabel = `✅ 완료 ${completed}/${subCount}`; todayColor = 'var(--green)'; }
+      else if (!drOk) { todayLabel = '— 확인 불가'; todayColor = 'var(--muted)'; }
+      else if (sendableToday > 0) { todayLabel = `🕗 발송 대기 ${sendableToday}명`; todayColor = 'var(--gold)'; }
+      else {
+        const rl = reasonsToday.length ? (REASON_SHORT[reasonsToday[0]] || reasonsToday[0]) : '콘텐츠 없음';
+        todayLabel = `⚠️ 발송불가 (${rl})`; todayColor = '#ff9999';
       }
 
-      // 발송 준비 상태
-      let sendLabel, sendColor;
-      if (!drOk) { sendLabel = '— 확인 불가'; sendColor = 'var(--muted)'; }
-      else if (sendable > 0) { sendLabel = `✅ ${sendable}명 발송가능`; sendColor = 'var(--green)'; }
-      else if (subCount > 0) {
-        const rl = reasons.length ? (REASON_SHORT[reasons[0]] || reasons[0]) : (mode === 'date' ? '콘텐츠 없음' : '대기');
-        sendLabel = `⚠️ 발송불가 (${rl})`; sendColor = '#ff9999';
-      } else { sendLabel = '⏸ 대상 없음'; sendColor = 'var(--muted)'; }
+      // ── 내일 발송 현황 ──────────────────────────────
+      //  준비됨 = 내일 dry-run would_send. 아니면 사유(순번 소진/콘텐츠 없음 등)
+      const sendableTomorrow = subList.reduce((n, s) => n + (_sendableT[s.id] ? 1 : 0), 0);
+      const reasonsTomorrow  = subList.map(s => _skipT[s.id]).filter(Boolean);
+
+      let tmrLabel, tmrColor;
+      if (subCount === 0) { tmrLabel = '—'; tmrColor = 'var(--muted)'; }
+      else if (!drOkT) { tmrLabel = '— 확인 불가'; tmrColor = 'var(--muted)'; }
+      else if (sendableTomorrow >= subCount) { tmrLabel = '✅ 준비됨'; tmrColor = 'var(--green)'; }
+      else if (sendableTomorrow > 0) { tmrLabel = `✅ 준비 ${sendableTomorrow}/${subCount}`; tmrColor = 'var(--green)'; }
+      else {
+        const rl = reasonsTomorrow.length ? (REASON_SHORT[reasonsTomorrow[0]] || reasonsTomorrow[0]) : '콘텐츠 없음';
+        tmrLabel = `⚠️ 미준비 (${rl})`; tmrColor = '#ff9999';
+      }
 
       const modeBadge = mode === 'sequence'
         ? `<span style="font-size:9px;background:rgba(201,168,76,.15);color:var(--gold);padding:1px 5px;border-radius:4px;margin-left:4px">순번</span>`
         : `<span style="font-size:9px;background:rgba(255,255,255,.06);color:var(--muted);padding:1px 5px;border-radius:4px;margin-left:4px">일자</span>`;
 
-      html += `<div style="display:flex;align-items:center;gap:8px;padding:7px 10px;${i > 0 ? 'border-top:1px solid var(--b);' : ''}font-size:11px">
+      html += `<div style="display:flex;align-items:center;gap:8px;padding:7px 10px;border-top:1px solid var(--b);font-size:11px">
         <span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text)">${escapeHtml(st.name || ('부주제 ' + sid))}${modeBadge}</span>
-        <span style="color:var(--muted);width:58px;text-align:right">구독자 ${subCount}</span>
-        <span style="width:36px;text-align:center;color:${contentColor};font-weight:700" title="콘텐츠 존재 여부">${contentMark}</span>
-        <span style="width:130px;text-align:right;color:${sendColor}">${sendLabel}</span>
+        <span style="color:var(--muted);width:52px;text-align:right">${subCount}</span>
+        <span style="width:140px;text-align:right;color:${todayColor}">${todayLabel}</span>
+        <span style="width:140px;text-align:right;color:${tmrColor}">${tmrLabel}</span>
       </div>`;
     });
 
