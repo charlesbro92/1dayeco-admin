@@ -5041,7 +5041,7 @@ async function loadSendPreview() {
     try {
       const lg = await apiFetch('/admin/send-logs?date_from=' + todayStr + '&date_to=' + todayStr + '&limit=500');
       ((lg && lg.data) || []).forEach(l => {
-        if (l.success && l.subscriber_id != null) sentTodaySet.add(l.subscriber_id);
+        if (l.success && l.subscriber_id != null) sentTodaySet.add(String(l.subscriber_id));
       });
     } catch (e) {
       console.warn('[발송미리보기] 오늘 발송로그 조회 실패:', e);
@@ -5278,14 +5278,14 @@ async function renderSubtopicBreakdown(ctx) {
       const sendableToday = subList.reduce((n, s) => n + (sendableBySub[s.id] ? 1 : 0), 0);
       const reasonsToday  = subList.map(s => skipReasonBySub[s.id]).filter(Boolean);
       const completed = subList.reduce((n, s) =>
-        n + ((_sentToday.has(s.id) || skipReasonBySub[s.id] === 'already_sent_today') ? 1 : 0), 0);
+        n + ((_sentToday.has(String(s.id)) || skipReasonBySub[s.id] === 'already_sent_today') ? 1 : 0), 0);
 
       let todayLabel, todayColor;
       if (subCount === 0) { todayLabel = '—'; todayColor = 'var(--muted)'; }
       else if (completed >= subCount) { todayLabel = '✅ 발송 완료'; todayColor = 'var(--green)'; }
       else if (completed > 0) { todayLabel = `✅ 완료 ${completed}/${subCount}`; todayColor = 'var(--green)'; }
       else if (!drOk) { todayLabel = '— 확인 불가'; todayColor = 'var(--muted)'; }
-      else if (sendableToday > 0) { todayLabel = `🕗 발송 대기 ${sendableToday}명`; todayColor = 'var(--gold)'; }
+      else if (sendableToday > 0) { todayLabel = `🕒 발송 예정 ${sendableToday}명`; todayColor = 'var(--gold)'; }
       else {
         const rl = reasonsToday.length ? (REASON_SHORT[reasonsToday[0]] || reasonsToday[0]) : '콘텐츠 없음';
         todayLabel = `⚠️ 발송불가 (${rl})`; todayColor = '#ff9999';
