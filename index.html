@@ -985,7 +985,7 @@ body:not(.light-mode) .np-time { color:#9b9eaa; }
 <!-- SIDEBAR -->
 <aside class="sidebar">
   <div class="sb-logo">1DAYECO<small>Admin Dashboard</small>
-    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v223</span>
+    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v224</span>
   </div>
   <nav class="sb-nav">
     <div class="sb-group">운영</div>
@@ -4990,62 +4990,61 @@ async function loadSendPreview() {
     let drTruncated = false;     // results가 50건으로 잘렸는지 (대규모 시 부분 집계)
     let sendableBySub = {};      // [v220] {subscriber_id: 1} — 발송 가능 구독자 (부주제 집계용)
     let skipReasonBySub = {};    // [v220] {subscriber_id: reason} — 제외 사유 (부주제 집계용)
-    try {
-      const dr = await apiPost('/admin/send-daily-content', { dry_run: true });
-      if (dr && dr.success !== false) {
-        drOk = true;
-        drSent = dr.sent || 0;
-        drSkipReasons = dr.skip_reasons || {};
-        (dr.results || []).forEach(r => {
-          const sid = (r.subscriber_id != null) ? r.subscriber_id : r.sub_id;
-          if (r.would_send) {
-            if (r.category) sendableByCat[r.category] = (sendableByCat[r.category] || 0) + 1;
-            if (sid != null) sendableBySub[sid] = (sendableBySub[sid] || 0) + 1;
-          } else if (r.reason && sid != null) {
-            skipReasonBySub[sid] = r.reason;
-          }
-        });
-        drTruncated = (dr.results || []).length >= 50 && (dr.total || 0) > 50;
-      }
-    } catch (e) {
-      console.warn('[발송미리보기] dry-run 실패 → 날짜 아카이브 기준 폴백:', e);
-    }
-
-    // [v222] ── 내일(date_str) dry-run + 오늘 실제 발송완료 집합 ─────────────
-    //  '오늘 발송 현황' / '내일 발송 현황' 2개 컬럼 분리용.
-    //  - 내일 dry-run: 백엔드가 date_str을 지원 → 오늘과 100% 동일 로직으로 내일 판정.
-    //    (순번은 current_seq+1, 중복가드는 send_date=내일 기준이라 비어있어 '내일 준비여부'만 봄)
-    //  - 오늘 완료: send_logs(오늘, 성공) 기준 — 일자/순번 모드 모두 정확.
+    // [v224] ── 로딩 단축: 4개 네트워크 호출을 병렬 실행 ────────────────────
+    //  기존엔 오늘 dry-run → 내일 dry-run → 발송로그 → 부주제목록 을 순차 await 해서
+    //  왕복 지연이 4배로 누적됐다. Promise.all 로 동시 요청하여 가장 느린 1건 수준으로 단축.
     const tomorrowStr = (typeof getKSTDateStr === 'function')
       ? getKSTDateStr(1)
       : new Date(new Date().getTime() + 33 * 3600000).toISOString().slice(0, 10);
     let drOkT = false;            // 내일 dry-run 성공 여부
     let sendableBySubT = {};      // {subscriber_id: 1} — 내일 발송 가능
     let skipReasonBySubT = {};    // {subscriber_id: reason} — 내일 제외 사유
-    try {
-      const drT = await apiPost('/admin/send-daily-content', { dry_run: true, date_str: tomorrowStr });
-      if (drT && drT.success !== false) {
-        drOkT = true;
-        (drT.results || []).forEach(r => {
-          const sid = (r.subscriber_id != null) ? r.subscriber_id : r.sub_id;
-          if (sid == null) return;
-          if (r.would_send) sendableBySubT[sid] = (sendableBySubT[sid] || 0) + 1;
-          else if (r.reason) skipReasonBySubT[sid] = r.reason;
-        });
-      }
-    } catch (e) {
-      console.warn('[발송미리보기] 내일 dry-run 실패:', e);
-    }
+    let sentTodaySet = new Set(); // 오늘 실제 발송 성공한 subscriber_id
+    let allSubtopics = [];        // [v224] 부주제 목록 (renderSubtopicBreakdown에 전달 → 중복 호출 제거)
 
-    let sentTodaySet = new Set();  // 오늘 실제 발송 성공한 subscriber_id
-    try {
-      const lg = await apiFetch('/admin/send-logs?date_from=' + todayStr + '&date_to=' + todayStr + '&limit=500');
-      ((lg && lg.data) || []).forEach(l => {
-        if (l.success && l.subscriber_id != null) sentTodaySet.add(String(l.subscriber_id));
+    const [dr, drT, lg, stRes] = await Promise.all([
+      apiPost('/admin/send-daily-content', { dry_run: true })
+        .catch(e => { console.warn('[발송미리보기] dry-run 실패:', e); return null; }),
+      apiPost('/admin/send-daily-content', { dry_run: true, date_str: tomorrowStr })
+        .catch(e => { console.warn('[발송미리보기] 내일 dry-run 실패:', e); return null; }),
+      apiFetch('/admin/send-logs?date_from=' + todayStr + '&date_to=' + todayStr + '&limit=500')
+        .catch(e => { console.warn('[발송미리보기] 발송로그 실패:', e); return null; }),
+      apiFetch('/admin/subtopics')
+        .catch(e => { console.warn('[발송미리보기] 부주제 로드 실패:', e); return null; }),
+    ]);
+
+    // 오늘 dry-run 처리
+    if (dr && dr.success !== false) {
+      drOk = true;
+      drSent = dr.sent || 0;
+      drSkipReasons = dr.skip_reasons || {};
+      (dr.results || []).forEach(r => {
+        const sid = (r.subscriber_id != null) ? r.subscriber_id : r.sub_id;
+        if (r.would_send) {
+          if (r.category) sendableByCat[r.category] = (sendableByCat[r.category] || 0) + 1;
+          if (sid != null) sendableBySub[sid] = (sendableBySub[sid] || 0) + 1;
+        } else if (r.reason && sid != null) {
+          skipReasonBySub[sid] = r.reason;
+        }
       });
-    } catch (e) {
-      console.warn('[발송미리보기] 오늘 발송로그 조회 실패:', e);
+      drTruncated = (dr.results || []).length >= 50 && (dr.total || 0) > 50;
     }
+    // 내일 dry-run 처리
+    if (drT && drT.success !== false) {
+      drOkT = true;
+      (drT.results || []).forEach(r => {
+        const sid = (r.subscriber_id != null) ? r.subscriber_id : r.sub_id;
+        if (sid == null) return;
+        if (r.would_send) sendableBySubT[sid] = (sendableBySubT[sid] || 0) + 1;
+        else if (r.reason) skipReasonBySubT[sid] = r.reason;
+      });
+    }
+    // 오늘 발송로그 → 완료 집합
+    ((lg && lg.data) || []).forEach(l => {
+      if (l.success && l.subscriber_id != null) sentTodaySet.add(String(l.subscriber_id));
+    });
+    // 부주제 목록
+    allSubtopics = (stRes && stRes.success && Array.isArray(stRes.data)) ? stRes.data : [];
 
     _prevState.sendableByCat = sendableByCat;
     _prevState.drOk = drOk;
@@ -5135,24 +5134,42 @@ async function loadSendPreview() {
       renderPrevContent();
     }
 
-    // 7. 경고 메시지
-    // [v218] 발송 가능 판정을 순번 발송까지 반영(isCatDeliverable). dry-run 미동작 시 폴백.
-    //   결과가 50건으로 잘린 대규모 상황(drTruncated)에선 카테고리별 오탐을 막기 위해 경고 생략.
+    // 7. 경고 / 안내 메시지
+    // [v224] '콘텐츠 없음'(실제 문제)과 '오늘 발송 완료'(정상)를 구분해 오해를 방지.
+    //   - 빨강: 실제로 보낼 콘텐츠가 없는 경우(콘텐츠 미생성/순번 소진)
+    //   - 초록: 이미 오늘 발송이 끝나 더 보낼 대상이 없는 정상 상태
+    //   결과가 50건으로 잘린 대규모 상황(drTruncated)에선 카테고리별 오탐을 막기 위해 생략.
     const warnEl = document.getElementById('prevWarnings');
-    const warnings = [];
+    const CONTENT_ISSUE = ['no_matching_category', 'no_matching_content_for_subtopic', 'sequence_exhausted'];
+    const problems = [];   // 실제 문제 (빨강)
+    const notices  = [];   // 정상 안내 (초록)
     if (!drTruncated) {
       categories.forEach(cat => {
-        const count = (subsByCategory[cat] || []).length;
-        const deliverable = drOk ? isCatDeliverable(cat) : !!todayItems[cat];
-        if (count > 0 && !deliverable) {
-          const m = CATEGORY_META[cat] || { emoji: getCatEmoji(cat), label: getCatShortName(cat) };
-          warnings.push(`${m.emoji} <strong>${m.label}</strong> 카테고리 콘텐츠가 없어 ${count}명에게 발송 불가`);
+        const subs = subsByCategory[cat] || [];
+        if (subs.length === 0) return;
+        const sendable = drOk ? (sendableByCat[cat] || 0) : (todayItems[cat] ? subs.length : 0);
+        if (sendable > 0) return;  // 일부라도 발송 가능하면 경고 없음
+        const m = CATEGORY_META[cat] || { emoji: getCatEmoji(cat), label: getCatShortName(cat) };
+        const reasons = subs.map(s => skipReasonBySub[s.id]).filter(Boolean);
+        const sentCnt = subs.filter(s => sentTodaySet.has(String(s.id)) || skipReasonBySub[s.id] === 'already_sent_today').length;
+        if (reasons.some(r => CONTENT_ISSUE.includes(r))) {
+          // 실제로 보낼 콘텐츠가 없음 → 빨강 (단, '발송 불가'보다 정확한 표현)
+          problems.push(`${m.emoji} <strong>${m.label}</strong> 오늘 보낼 콘텐츠가 아직 없습니다 (${subs.length}명 대기)`);
+        } else if (sentCnt >= subs.length) {
+          notices.push(`${m.emoji} <strong>${m.label}</strong> 오늘 발송 완료 (${subs.length}명)`);
+        } else if (sentCnt > 0) {
+          notices.push(`${m.emoji} <strong>${m.label}</strong> ${sentCnt}명 발송 완료 · ${subs.length - sentCnt}명 대기`);
         }
+        // 만료/시작일 이전 등은 아래 요약의 '사유'에서 안내
       });
     }
-    if (warnings.length > 0) {
-      warnEl.style.display = 'block';
-      warnEl.innerHTML = warnings.map(w => '⚠️ ' + w).join('<br>');
+    if (problems.length > 0) {
+      warnEl.style.cssText = 'display:block;background:rgba(255,118,118,.08);border:1px solid rgba(255,118,118,.3);border-radius:8px;padding:10px 12px;margin-bottom:14px;font-size:12px;line-height:1.7';
+      warnEl.innerHTML = problems.map(w => `<div style="color:#ff9999">⚠️ ${w}</div>`).join('')
+                       + notices.map(w => `<div style="color:var(--green)">✅ ${w}</div>`).join('');
+    } else if (notices.length > 0) {
+      warnEl.style.cssText = 'display:block;background:rgba(94,234,145,.07);border:1px solid rgba(94,234,145,.28);border-radius:8px;padding:10px 12px;margin-bottom:14px;font-size:12px;line-height:1.7';
+      warnEl.innerHTML = notices.map(w => `<div style="color:var(--green)">✅ ${w}</div>`).join('');
     } else {
       warnEl.style.display = 'none';
     }
@@ -5177,7 +5194,11 @@ async function loadSendPreview() {
       no_matching_category:            '콘텐츠 없는 카테고리',
     };
     let reasonHint = '';
-    if (sendableCount === 0 && drOk) {
+    const skipKeys = Object.keys(drSkipReasons).filter(k => drSkipReasons[k] > 0);
+    // [v224] 모든 제외 사유가 '오늘 이미 발송됨' 뿐이면 = 정상적으로 오늘 발송이 끝난 상태
+    const allDoneToday = drOk && sendableCount === 0 && skipKeys.length > 0
+      && skipKeys.every(k => k === 'already_sent_today');
+    if (sendableCount === 0 && drOk && !allDoneToday) {
       const parts = Object.entries(drSkipReasons)
         .filter(([, n]) => n > 0)
         .map(([k, n]) => `${SKIP_REASON_LABEL[k] || k} ${n}명`);
@@ -5190,7 +5211,10 @@ async function loadSendPreview() {
     document.getElementById('prevSummary').innerHTML =
       sendableCount > 0
         ? `발송 메시지: <strong style="color:var(--text)">${sendableCount}건</strong> / 활성 구독자 ${totalSubs}명`
-        : '<span style="color:#ff9999">⚠️ 지금 발송 가능한 대상이 없습니다</span>' + reasonHint;
+        : allDoneToday
+          ? `<span style="color:var(--green)">✅ 오늘 발송이 모두 완료되었습니다 (${drSkipReasons.already_sent_today}명)</span>`
+            + `<div style="font-size:11px;color:var(--muted);margin-top:4px">다음 발송은 내일 오전 8시에 자동 진행됩니다.</div>`
+          : '<span style="color:#ff9999">⚠️ 지금 발송 가능한 대상이 없습니다</span>' + reasonHint;
 
     document.getElementById('sendAllBtnLabel').textContent =
       sendableCount > 0 ? `${sendableCount}건 발송 시작` : '발송 시작';
@@ -5203,6 +5227,7 @@ async function loadSendPreview() {
       categories, todayStr, tomorrowStr, activeSubs,
       sendableBySub, skipReasonBySub, drOk, drTruncated,
       sendableBySubT, skipReasonBySubT, drOkT, sentTodaySet,
+      allSubtopics,
     });
 
   } catch (e) {
@@ -5235,13 +5260,15 @@ async function renderSubtopicBreakdown(ctx) {
   const _todayLabelDate = _fmtDateKST(todayStr);
   const _tmrLabelDate   = _fmtDateKST(tomorrowStr);
 
-  // 전체 부주제 로드
-  let allSubtopics = [];
-  try {
-    const r = await apiFetch('/admin/subtopics');
-    allSubtopics = (r && r.success && Array.isArray(r.data)) ? r.data : [];
-  } catch (e) {
-    console.warn('[부주제현황] 로드 실패:', e);
+  // 전체 부주제 — [v224] 상위에서 병렬로 미리 받아 전달받음 (없을 때만 폴백 호출)
+  let allSubtopics = Array.isArray(ctx.allSubtopics) ? ctx.allSubtopics : [];
+  if (allSubtopics.length === 0) {
+    try {
+      const r = await apiFetch('/admin/subtopics');
+      allSubtopics = (r && r.success && Array.isArray(r.data)) ? r.data : [];
+    } catch (e) {
+      console.warn('[부주제현황] 로드 실패:', e);
+    }
   }
 
   // 부주제별 활성 구독자 그룹
