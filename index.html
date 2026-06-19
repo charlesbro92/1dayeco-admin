@@ -4470,7 +4470,7 @@ async function loadSubscribers(opts) {
       last_send_channel:     s.last_send_channel || null,
       last_sent_at:          s.last_sent_at || null,
       // [v186] 결제/플랜 부가 정보 — 모달/상세에서 사용
-      paid_amount:           s.paid_amount || null,
+      paid_amount:           (s.paid_amount === null || s.paid_amount === undefined) ? null : s.paid_amount,  // [v223] 0원(무료쿠폰) 보존 — `|| null` 쓰면 0이 null로 바뀜
       total_send_days:       s.total_send_days || null,
       pg_provider:           s.pg_provider || null,
       card_company:          s.card_company || null,
@@ -4604,13 +4604,14 @@ function renderSubscribersRows(filtered) {
                       vertical-align:middle">NEW</span>`
       : '';
 
-    // [v223] 금액(정가) / 할인액 / 최종결제액 — paid_amount(실결제액) 기반 계산
+    // [v223] 금액(정가) / 할인액 / 최종결제액 — paid_amount(실결제액) 기반. 결제완료 시에만 계산(0원 무료쿠폰 포함)
     const PLAN_LIST_AMT = {monthly:9900, yearly:79000, free:0, pkg3m:19900, pkg6m:24900, pkg1y:41900};
     const _listAmt  = PLAN_LIST_AMT[s.plan];
+    const _charged  = ['paid','completed','refunded','refund_requested'].includes(s.payment_status);
     const _finalAmt = (s.paid_amount !== null && s.paid_amount !== undefined && s.paid_amount !== '') ? Number(s.paid_amount) : null;
     const listAmtLabel = (_listAmt !== undefined) ? ('₩' + _listAmt.toLocaleString()) : '';
     let discountLabel = '—', finalAmtLabel = '—';
-    if (_finalAmt !== null && !isNaN(_finalAmt)) {
+    if (_charged && _finalAmt !== null && !isNaN(_finalAmt)) {
       finalAmtLabel = '₩' + _finalAmt.toLocaleString();
       if (_listAmt !== undefined) {
         const _disc = Math.max(0, _listAmt - _finalAmt);
