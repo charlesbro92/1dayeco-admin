@@ -985,7 +985,7 @@ body:not(.light-mode) .np-time { color:#9b9eaa; }
 <!-- SIDEBAR -->
 <aside class="sidebar">
   <div class="sb-logo">1DAYECO<small>Admin Dashboard</small>
-    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v225</span>
+    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v226</span>
   </div>
   <nav class="sb-nav">
     <div class="sb-group">운영</div>
@@ -5079,6 +5079,18 @@ async function loadSendPreview() {
       year: 'numeric', month: 'long', day: 'numeric', weekday: 'short', timeZone: 'Asia/Seoul'
     });
 
+    // [v226] 내일 dry-run + 오늘 발송로그를 '미리' 병렬 요청해 로딩 지연 최소화.
+    //  (오늘 dry-run/카테고리 렌더와 동시에 백그라운드로 진행 → 부주제표 단계에서 수거)
+    const tomorrowD = new Date(todayStr + 'T12:00:00+09:00');
+    tomorrowD.setDate(tomorrowD.getDate() + 1);
+    const tomorrowStr = tomorrowD.getFullYear() + '-' +
+                        String(tomorrowD.getMonth() + 1).padStart(2, '0') + '-' +
+                        String(tomorrowD.getDate()).padStart(2, '0');
+    const _tomorrowDrPromise = apiPost('/admin/send-daily-content', { dry_run: true, date_str: tomorrowStr })
+      .catch(e => { console.warn('[발송미리보기] 내일 dry-run 실패:', e); return null; });
+    const _todayLogsPromise = apiFetch('/admin/send-logs?date_from=' + todayStr + '&date_to=' + todayStr + '&limit=500')
+      .catch(e => { console.warn('[발송미리보기] 오늘 발송로그 조회 실패:', e); return null; });
+
     // 2. 활성 구독자 카테고리별 분류 (1인이 여러 카테고리 구독 시 모두 카운트)
     const activeSubs = STATE.subscribers.filter(s => ['active','trial'].includes(s.status));
     const allCatIds = getActiveCatIds();
@@ -5133,44 +5145,26 @@ async function loadSendPreview() {
     _prevState.sendableByCat = sendableByCat;
     _prevState.drOk = drOk;
 
-    // [v224] ── 내일 발송 대상자 + 오늘 발송 성공여부 집계 ───────────
-    //  부주제별 발송현황 표에 '오늘 발송(대상자/성공여부)' '내일 발송(대상자/준비상태)'
-    //  컬럼을 표기하기 위한 보조 데이터.
-    //  - tomorrowSendableBySub: 내일 날짜 dry-run의 발송가능 구독자 (내일 대상자/준비 판정)
-    //  - todaySentBySub: 오늘 send_logs 집계 {sid:{ok,fail}} (오늘 성공여부)
-    const tomorrowD = new Date(todayStr + 'T12:00:00+09:00');
-    tomorrowD.setDate(tomorrowD.getDate() + 1);
-    const tomorrowStr = tomorrowD.getFullYear() + '-' +
-                        String(tomorrowD.getMonth() + 1).padStart(2, '0') + '-' +
-                        String(tomorrowD.getDate()).padStart(2, '0');
-
+    // [v224→v226] ── 내일 발송 대상자 + 오늘 발송 성공여부 집계 ──────
+    //  위에서 병렬로 미리 요청한 결과(_tomorrowDrPromise/_todayLogsPromise)를 수거만 한다.
+    //  (순차 await 제거 → 오늘 dry-run/렌더와 동시에 진행되어 로딩 지연 ↓)
     let tomorrowDrOk = false;
     let tomorrowSendableBySub = {};   // {subscriber_id: 1}
-    try {
-      const dr2 = await apiPost('/admin/send-daily-content', { dry_run: true, date_str: tomorrowStr });
-      if (dr2 && dr2.success !== false) {
-        tomorrowDrOk = true;
-        (dr2.results || []).forEach(r => {
-          const sid = (r.subscriber_id != null) ? r.subscriber_id : r.sub_id;
-          if (r.would_send && sid != null) tomorrowSendableBySub[sid] = (tomorrowSendableBySub[sid] || 0) + 1;
-        });
-      }
-    } catch (e) {
-      console.warn('[발송미리보기] 내일 dry-run 실패:', e);
-    }
-
     let todaySentBySub = {};          // {subscriber_id: {ok:n, fail:n}}
-    try {
-      const lr = await apiFetch('/admin/send-logs?date_from=' + todayStr + '&date_to=' + todayStr + '&limit=500');
-      (lr && lr.data ? lr.data : []).forEach(log => {
-        const sid = log.subscriber_id;
-        if (sid == null) return;
-        const bucket = todaySentBySub[sid] || (todaySentBySub[sid] = { ok: 0, fail: 0 });
-        if (log.success) bucket.ok++; else bucket.fail++;
+    const [dr2, lr] = await Promise.all([_tomorrowDrPromise, _todayLogsPromise]);
+    if (dr2 && dr2.success !== false) {
+      tomorrowDrOk = true;
+      (dr2.results || []).forEach(r => {
+        const sid = (r.subscriber_id != null) ? r.subscriber_id : r.sub_id;
+        if (r.would_send && sid != null) tomorrowSendableBySub[sid] = (tomorrowSendableBySub[sid] || 0) + 1;
       });
-    } catch (e) {
-      console.warn('[발송미리보기] 오늘 발송로그 조회 실패:', e);
     }
+    (lr && lr.data ? lr.data : []).forEach(log => {
+      const sid = log.subscriber_id;
+      if (sid == null) return;
+      const bucket = todaySentBySub[sid] || (todaySentBySub[sid] = { ok: 0, fail: 0 });
+      if (log.success) bucket.ok++; else bucket.fail++;
+    });
 
     // 카테고리 발송 가능 판정: 순번 발송분(sendableByCat) 또는 오늘 날짜 콘텐츠(todayItems)
     const isCatDeliverable = (cat) =>
@@ -5382,9 +5376,9 @@ async function renderSubtopicBreakdown(ctx) {
     const TMR_CELL = 'border-left:1px solid var(--b);padding-left:8px';
     html += `<div style="display:flex;align-items:center;gap:8px;padding:6px 10px;background:var(--s2);border-bottom:1px solid var(--b);font-size:10px;color:var(--muted);font-weight:600;letter-spacing:.2px">
       <span style="flex:1;min-width:0">부주제</span>
-      <span style="width:46px;text-align:center" title="오늘 발송 대상자 수">📨 오늘<br>대상</span>
+      <span style="width:62px;text-align:center;white-space:nowrap" title="오늘 발송 대상자 수">오늘 대상</span>
       <span style="width:108px;text-align:center" title="오늘 발송 성공/실패">오늘 성공여부</span>
-      <span style="width:46px;text-align:center;${TMR_CELL}" title="내일 발송 예정 대상자 수">📅 내일<br>대상</span>
+      <span style="width:62px;text-align:center;white-space:nowrap;${TMR_CELL}" title="내일 발송 예정 대상자 수">내일 대상</span>
       <span style="width:108px;text-align:center" title="내일 발송 준비 상태">내일 준비상태</span>
     </div>`;
 
@@ -5440,9 +5434,9 @@ async function renderSubtopicBreakdown(ctx) {
 
       html += `<div style="display:flex;align-items:center;gap:8px;padding:7px 10px;${i > 0 ? 'border-top:1px solid var(--b);' : ''}font-size:11px">
         <span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text)">${escapeHtml(st.name || ('부주제 ' + sid))}${modeBadge}</span>
-        <span style="width:46px;text-align:center;color:${todayTargetColor};font-weight:700">${todayTargetN}</span>
+        <span style="width:62px;text-align:center;color:${todayTargetColor};font-weight:700">${todayTargetN}</span>
         <span style="width:108px;text-align:center;color:${todayStatusColor}">${todayStatus}</span>
-        <span style="width:46px;text-align:center;color:${tmrTargetColor};font-weight:700;${TMR_CELL}">${tmrTargetN}</span>
+        <span style="width:62px;text-align:center;color:${tmrTargetColor};font-weight:700;${TMR_CELL}">${tmrTargetN}</span>
         <span style="width:108px;text-align:center;color:${tmrStatusColor}">${tmrStatus}</span>
       </div>`;
     });
@@ -5452,8 +5446,8 @@ async function renderSubtopicBreakdown(ctx) {
 
   // [v224] 범례
   const legend = `<div style="font-size:10px;color:var(--muted);margin-top:8px;line-height:1.6">
-    📨 <b>오늘 대상</b> = 오늘 발송 예정 인원(발송완료+대기) · <b>성공여부</b> = 오늘 실제 발송 결과(✅성공/❌실패, 미발송 시 발송대기)<br>
-    📅 <b>내일 대상</b> = 내일 발송 예정 인원(시뮬레이션) · <b>준비상태</b> = 내일 콘텐츠 준비 여부(준비완료/콘텐츠 준비중)
+<b>오늘 대상</b> = 오늘 발송 예정 인원(발송완료+대기) · <b>성공여부</b> = 오늘 실제 발송 결과(성공/실패, 미발송 시 발송대기)<br>
+    <b>내일 대상</b> = 내일 발송 예정 인원(시뮬레이션) · <b>준비상태</b> = 내일 콘텐츠 준비 여부(준비완료/콘텐츠 준비중)
   </div>`;
   box.innerHTML = (html || '<div style="padding:10px;color:var(--muted);font-size:12px">표시할 부주제가 없습니다.</div>') + (html ? legend : '');
   if (drTruncated) {
