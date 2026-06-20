@@ -985,7 +985,7 @@ body:not(.light-mode) .np-time { color:#9b9eaa; }
 <!-- SIDEBAR -->
 <aside class="sidebar">
   <div class="sb-logo">1DAYECO<small>Admin Dashboard</small>
-    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v224</span>
+    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v225</span>
   </div>
   <nav class="sb-nav">
     <div class="sb-group">운영</div>
@@ -2072,6 +2072,46 @@ body:not(.light-mode) .np-time { color:#9b9eaa; }
       </div>
     </div>
 
+    <!-- [v225] 쿠폰 설정 편집 패널 -->
+    <div class="panel" style="margin-bottom:14px">
+      <div class="panel-head" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+        <div class="panel-title">⚙️ 쿠폰 설정</div>
+        <label style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted);cursor:pointer">
+          이벤트 활성화
+          <input type="checkbox" id="cpnSetEnabled" style="width:16px;height:16px;cursor:pointer;accent-color:var(--gold)">
+        </label>
+      </div>
+      <div class="panel-body" style="padding:16px">
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px">
+          <div>
+            <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:5px">쿠폰 코드</label>
+            <input type="text" id="cpnSetCode" placeholder="ONEDAYECO9900"
+              style="width:100%;background:var(--s3);border:1px solid var(--b);color:var(--text);padding:8px 10px;border-radius:6px;font-size:13px;font-family:var(--sans);box-sizing:border-box">
+          </div>
+          <div>
+            <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:5px">할인액 (원)</label>
+            <input type="number" id="cpnSetDiscount" min="0" max="9999999" placeholder="9900"
+              style="width:100%;background:var(--s3);border:1px solid var(--b);color:var(--text);padding:8px 10px;border-radius:6px;font-size:13px;font-family:var(--sans);box-sizing:border-box">
+          </div>
+          <div>
+            <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:5px">발급 한도 (개)</label>
+            <input type="number" id="cpnSetLimit" min="0" max="9999999" placeholder="100"
+              style="width:100%;background:var(--s3);border:1px solid var(--b);color:var(--text);padding:8px 10px;border-radius:6px;font-size:13px;font-family:var(--sans);box-sizing:border-box">
+          </div>
+          <div>
+            <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:5px">사용 기한 <span style="color:var(--muted)">(비우면 무제한)</span></label>
+            <input type="datetime-local" id="cpnSetExpire"
+              style="width:100%;background:var(--s3);border:1px solid var(--b);color:var(--text);padding:7px 10px;border-radius:6px;font-size:13px;font-family:var(--sans);color-scheme:dark;box-sizing:border-box">
+          </div>
+        </div>
+        <div style="display:flex;justify-content:flex-end;align-items:center;gap:10px;margin-top:14px">
+          <span style="font-size:10px;color:var(--muted);margin-right:auto">⚠️ 코드 변경 시 새 결제부터 적용됩니다. 기존 발급분은 전화번호로 계속 인식됩니다.</span>
+          <button onclick="saveCouponSettings(this)" id="cpnSetSaveBtn"
+            style="background:linear-gradient(135deg, var(--gold), #b08d3f);border:none;color:#1a1a1a;padding:8px 18px;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;font-family:var(--sans)">💾 설정 저장</button>
+        </div>
+      </div>
+    </div>
+
     <!-- 발급 내역 테이블 -->
     <div class="panel">
       <div class="panel-head" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
@@ -2082,6 +2122,8 @@ body:not(.light-mode) .np-time { color:#9b9eaa; }
           <button class="filter-pill active" data-cpn-filter="" onclick="filterCoupons('')">전체</button>
           <button class="filter-pill" data-cpn-filter="used" onclick="filterCoupons('used')">사용</button>
           <button class="filter-pill" data-cpn-filter="unused" onclick="filterCoupons('unused')">미사용</button>
+          <button onclick="openCouponModal()"
+            style="background:linear-gradient(135deg, var(--gold), #b08d3f);border:none;color:#1a1a1a;padding:7px 12px;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;font-family:var(--sans)">➕ 수동 추가</button>
           <span class="panel-act" onclick="loadCoupons()">🔄 새로고침</span>
         </div>
       </div>
@@ -2096,12 +2138,73 @@ body:not(.light-mode) .np-time { color:#9b9eaa; }
               <th>사용일시</th>
               <th>사용플랜</th>
               <th style="text-align:right">할인액</th>
+              <th style="text-align:center">작업</th>
             </tr>
           </thead>
           <tbody id="cpnBody">
-            <tr><td colspan="7"><div class="empty"><span class="empty-ico">🎟️</span>발급 내역이 없습니다</div></td></tr>
+            <tr><td colspan="8"><div class="empty"><span class="empty-ico">🎟️</span>발급 내역이 없습니다</div></td></tr>
           </tbody>
         </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- [v225] 쿠폰 수동 추가/수정 모달 -->
+  <div class="overlay" id="cpnOverlay" onclick="if(event.target.id==='cpnOverlay')closeCouponModal()">
+    <div class="modal" style="max-width:480px;background:var(--s2);border:1px solid var(--b);border-radius:14px;padding:0">
+      <div style="padding:18px 22px;border-bottom:1px solid var(--b);display:flex;justify-content:space-between;align-items:center">
+        <div style="font-size:15px;font-weight:700" id="cpnModalTitle">➕ 쿠폰 수동 추가</div>
+        <button onclick="closeCouponModal()" style="background:none;border:none;color:var(--muted);font-size:18px;cursor:pointer;padding:4px">✕</button>
+      </div>
+      <div style="padding:22px">
+        <input type="hidden" id="cpnEditId">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+          <div>
+            <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:5px">이름</label>
+            <input type="text" id="cpnFName" placeholder="홍길동"
+              style="width:100%;background:var(--s3);border:1px solid var(--b);color:var(--text);padding:8px 10px;border-radius:6px;font-size:13px;font-family:var(--sans);box-sizing:border-box">
+          </div>
+          <div>
+            <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:5px">전화번호 *</label>
+            <input type="text" id="cpnFPhone" placeholder="01012345678" maxlength="13"
+              style="width:100%;background:var(--s3);border:1px solid var(--b);color:var(--text);padding:8px 10px;border-radius:6px;font-size:13px;font-family:var(--sans);box-sizing:border-box">
+          </div>
+          <div>
+            <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:5px">쿠폰 코드</label>
+            <input type="text" id="cpnFCode" placeholder="ONEDAYECO9900"
+              style="width:100%;background:var(--s3);border:1px solid var(--b);color:var(--text);padding:8px 10px;border-radius:6px;font-size:13px;font-family:var(--sans);box-sizing:border-box">
+          </div>
+          <div>
+            <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:5px">할인액 (원)</label>
+            <input type="number" id="cpnFDiscount" min="0" max="9999999" placeholder="9900"
+              style="width:100%;background:var(--s3);border:1px solid var(--b);color:var(--text);padding:8px 10px;border-radius:6px;font-size:13px;font-family:var(--sans);box-sizing:border-box">
+          </div>
+          <div>
+            <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:5px">사용 플랜</label>
+            <select id="cpnFPlan"
+              style="width:100%;background:var(--s3);border:1px solid var(--b);color:var(--text);padding:8px 10px;border-radius:6px;font-size:13px;font-family:var(--sans);box-sizing:border-box">
+              <option value="">미사용</option>
+              <option value="monthly">1개월</option>
+              <option value="pkg3m">3개월</option>
+              <option value="pkg6m">6개월</option>
+              <option value="pkg1y">1년</option>
+            </select>
+          </div>
+          <div>
+            <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:5px">사용 일시</label>
+            <input type="datetime-local" id="cpnFUsedAt"
+              style="width:100%;background:var(--s3);border:1px solid var(--b);color:var(--text);padding:7px 10px;border-radius:6px;font-size:13px;font-family:var(--sans);color-scheme:dark;box-sizing:border-box">
+          </div>
+        </div>
+        <label style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text);margin-top:14px;cursor:pointer">
+          <input type="checkbox" id="cpnFUsed" onchange="cpnToggleUsedFields()" style="width:16px;height:16px;cursor:pointer;accent-color:#5eea91">
+          사용 처리 (체크 시 '사용'으로 표시)
+        </label>
+        <div style="font-size:10px;color:var(--muted);margin-top:10px;line-height:1.5">※ 관리자 강제 추가 — 발급 한도·중복 검사를 건너뜁니다. 단, 같은 전화번호가 이미 있으면 추가되지 않을 수 있습니다.</div>
+        <div style="display:flex;gap:8px;margin-top:18px">
+          <button onclick="closeCouponModal()" style="flex:1;background:none;border:1px solid var(--b);color:var(--muted);padding:11px;border-radius:8px;font-size:13px;font-weight:600;font-family:var(--sans);cursor:pointer">취소</button>
+          <button onclick="submitCouponModal(this)" id="cpnModalSaveBtn" style="flex:2;background:linear-gradient(135deg, var(--gold), #b08d3f);border:none;color:#1a1a1a;padding:11px;border-radius:8px;font-size:13px;font-weight:700;font-family:var(--sans);cursor:pointer">저장</button>
+        </div>
       </div>
     </div>
   </div>
@@ -10010,17 +10113,20 @@ let _payFilter      = '';
 let COUPON_DATA = [];
 let _cpnFilter = '';
 
+let COUPON_SETTINGS = {};  // [v225] 활성 코드 등 설정 캐시
 async function loadCoupons() {
   const tbody = document.getElementById('cpnBody');
-  if (tbody) tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:30px">로딩 중...</td></tr>';
+  if (tbody) tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--muted);padding:30px">로딩 중...</td></tr>';
   try {
     const r = await fetch(API_BASE + '/admin/coupons');
     const d = await r.json();
     if (!d || d.success === false) {
-      if (tbody) tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--red);padding:30px">불러오기 실패</td></tr>';
+      if (tbody) tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--red);padding:30px">불러오기 실패</td></tr>';
       return;
     }
     COUPON_DATA = d.items || [];
+    COUPON_SETTINGS = { code: d.code || '', discount: d.discount || 0, limit: d.limit || 0,
+                        enabled: !!d.enabled, expire_at: d.expire_at || '' };
     // KPI
     setText('cpnCode', d.code || '—');
     setText('cpnDiscount', '₩' + (d.discount || 0).toLocaleString() + ' 할인');
@@ -10030,10 +10136,17 @@ async function loadCoupons() {
     setText('cpnUnused', ((d.issued || 0) - (d.used || 0)).toLocaleString());
     setText('cpnRemaining', (d.remaining || 0).toLocaleString());
     setText('cpnStatus', d.enabled ? (d.remaining > 0 ? '발급 가능' : '발급 마감') : '이벤트 OFF');
+    // [v225] 설정 패널 입력값 채우기
+    const setVal = (id, v) => { const el = document.getElementById(id); if (el) el.value = (v ?? ''); };
+    setVal('cpnSetCode', d.code || '');
+    setVal('cpnSetDiscount', d.discount ?? '');
+    setVal('cpnSetLimit', d.limit ?? '');
+    setVal('cpnSetExpire', isoToLocalInput(d.expire_at));
+    const enEl = document.getElementById('cpnSetEnabled'); if (enEl) enEl.checked = !!d.enabled;
     renderCouponTable();
   } catch (e) {
     console.warn('[loadCoupons] 실패:', e);
-    if (tbody) tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--red);padding:30px">네트워크 오류</td></tr>';
+    if (tbody) tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--red);padding:30px">네트워크 오류</td></tr>';
   }
 }
 
@@ -10060,7 +10173,7 @@ function renderCouponTable() {
     (r.name || '').toLowerCase().includes(q) || (r.phone || '').includes(q));
 
   if (!rows.length) {
-    tbody.innerHTML = '<tr><td colspan="7"><div class="empty"><span class="empty-ico">🎟️</span>해당하는 내역이 없습니다</div></td></tr>';
+    tbody.innerHTML = '<tr><td colspan="8"><div class="empty"><span class="empty-ico">🎟️</span>해당하는 내역이 없습니다</div></td></tr>';
     return;
   }
 
@@ -10068,6 +10181,7 @@ function renderCouponTable() {
     const usedPill = r.used
       ? '<span class="payment-pill" style="color:#5eea91;background:rgba(94,234,145,.12)">✅ 사용</span>'
       : '<span class="payment-pill" style="color:#f59e0b;background:rgba(245,158,11,.12)">⏳ 미사용</span>';
+    const rid = r.id != null ? String(r.id) : '';
     return `<tr>
       <td>${escapeHtml(r.name || '-')}</td>
       <td>${escapeHtml(fmtPhoneDisplay(r.phone))}</td>
@@ -10076,8 +10190,169 @@ function renderCouponTable() {
       <td style="font-size:11px">${r.used_at ? fmtDateTime(r.used_at) : '-'}</td>
       <td>${planLabels[r.used_plan] || r.used_plan || '-'}</td>
       <td style="text-align:right">${r.discount_amount ? '₩' + Number(r.discount_amount).toLocaleString() : '-'}</td>
+      <td style="text-align:center;white-space:nowrap">
+        <button onclick="openCouponModal('${rid}')" title="수정"
+          style="background:none;border:1px solid var(--b);color:var(--muted);padding:3px 8px;border-radius:5px;font-size:11px;cursor:pointer;margin-right:4px">✏️</button>
+        <button onclick="deleteCoupon('${rid}')" title="삭제"
+          style="background:none;border:1px solid rgba(255,118,118,.3);color:#ff9999;padding:3px 8px;border-radius:5px;font-size:11px;cursor:pointer">🗑️</button>
+      </td>
     </tr>`;
   }).join('');
+}
+
+// ── [v225] 쿠폰 설정 저장 ──────────────────────────────────
+function isoToLocalInput(iso) {
+  // ISO 문자열 → datetime-local 입력값(YYYY-MM-DDTHH:MM). 빈 값이면 ''.
+  if (!iso) return '';
+  try {
+    const s = String(iso).trim();
+    // 'YYYY-MM-DDTHH:MM...' 형태면 앞 16자만 사용 (tz 무시 = KST 그대로 취급)
+    const m = s.match(/^(\d{4}-\d{2}-\d{2})[T ](\d{2}:\d{2})/);
+    if (m) return m[1] + 'T' + m[2];
+    const dt = new Date(s);
+    if (isNaN(dt)) return '';
+    const p = n => String(n).padStart(2, '0');
+    return `${dt.getFullYear()}-${p(dt.getMonth()+1)}-${p(dt.getDate())}T${p(dt.getHours())}:${p(dt.getMinutes())}`;
+  } catch (_) { return ''; }
+}
+
+async function _putSetting(key, value) {
+  const r = await apiFetch('/admin/settings/' + key, {
+    method: 'PUT', body: JSON.stringify({ value: String(value) }),
+  });
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok || j.success === false) throw new Error(j.message || j.error || ('설정 저장 실패: ' + key));
+  return j;
+}
+
+async function saveCouponSettings(btn) {
+  const code = (document.getElementById('cpnSetCode')?.value || '').trim();
+  const discount = (document.getElementById('cpnSetDiscount')?.value || '').trim();
+  const limit = (document.getElementById('cpnSetLimit')?.value || '').trim();
+  const expireLocal = (document.getElementById('cpnSetExpire')?.value || '').trim();
+  const enabled = !!document.getElementById('cpnSetEnabled')?.checked;
+
+  if (code && !/^[A-Za-z0-9]{4,40}$/.test(code)) {
+    showToast('쿠폰 코드는 영문/숫자 4~40자여야 합니다', 'ng'); return;
+  }
+  if (discount !== '' && (isNaN(+discount) || +discount < 0)) { showToast('할인액이 올바르지 않습니다', 'ng'); return; }
+  if (limit !== '' && (isNaN(+limit) || +limit < 0)) { showToast('발급 한도가 올바르지 않습니다', 'ng'); return; }
+
+  // datetime-local(YYYY-MM-DDTHH:MM) → 초 보강. 빈 값이면 무제한.
+  const expireVal = expireLocal ? (expireLocal.length === 16 ? expireLocal + ':00' : expireLocal) : '';
+
+  if (btn) { btn.disabled = true; btn.style.opacity = '0.5'; }
+  try {
+    await _putSetting('coupon_event_enabled', enabled ? 'true' : 'false');
+    if (code) await _putSetting('coupon_code', code.toUpperCase());
+    if (discount !== '') await _putSetting('coupon_discount', String(parseInt(discount, 10)));
+    if (limit !== '') await _putSetting('coupon_issue_limit', String(parseInt(limit, 10)));
+    await _putSetting('coupon_expire_at', expireVal);  // 빈 값 허용 = 무제한
+    showToast('쿠폰 설정이 저장되었습니다', 'ok');
+    loadCoupons();
+  } catch (e) {
+    showToast(e.message || '설정 저장 실패', 'ng');
+  } finally {
+    if (btn) { btn.disabled = false; btn.style.opacity = '1'; }
+  }
+}
+
+// ── [v225] 쿠폰 발급행 수동 추가/수정 모달 ─────────────────
+function cpnToggleUsedFields() {
+  // 사용 체크 시 사용일시 기본값(현재) 자동 채움 (비어있을 때만)
+  const used = !!document.getElementById('cpnFUsed')?.checked;
+  const at = document.getElementById('cpnFUsedAt');
+  if (used && at && !at.value) at.value = isoToLocalInput(new Date().toISOString());
+}
+
+function openCouponModal(id) {
+  const overlay = document.getElementById('cpnOverlay');
+  if (!overlay) return;
+  const isEdit = id != null && id !== '';
+  document.getElementById('cpnModalTitle').textContent = isEdit ? '✏️ 쿠폰 수정' : '➕ 쿠폰 수동 추가';
+  document.getElementById('cpnEditId').value = isEdit ? String(id) : '';
+
+  const set = (k, v) => { const el = document.getElementById(k); if (el) el.value = (v ?? ''); };
+  if (isEdit) {
+    const r = COUPON_DATA.find(x => String(x.id) === String(id)) || {};
+    set('cpnFName', r.name || '');
+    set('cpnFPhone', r.phone || '');
+    set('cpnFCode', r.code || COUPON_SETTINGS.code || '');
+    set('cpnFDiscount', r.discount_amount ?? '');
+    set('cpnFPlan', r.used_plan || '');
+    set('cpnFUsedAt', isoToLocalInput(r.used_at));
+    document.getElementById('cpnFUsed').checked = !!r.used;
+  } else {
+    set('cpnFName', ''); set('cpnFPhone', '');
+    set('cpnFCode', COUPON_SETTINGS.code || '');
+    set('cpnFDiscount', COUPON_SETTINGS.discount || '');
+    set('cpnFPlan', ''); set('cpnFUsedAt', '');
+    document.getElementById('cpnFUsed').checked = false;
+  }
+  overlay.classList.add('open');
+}
+
+function closeCouponModal() {
+  const overlay = document.getElementById('cpnOverlay');
+  if (overlay) overlay.classList.remove('open');
+}
+
+async function submitCouponModal(btn) {
+  const id = (document.getElementById('cpnEditId').value || '').trim();
+  const isEdit = !!id;
+  const name = (document.getElementById('cpnFName').value || '').trim();
+  const phoneRaw = (document.getElementById('cpnFPhone').value || '').replace(/[^0-9]/g, '');
+  const code = (document.getElementById('cpnFCode').value || '').trim();
+  const discountRaw = (document.getElementById('cpnFDiscount').value || '').trim();
+  const plan = (document.getElementById('cpnFPlan').value || '').trim();
+  const used = !!document.getElementById('cpnFUsed').checked;
+  const usedAtLocal = (document.getElementById('cpnFUsedAt').value || '').trim();
+
+  if (!phoneRaw || !/^010\d{8}$/.test(phoneRaw)) {
+    showToast('010으로 시작하는 11자리 전화번호를 입력해주세요', 'ng'); return;
+  }
+
+  const payload = {
+    name, phone: phoneRaw, code: code || undefined,
+    used,
+    used_plan: plan || null,
+    discount_amount: discountRaw === '' ? null : parseInt(discountRaw, 10),
+    used_at: usedAtLocal ? (usedAtLocal.length === 16 ? usedAtLocal + ':00' : usedAtLocal) : null,
+  };
+
+  if (btn) { btn.disabled = true; btn.style.opacity = '0.5'; }
+  try {
+    let r;
+    if (isEdit) {
+      r = await apiFetch('/admin/coupons/' + encodeURIComponent(id), { method: 'PATCH', body: JSON.stringify(payload) });
+    } else {
+      r = await apiFetch('/admin/coupons', { method: 'POST', body: JSON.stringify(payload) });
+    }
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok || j.success === false) throw new Error(j.message || j.error || '저장 실패');
+    showToast(isEdit ? '쿠폰 내역이 수정되었습니다' : '쿠폰이 추가되었습니다', 'ok');
+    closeCouponModal();
+    loadCoupons();
+  } catch (e) {
+    showToast(e.message || '저장 실패', 'ng');
+  } finally {
+    if (btn) { btn.disabled = false; btn.style.opacity = '1'; }
+  }
+}
+
+async function deleteCoupon(id) {
+  if (!id) return;
+  const r0 = COUPON_DATA.find(x => String(x.id) === String(id)) || {};
+  if (!confirm(`이 쿠폰 내역을 삭제할까요?\n\n이름: ${r0.name || '-'}\n전화: ${fmtPhoneDisplay(r0.phone) || '-'}`)) return;
+  try {
+    const r = await apiFetch('/admin/coupons/' + encodeURIComponent(id), { method: 'DELETE' });
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok || j.success === false) throw new Error(j.message || j.error || '삭제 실패');
+    showToast('삭제되었습니다', 'ok');
+    loadCoupons();
+  } catch (e) {
+    showToast(e.message || '삭제 실패', 'ng');
+  }
 }
 
 // 전화번호 표시용 하이픈 (010-xxxx-xxxx)
