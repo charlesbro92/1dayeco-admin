@@ -985,7 +985,7 @@ body:not(.light-mode) .np-time { color:#9b9eaa; }
 <!-- SIDEBAR -->
 <aside class="sidebar">
   <div class="sb-logo">1DAYECO<small>Admin Dashboard</small>
-    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v226</span>
+    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v227</span>
   </div>
   <nav class="sb-nav">
     <div class="sb-group">운영</div>
@@ -1056,69 +1056,24 @@ body:not(.light-mode) .np-time { color:#9b9eaa; }
     </div>
 
     <div class="two-col">
-      <!-- 오늘 발송 현황 -->
+      <!-- 오늘 발송 현황 ([v227] 부주제별 실제 발송만) -->
       <div class="panel">
         <div class="panel-head"><div class="panel-title">📨 오늘 발송 현황</div><span class="panel-act" id="sendRefreshBtn" onclick="refreshSendPanel(this)">새로고침</span></div>
-        <div class="send-progress" id="sendProgress">
-          <div class="prog-row"><div class="prog-label">발송 진행률</div><div class="prog-nums" id="progNums">--/--</div></div>
-          <div class="prog-bar"><div class="prog-fill" id="progFill" style="width:0%"></div></div>
-          <div class="prog-meta"><span id="progSuccess">성공 --</span><span id="progFailed" style="color:var(--red)">실패 --</span><span id="progPending">대기 --</span></div>
-          <div style="margin-top:16px">
-            <div style="font-size:11px;color:var(--muted);margin-bottom:6px">최근 7일 발송 추이</div>
-            <div class="mini-bars" id="miniBars"></div>
-          </div>
-          <div style="margin-top:16px;border-top:1px solid var(--b);padding-top:14px">
-            <div style="font-size:11px;color:var(--muted);margin-bottom:8px">⏰ 시간별 오늘 발송 현황</div>
-            <div id="hourBreakdown" style="display:flex;flex-direction:column;gap:6px"></div>
-          </div>
+        <div class="panel-body" style="padding:14px 16px">
+          <div id="sendTodaySummary" style="font-size:12px;color:var(--muted);margin-bottom:10px">로딩 중...</div>
+          <div id="sendTodayBreakdown" style="display:flex;flex-direction:column;gap:6px;max-height:300px;overflow-y:auto"></div>
         </div>
       </div>
 
-      <!-- 콘텐츠 생성 현황 -->
+      <!-- 이벤트 쿠폰 현황 ([v227] 콘텐츠 생성 현황 자리 대체) -->
       <div class="panel">
         <div class="panel-head">
-          <div class="panel-title">📝 콘텐츠 생성 현황</div>
-          <span class="panel-act" onclick="showPage('archive')">콘텐츠 아카이브</span>
+          <div class="panel-title">🎟️ 이벤트 쿠폰 현황</div>
+          <span class="panel-act" onclick="showPage('coupons')">쿠폰 관리</span>
         </div>
-        <div class="panel-body" id="contentSummary"
-          style="padding:18px 20px;display:flex;flex-direction:column;gap:14px;
-                 max-height:320px;overflow-y:auto">
-          <!-- 오늘 카드 -->
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-            <div style="border:1px solid var(--b);border-radius:8px;padding:12px 14px">
-              <div style="font-size:10px;color:var(--muted);letter-spacing:.5px;margin-bottom:4px">오늘 생성</div>
-              <div style="display:flex;align-items:baseline;gap:6px">
-                <span id="csToday" style="font-size:24px;font-weight:700;color:var(--gold);font-family:var(--mono)">0</span>
-                <span id="csTodayTotal" style="font-size:11px;color:var(--muted)">/ 0 카테고리</span>
-              </div>
-              <div id="csTodayCats" style="font-size:10px;color:var(--muted);margin-top:4px;letter-spacing:.3px">—</div>
-            </div>
-            <div style="border:1px solid var(--b);border-radius:8px;padding:12px 14px">
-              <div style="font-size:10px;color:var(--muted);letter-spacing:.5px;margin-bottom:4px">이번 주 생성</div>
-              <div style="display:flex;align-items:baseline;gap:6px">
-                <span id="csWeek" style="font-size:24px;font-weight:700;color:var(--text);font-family:var(--mono)">0</span>
-                <span style="font-size:11px;color:var(--muted)">건</span>
-              </div>
-              <div id="csWeekTrend" style="font-size:10px;color:var(--muted);margin-top:4px;letter-spacing:.3px">—</div>
-            </div>
-          </div>
-
-          <!-- 카테고리별 이번 달 -->
-          <div>
-            <div style="font-size:11px;color:var(--muted);letter-spacing:.5px;margin-bottom:8px">📊 이번 달 카테고리별</div>
-            <div id="csCatBars" style="display:flex;flex-direction:column;gap:6px"></div>
-          </div>
-
-          <!-- 다음 발송 예정 -->
-          <div style="border-top:1px dashed var(--b);padding-top:12px">
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
-              <span style="font-size:11px;color:var(--muted);letter-spacing:.5px">📅 내일 발송 예정</span>
-              <span id="csNextDate" style="font-size:10px;color:var(--gold);font-family:var(--mono)">—</span>
-            </div>
-            <div id="csNextContent" style="font-size:12px;color:var(--text);line-height:1.5">
-              <span style="color:var(--muted)">—</span>
-            </div>
-          </div>
+        <div class="panel-body" id="eventCouponSummary"
+          style="padding:16px 18px;display:flex;flex-direction:column;gap:14px;max-height:340px;overflow-y:auto">
+          <div style="color:var(--muted);font-size:12px;text-align:center;padding:18px">로딩 중...</div>
         </div>
       </div>
     </div>
@@ -1844,9 +1799,9 @@ body:not(.light-mode) .np-time { color:#9b9eaa; }
             <div id="statMRRMonthlyCount" style="font-size:10px;color:var(--muted);margin-top:2px">0명 × ₩0</div>
           </div>
           <div style="border:1px solid var(--b);border-radius:8px;padding:12px 14px">
-            <div style="font-size:10px;color:var(--muted);letter-spacing:.3px;margin-bottom:4px">연간 구독 MRR (월할)</div>
+            <div style="font-size:10px;color:var(--muted);letter-spacing:.3px;margin-bottom:4px">패키지·연간 MRR (월할)</div>
             <div id="statMRRYearly" style="font-size:18px;font-weight:700;color:var(--text);font-family:var(--mono)">₩0</div>
-            <div id="statMRRYearlyCount" style="font-size:10px;color:var(--muted);margin-top:2px">0명 ÷ 12</div>
+            <div id="statMRRYearlyCount" style="font-size:10px;color:var(--muted);margin-top:2px">0명 (월할 환산)</div>
           </div>
           <div style="border:1px solid var(--b);border-radius:8px;padding:12px 14px">
             <div style="font-size:10px;color:var(--muted);letter-spacing:.3px;margin-bottom:4px">예상 ARR</div>
@@ -3727,7 +3682,7 @@ function showPage(name) {
 
 function loadPage(name) {
   if (name === 'overview')     {
-    loadKPIs(); loadRecentSubs(); loadContentSummary(); renderUsageKPI();
+    loadKPIs(); loadRecentSubs(); loadEventSummary(); renderUsageKPI();
     Promise.all([
       loadSubscribers({silent: true}),
       loadSendStatus(),
@@ -4044,62 +3999,77 @@ function setKPI(id, val, cls, ch) {
 }
 
 // ── 발송 현황 (STATE.today_send 기반) ───────────────────────
+// [v227] 부주제 id→이름 맵 (1회 로드 후 캐시)
+let _SUBTOPIC_NAME_MAP = null;
+async function _getSubtopicNameMap() {
+  if (_SUBTOPIC_NAME_MAP) return _SUBTOPIC_NAME_MAP;
+  const map = {};
+  try {
+    const r = await apiFetch('/admin/subtopics');
+    (r && r.success && Array.isArray(r.data) ? r.data : []).forEach(st => {
+      map[String(st.id)] = { name: st.name || ('부주제 ' + st.id), cat: st.category_id };
+    });
+    _SUBTOPIC_NAME_MAP = map;
+  } catch (e) { console.warn('[부주제명] 로드 실패:', e); }
+  return map;
+}
+
+// [v227] 오늘 발송 현황 = 실제 발송된 부주제·인원·성공여부 (발송현황 탭과 동일 기준)
 async function loadSendStatus() {
-  let d = null;
-  try { d = await apiFetch('/admin/today-send'); } catch(e) {}
-  // API 응답 없으면 STATE에서 직접 계산
-  if (!d || typeof d.total === 'undefined') d = STATE.today_send;
-  // null/undefined 방어
-  d = Object.assign({sent:0, failed:0, pending:0, total:0, by_hour:{}}, d || {});
-
-  const pct = d.total > 0 ? Math.round(d.sent/d.total*100) : 0;
-  document.getElementById('progNums').textContent    = `${d.sent}/${d.total}`;
-  document.getElementById('progFill').style.width    = pct+'%';
-  document.getElementById('progSuccess').textContent = `성공 ${d.sent}`;
-  document.getElementById('progFailed').textContent  = `실패 ${d.failed}`;
-  document.getElementById('progPending').textContent = `대기 ${d.pending}`;
-
-  // 미니바: MOCK_SEND_HISTORY 기반으로 실제 추이 반영
-  const bars = document.getElementById('miniBars');
-  if (bars) {
-    const hist = [...MOCK_SEND_HISTORY].reverse(); // 오래된→최신 순
-    bars.innerHTML = hist.map(r => {
-      const cls = r.failed === 0 ? 'ok' : r.rate < 95 ? 'fail' : 'ok';
-      const h   = Math.max(10, Math.round(r.rate));
-      return `<div class="mini-bar ${cls}" style="height:${h}%" title="${r.date} ${r.rate.toFixed(1)}%"></div>`;
-    }).join('');
-  }
-
-  // 시간별 발송 현황 (가입자가 실제 사용하는 시간만 표시)
-  const hbEl = document.getElementById('hourBreakdown');
-  if (hbEl && d.by_hour) {
-    // 실제 데이터가 있는 시간들 정렬 (오전 일찍 → 늦게)
-    const usedHours = Object.keys(d.by_hour)
-      .map(h => parseInt(h, 10))
-      .filter(h => !isNaN(h) && (d.by_hour[h]?.total > 0))
-      .sort((a, b) => a - b);
-
-    // 데이터 없으면 디폴트로 8시 표시
-    const hoursToShow = usedHours.length > 0 ? usedHours : [8];
-
-    hbEl.innerHTML = hoursToShow.map(h => {
-      const hd = d.by_hour[h] || {total:0,sent:0,failed:0};
-      const pct = hd.total > 0 ? Math.round(hd.sent/hd.total*100) : 0;
-      // 오전/오후 표시
-      const label = h < 12 ? `오전 ${h}시` : (h === 12 ? '낮 12시' : `오후 ${h-12}시`);
-      return `<div style="display:flex;align-items:center;gap:8px;font-size:11px">
-        <span style="color:var(--gold);font-family:var(--mono);width:54px;flex-shrink:0">${label}</span>
-        <div style="flex:1;height:5px;background:var(--s3);border-radius:3px;overflow:hidden">
-          <div style="height:100%;width:${pct}%;background:${hd.failed>0?'var(--amber)':'var(--green)'};border-radius:3px;transition:width .6s"></div>
-        </div>
-        <span style="color:var(--muted);font-family:var(--mono);width:60px;text-align:right;flex-shrink:0">${hd.sent}/${hd.total}</span>
-        ${hd.failed>0?`<span style="color:var(--red);font-size:10px">✗${hd.failed}</span>`:'<span style="color:var(--green);font-size:10px">✓</span>'}
-      </div>`;
-    }).join('');
-  }
-
-  // 배지 갱신 (독립함수 호출)
+  const box = document.getElementById('sendTodayBreakdown');
+  const summaryEl = document.getElementById('sendTodaySummary');
   updateFailBadge();
+  if (!box) return;
+
+  const todayStr = getKSTDateStr();
+  let logs = [];
+  try {
+    const lr = await apiFetch('/admin/send-logs?date_from=' + todayStr + '&date_to=' + todayStr + '&limit=500');
+    logs = (lr && lr.data) ? lr.data : [];
+  } catch (e) { console.warn('[오늘발송] 로그 조회 실패:', e); }
+
+  const subMap = {};
+  (STATE.subscribers || []).forEach(s => { subMap[s.id] = s; });
+  const stMap = await _getSubtopicNameMap();
+
+  // 부주제별 집계 {key:{name, cat, ok, fail}}
+  const groups = {};
+  let totalOk = 0, totalFail = 0;
+  logs.forEach(l => {
+    let sid = (l.subtopic_id != null) ? l.subtopic_id
+            : (subMap[l.subscriber_id] ? subMap[l.subscriber_id].subtopic_id : null);
+    const key = (sid != null) ? String(sid) : '_none';
+    const meta = stMap[key];
+    const g = groups[key] || (groups[key] = {
+      name: meta ? meta.name : (key === '_none' ? '(부주제 미지정)' : ('부주제 ' + key)),
+      cat: l.category || (meta && meta.cat) || '', ok: 0, fail: 0,
+    });
+    if (l.success) { g.ok++; totalOk++; } else { g.fail++; totalFail++; }
+  });
+
+  const rows = Object.values(groups).sort((a, b) => (b.ok + b.fail) - (a.ok + a.fail));
+  const total = totalOk + totalFail;
+
+  if (summaryEl) {
+    summaryEl.innerHTML = total > 0
+      ? `오늘 발송 <strong style="color:var(--text)">${total}</strong>건 · <span style="color:var(--green)">성공 ${totalOk}</span>${totalFail > 0 ? ` · <span style="color:#ff9999">실패 ${totalFail}</span>` : ''}`
+      : '<span style="color:var(--muted)">오늘 발송된 내역이 없습니다</span>';
+  }
+
+  box.innerHTML = rows.length === 0
+    ? '<div style="text-align:center;color:var(--muted);font-size:12px;padding:16px">—</div>'
+    : rows.map(g => {
+        const cnt = g.ok + g.fail;
+        const status = g.fail > 0
+          ? `<span style="color:#ff9999">✅ ${g.ok} · ❌ ${g.fail}</span>`
+          : `<span style="color:var(--green)">✅ ${g.ok}건 성공</span>`;
+        const catEmoji = (typeof getCatEmoji === 'function' && g.cat) ? getCatEmoji(g.cat) + ' ' : '';
+        return `<div style="display:flex;align-items:center;gap:8px;font-size:11px;padding:7px 8px;border:1px solid var(--b);border-radius:7px">
+          <span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text)">${catEmoji}${escapeHtml(g.name)}</span>
+          <span style="width:54px;text-align:right;color:var(--muted)">${cnt}명</span>
+          <span style="width:96px;text-align:right">${status}</span>
+        </div>`;
+      }).join('');
 }
 
 // ── 실패 배지 독립 갱신 함수 ─────────────────────────────────
@@ -4174,8 +4144,77 @@ function renderTodayContent(el, d, dateStr) {
     (tags ? '<div class="cc-tags" style="margin-top:10px">' + tags + '</div>' : '');
 }
 
+// ── [v227] 이벤트 쿠폰 요약 (개요 페이지용) ────────────────
+function _cpnExpireShort(iso) {
+  if (!iso) return '무제한';
+  const m = String(iso).match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (m) return `${parseInt(m[2],10)}/${parseInt(m[3],10)}까지`;
+  return '무제한';
+}
+async function loadEventSummary() {
+  const box = document.getElementById('eventCouponSummary');
+  if (!box) return;
+  let d = null;
+  try { const r = await fetch(API_BASE + '/admin/coupons'); d = await r.json(); } catch (e) {}
+  if (!d || d.success === false) {
+    box.innerHTML = '<div style="text-align:center;color:var(--red);font-size:12px;padding:18px">쿠폰 정보를 불러오지 못했습니다</div>';
+    return;
+  }
+  const issued = d.issued || 0;          // 발급 인원
+  const used   = d.used || 0;            // 등록(사용) 인원
+  const limit  = d.limit || 0;           // 발급 한도
+  const remaining = (d.remaining != null) ? d.remaining : Math.max(0, limit - issued); // 남은 발급 수량
+  const unused = Math.max(0, issued - used);  // 발급만 받고 미사용
+  const issueRate = limit > 0 ? Math.round(issued / limit * 100) : 0;   // 발급률
+  const useRate   = issued > 0 ? Math.round(used / issued * 100) : 0;   // 사용(등록)률
+  const enabled = !!d.enabled;
+  const code = d.code || '—';
+  const discount = (d.discount || 0).toLocaleString();
+  const expTxt = _cpnExpireShort(d.expire_at);
+
+  const statusBadge = enabled
+    ? '<span style="font-size:10px;background:rgba(94,234,145,.14);color:#5eea91;padding:2px 8px;border-radius:10px">진행 중</span>'
+    : '<span style="font-size:10px;background:rgba(255,255,255,.08);color:var(--muted);padding:2px 8px;border-radius:10px">종료/중지</span>';
+
+  const card = (label, val, sub, color) => `
+    <div style="border:1px solid var(--b);border-radius:8px;padding:11px 12px;text-align:center">
+      <div style="font-size:10px;color:var(--muted);letter-spacing:.3px;margin-bottom:4px">${label}</div>
+      <div style="font-size:22px;font-weight:700;color:${color};font-family:var(--mono)">${val}</div>
+      <div style="font-size:10px;color:var(--muted);margin-top:2px">${sub}</div>
+    </div>`;
+
+  const bar = (label, pct, color) => `
+    <div>
+      <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--muted);margin-bottom:3px"><span>${label}</span><span style="font-family:var(--mono);color:var(--text)">${pct}%</span></div>
+      <div style="height:6px;background:var(--s3);border-radius:3px;overflow:hidden"><div style="height:100%;width:${Math.min(100,pct)}%;background:${color};border-radius:3px"></div></div>
+    </div>`;
+
+  box.innerHTML = `
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap">
+      <div style="display:flex;align-items:center;gap:8px">
+        <span style="font-family:var(--mono);font-size:13px;color:var(--gold)">${escapeHtml(code)}</span>
+        ${statusBadge}
+      </div>
+      <div style="font-size:11px;color:var(--muted)">₩${discount} 할인 · ${expTxt}</div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">
+      ${card('발급 인원', issued.toLocaleString(), `/ ${limit.toLocaleString()} 한도`, 'var(--gold)')}
+      ${card('등록 인원', used.toLocaleString(), '쿠폰 사용 완료', 'var(--green)')}
+      ${card('남은 수량', remaining.toLocaleString(), '추가 발급 가능', 'var(--text)')}
+    </div>
+    <div style="display:flex;flex-direction:column;gap:9px">
+      ${bar('발급률 (한도 대비)', issueRate, 'rgba(201,168,76,.7)')}
+      ${bar('사용(등록)률 (발급 대비)', useRate, 'rgba(94,234,145,.7)')}
+    </div>
+    <div style="font-size:11px;color:var(--muted);border-top:1px dashed var(--b);padding-top:10px">
+      발급 후 미사용 <strong style="color:var(--text)">${unused.toLocaleString()}</strong>명
+    </div>`;
+}
+
 // ── 콘텐츠 생성 현황 (개요 페이지용) ──────────────────────
 function loadContentSummary() {
+  // [v227] 개요에서 콘텐츠 생성 현황 패널 제거 → 컨테이너 없으면 안전하게 무시
+  if (!document.getElementById('contentSummary')) return;
   const CAT_COLORS = ['#C9A84C', '#7BB3F7', '#A78BFA', '#5EE3B0', '#FF9F76', '#76C7FF', '#FFD166', '#06D6A0'];
   const cats = getAllCatIds();
   const catMeta = {};
@@ -8608,6 +8647,18 @@ function toggleUsageDetail() {
 const PRICE_MONTHLY = 9900;
 const PRICE_YEARLY  = 79000;
 
+// [v227] 전 플랜 정가 + 약정 개월수 (MRR 월할 환산용)
+//   기존 버그: monthly/yearly 플랜만 집계 → pkg3m/pkg6m/pkg1y 패키지가 MRR에서 누락되어 과소 집계.
+const PLAN_AMOUNT_MAP = { monthly: 9900, pkg3m: 19900, pkg6m: 24900, pkg1y: 41900, yearly: 79000 };
+const PLAN_MONTHS_MAP = { monthly: 1, pkg3m: 3, pkg6m: 6, pkg1y: 12, yearly: 12 };
+// 구독자 1명의 월 환산 매출 (정가 ÷ 약정개월). 알 수 없는 플랜은 0.
+function _planMonthlyValue(plan) {
+  const amt = PLAN_AMOUNT_MAP[plan];
+  const mo  = PLAN_MONTHS_MAP[plan];
+  if (!amt || !mo) return 0;
+  return amt / mo;
+}
+
 // 날짜 차이 (일 단위)
 function _daysBetween(d1, d2) {
   return Math.floor((d2.getTime() - d1.getTime()) / 86400000);
@@ -8631,22 +8682,23 @@ function _activeAtDate(subs, dateAtMs) {
   });
 }
 
-// MRR 계산 (특정 시점)
+// MRR 계산 (특정 시점) — [v227] 전 플랜(월/3·6·12개월 패키지/연간)을 월할 환산해 합산
 function _computeMRRAt(subs, dateAtMs) {
   const active = _activeAtDate(subs, dateAtMs);
-  let monthlyCount = 0, yearlyCount = 0;
+  // monthlyXxx = 월간 플랜, packageXxx = 3/6/12개월·연간 패키지(월할 환산)
+  let monthlyCount = 0, monthlyMRR = 0, packageCount = 0, packageMRR = 0;
   active.forEach(function(s) {
-    if (s.plan === 'monthly') monthlyCount++;
-    else if (s.plan === 'yearly') yearlyCount++;
+    const v = _planMonthlyValue(s.plan);
+    if (v <= 0) return;  // 알 수 없는 플랜은 제외
+    if (s.plan === 'monthly') { monthlyCount++; monthlyMRR += v; }
+    else { packageCount++; packageMRR += v; }
   });
-  const monthlyMRR = monthlyCount * PRICE_MONTHLY;
-  const yearlyMRR  = yearlyCount * (PRICE_YEARLY / 12);
   return {
     monthlyCount: monthlyCount,
-    yearlyCount:  yearlyCount,
+    yearlyCount:  packageCount,   // (호환) UI는 yearlyCount/yearlyMRR 필드를 패키지·연간 합으로 표기
     monthlyMRR:   monthlyMRR,
-    yearlyMRR:    yearlyMRR,
-    totalMRR:     monthlyMRR + yearlyMRR,
+    yearlyMRR:    packageMRR,
+    totalMRR:     monthlyMRR + packageMRR,
   };
 }
 
@@ -8739,7 +8791,7 @@ function loadStats() {
   setText('statMRRMonthly', fmtKRW(mrrNow.monthlyMRR));
   setText('statMRRMonthlyCount', mrrNow.monthlyCount + '명 × ' + fmtKRW(PRICE_MONTHLY));
   setText('statMRRYearly', fmtKRW(Math.round(mrrNow.yearlyMRR)));
-  setText('statMRRYearlyCount', mrrNow.yearlyCount + '명 ÷ 12');
+  setText('statMRRYearlyCount', mrrNow.yearlyCount + '명 (월할 환산)');
   setText('statARR', fmtKRW(Math.round(mrrNow.totalMRR * 12)));
 
   // === MRR 일별 추이 차트 ===
