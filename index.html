@@ -985,7 +985,7 @@ body:not(.light-mode) .np-time { color:#9b9eaa; }
 <!-- SIDEBAR -->
 <aside class="sidebar">
   <div class="sb-logo">1DAYECO<small>Admin Dashboard</small>
-    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v227</span>
+    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v228</span>
   </div>
   <nav class="sb-nav">
     <div class="sb-group">운영</div>
@@ -1221,11 +1221,16 @@ body:not(.light-mode) .np-time { color:#9b9eaa; }
       </div>
       <div class="panel-body" style="padding:16px">
         <!-- [v221] 서브탭: 부주제별 발송현황(기본) / 카테고리별 발송현황 -->
-        <div style="display:flex;gap:0;margin-bottom:14px;border-bottom:1px solid var(--b)">
+        <div style="display:flex;gap:0;margin-bottom:14px;border-bottom:1px solid var(--b);align-items:center">
           <button id="prepViewSubtopicBtn" onclick="switchPrepareView('subtopic')"
             style="background:none;border:none;color:var(--gold);padding:8px 14px;font-size:12px;font-weight:700;cursor:pointer;border-bottom:2px solid var(--gold);margin-bottom:-1px;font-family:var(--sans)">📋 부주제별 발송현황</button>
           <button id="prepViewCategoryBtn" onclick="switchPrepareView('category')"
             style="background:none;border:none;color:var(--muted);padding:8px 14px;font-size:12px;font-weight:500;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;font-family:var(--sans)">📊 카테고리별 발송현황</button>
+          <!-- [v228] 구독자 있는 항목만 보기 토글 -->
+          <label style="margin-left:auto;display:flex;align-items:center;gap:7px;font-size:11px;color:var(--muted);cursor:pointer;padding-bottom:6px" title="구독자가 1명 이상인 부주제/카테고리만 표시">
+            <span>구독자 있는 항목만</span>
+            <input type="checkbox" id="prepOnlyWithSubs" checked onchange="togglePrepOnlySubs(this)" style="width:30px;height:16px;cursor:pointer;accent-color:var(--gold)">
+          </label>
         </div>
 
         <!-- 서브탭 1: 부주제별 발송현황 (기본) -->
@@ -5070,6 +5075,14 @@ function switchSendTab(tab) {
 }
 
 // [v221] '오늘 발송 준비' 내 서브탭: subtopic(부주제별, 기본) / category(카테고리별)
+// [v228] 발송 현황 — 구독자 있는 항목만 보기 토글 (기본 ON)
+let _prepOnlyWithSubs = true;
+function togglePrepOnlySubs(el) {
+  _prepOnlyWithSubs = !!(el && el.checked);
+  // 데이터 재요청 없이 현재 캐시로 다시 그림
+  if (typeof loadSendPreview === 'function') loadSendPreview();
+}
+
 function switchPrepareView(view) {
   const sub = document.getElementById('prepViewSubtopic');
   const cat = document.getElementById('prepViewCategory');
@@ -5222,7 +5235,11 @@ async function loadSendPreview() {
     const grid = document.getElementById('prevCategoriesGrid');
     grid.style.gridTemplateColumns = 'repeat(auto-fill,minmax(160px,1fr))';
     const categories = allCatIds;
-    grid.innerHTML = categories.map(cat => {
+    // [v228] '구독자 있는 항목만' 토글 ON 시 구독자 0명 카테고리는 그리드에서 숨김
+    const gridCats = _prepOnlyWithSubs
+      ? categories.filter(cat => (subsByCategory[cat] || []).length > 0)
+      : categories;
+    grid.innerHTML = (gridCats.length ? gridCats : []).map(cat => {
       const meta = CATEGORY_META[cat] || { emoji: getCatEmoji(cat), label: getCatShortName(cat) };
       const count = (subsByCategory[cat] || []).length;
       // [v218] 순번 발송 반영: dry-run 성공 시 실제 발송 가능 여부로 판단
@@ -5257,7 +5274,7 @@ async function loadSendPreview() {
         </div>
         <div style="font-size:10px;color:${statusColor}">${statusText}</div>
       </div>`;
-    }).join('');
+    }).join('') || '<div style="padding:14px;text-align:center;color:var(--muted);font-size:12px;grid-column:1/-1">구독자가 있는 카테고리가 없습니다 (토글을 끄면 전체 표시)</div>';
 
     // 6. 탭 바 + 콘텐츠 박스
     // [v218] 날짜 콘텐츠가 없어도 순번 발송 가능한 카테고리는 탭에 표시 (안내문 노출)
@@ -5404,6 +5421,8 @@ async function renderSubtopicBreakdown(ctx) {
     let sts = allSubtopics.filter(st => String(st.category_id) === String(cat));
     // 비활성이어도 활성 구독자가 있으면 표시 (발송 대상이 남아있을 수 있음)
     sts = sts.filter(st => (st.active !== false) || (subsBySubtopic[st.id] || []).length > 0);
+    // [v228] '구독자 있는 항목만' 토글 ON 시 구독자 0명 부주제 숨김
+    if (_prepOnlyWithSubs) sts = sts.filter(st => (subsBySubtopic[st.id] || []).length > 0);
     sts.sort((a, b) => (a.display_order || 0) - (b.display_order || 0));
     if (sts.length === 0) return;
 
@@ -5488,7 +5507,10 @@ async function renderSubtopicBreakdown(ctx) {
 <b>오늘 대상</b> = 오늘 발송 예정 인원(발송완료+대기) · <b>성공여부</b> = 오늘 실제 발송 결과(성공/실패, 미발송 시 발송대기)<br>
     <b>내일 대상</b> = 내일 발송 예정 인원(시뮬레이션) · <b>준비상태</b> = 내일 콘텐츠 준비 여부(준비완료/콘텐츠 준비중)
   </div>`;
-  box.innerHTML = (html || '<div style="padding:10px;color:var(--muted);font-size:12px">표시할 부주제가 없습니다.</div>') + (html ? legend : '');
+  const emptyMsg = _prepOnlyWithSubs
+    ? '구독자가 있는 부주제가 없습니다. (상단 \'구독자 있는 항목만\' 토글을 끄면 전체 표시)'
+    : '표시할 부주제가 없습니다.';
+  box.innerHTML = (html || `<div style="padding:10px;color:var(--muted);font-size:12px">${emptyMsg}</div>`) + (html ? legend : '');
   if (drTruncated) {
     box.innerHTML += `<div style="font-size:10px;color:var(--muted);margin-top:6px">※ 구독자 50명 초과 — 발송가능 집계는 상위 50건 기준(부분)</div>`;
   }
