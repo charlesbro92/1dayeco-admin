@@ -985,7 +985,7 @@ body:not(.light-mode) .np-time { color:#9b9eaa; }
 <!-- SIDEBAR -->
 <aside class="sidebar">
   <div class="sb-logo">1DAYECO<small>Admin Dashboard</small>
-    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v231</span>
+    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v232</span>
   </div>
   <nav class="sb-nav">
     <div class="sb-group">운영</div>
@@ -5707,22 +5707,28 @@ async function tsSend(btn) {
   const checked = [...document.querySelectorAll('#tsContentList .ts-chk:checked')];
   if (!checked.length) { showToast('발송할 콘텐츠를 선택하세요', 'ng'); return; }
   const items = checked.map(ch => _tsContents[parseInt(ch.dataset.idx, 10)]).filter(Boolean);
-  if (!confirm(`${phoneRaw} 번호로 선택한 ${items.length}건을 테스트 발송할까요?`)) return;
+  const ids = items.map(c => c.id).filter(v => v != null);
+  if (!ids.length) { showToast('콘텐츠 식별자(id)가 없어 발송할 수 없습니다', 'ng'); return; }
+  if (!confirm(`${phoneRaw} 번호로 선택한 ${ids.length}건을 카카오 알림톡으로 테스트 발송할까요?`)) return;
 
   btn.disabled = true; const orig = btn.innerHTML; btn.innerHTML = '<span class="spin"></span> 발송 중...';
-  let ok = 0, fail = 0;
   try {
-    for (const c of items) {
-      const body = c.body || c.summary || '';
-      if (!body) { fail++; continue; }
-      try {
-        const res = await apiPost('/admin/send-selected', { phones: [phoneRaw], content: body });
-        if (res && (res.sent || 0) > 0) ok++; else fail++;
-      } catch (e) { fail++; }
+    // [v232] 실제 일일 발송과 동일한 카카오 알림톡 경로(send_daily_content)로 발송 — SMS 아님
+    const res = await apiPost('/admin/send-test-content', { phone: phoneRaw, content_ids: ids });
+    const ok = (res && res.sent) || 0;
+    const fail = (res && res.failed) ? res.failed.length : 0;
+    if (ok > 0 && !fail) {
+      showToast(`알림톡 테스트 발송 완료 ${ok}건 ✅`, 'ok');
+    } else if (ok > 0) {
+      showToast(`알림톡 발송 — 성공 ${ok}건 · 실패 ${fail}건`, 'ng');
+    } else {
+      const errd = (res && res.failed && res.failed[0]) ? (res.failed[0].error || '') : ((res && res.error) || '');
+      showToast('알림톡 발송 실패: ' + (errd || '템플릿/번호 확인 필요'), 'ng');
     }
-    showToast(`테스트 발송 — 성공 ${ok}건${fail ? ` · 실패 ${fail}건` : ''}`, fail ? 'ng' : 'ok');
     if (ok > 0) { loadTodaySendStats?.(); loadSendLogs?.(); }
-    if (!fail) closeTestSend();
+    if (ok > 0 && !fail) closeTestSend();
+  } catch (e) {
+    showToast('발송 오류: ' + (e?.message || e), 'ng');
   } finally {
     btn.disabled = false; btn.innerHTML = orig;
   }
