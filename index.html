@@ -985,7 +985,7 @@ body:not(.light-mode) .np-time { color:#9b9eaa; }
 <!-- SIDEBAR -->
 <aside class="sidebar">
   <div class="sb-logo">1DAYECO<small>Admin Dashboard</small>
-    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v230</span>
+    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v231</span>
   </div>
   <nav class="sb-nav">
     <div class="sb-group">운영</div>
@@ -2165,6 +2165,37 @@ body:not(.light-mode) .np-time { color:#9b9eaa; }
           <button onclick="closeCouponModal()" style="flex:1;background:none;border:1px solid var(--b);color:var(--muted);padding:11px;border-radius:8px;font-size:13px;font-weight:600;font-family:var(--sans);cursor:pointer">취소</button>
           <button onclick="submitCouponModal(this)" id="cpnModalSaveBtn" style="flex:2;background:linear-gradient(135deg, var(--gold), #b08d3f);border:none;color:#1a1a1a;padding:11px;border-radius:8px;font-size:13px;font-weight:700;font-family:var(--sans);cursor:pointer">저장</button>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- [v231] 테스트 발송 모달 — 연락처 + 부주제 선택 → 저장된 콘텐츠 다중선택 발송 -->
+  <div class="overlay" id="testSendOverlay" onclick="if(event.target.id==='testSendOverlay')closeTestSend()">
+    <div class="modal" style="max-width:580px;width:100%;background:var(--s2);border:1px solid var(--b);border-radius:14px;padding:0;max-height:90vh;display:flex;flex-direction:column">
+      <div style="padding:16px 20px;border-bottom:1px solid var(--b);display:flex;justify-content:space-between;align-items:center;flex-shrink:0">
+        <div style="font-size:15px;font-weight:700">🧪 테스트 발송</div>
+        <button onclick="closeTestSend()" style="background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer;padding:2px 6px">✕</button>
+      </div>
+      <div style="padding:18px 20px;overflow-y:auto">
+        <label style="font-size:12px;color:var(--muted);display:block;margin-bottom:5px">연락처 (받는 번호)</label>
+        <input id="tsPhone" type="tel" inputmode="numeric" placeholder="01012345678" maxlength="13"
+          style="width:100%;box-sizing:border-box;background:var(--s3);border:1px solid var(--b);color:var(--text);padding:10px 12px;border-radius:8px;font-size:14px;font-family:var(--sans);outline:none;margin-bottom:14px">
+        <label style="font-size:12px;color:var(--muted);display:block;margin-bottom:5px">부주제</label>
+        <select id="tsSubtopic" onchange="tsLoadContents()"
+          style="width:100%;box-sizing:border-box;background:var(--s3);border:1px solid var(--b);color:var(--text);padding:10px 12px;border-radius:8px;font-size:14px;font-family:var(--sans);outline:none;cursor:pointer;margin-bottom:14px">
+          <option value="">부주제를 선택하세요…</option>
+        </select>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+          <label style="font-size:12px;color:var(--muted)">발송할 콘텐츠 (다중 선택)</label>
+          <span id="tsSelCount" style="font-size:11px;color:var(--gold)"></span>
+        </div>
+        <div id="tsContentList" style="border:1px solid var(--b);border-radius:8px;max-height:300px;overflow-y:auto;background:var(--s3)">
+          <div style="padding:18px;text-align:center;color:var(--muted);font-size:12px">부주제를 먼저 선택하세요</div>
+        </div>
+      </div>
+      <div style="padding:14px 20px;border-top:1px solid var(--b);display:flex;gap:8px;flex-shrink:0">
+        <button onclick="closeTestSend()" style="flex:1;background:none;border:1px solid var(--b);color:var(--muted);padding:11px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:var(--sans)">취소</button>
+        <button onclick="tsSend(this)" id="tsSendBtn" style="flex:2;background:linear-gradient(135deg,var(--gold),#b08d3f);border:none;color:#1a1a1a;padding:11px;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;font-family:var(--sans)">📤 선택 콘텐츠 발송</button>
       </div>
     </div>
   </div>
@@ -5338,11 +5369,21 @@ async function loadSendPreview() {
     const warnings = [];
     if (!drTruncated) {
       categories.forEach(cat => {
-        const count = (subsByCategory[cat] || []).length;
-        const deliverable = drOk ? isCatDeliverable(cat) : !!todayItems[cat];
-        if (count > 0 && !deliverable) {
-          const m = CATEGORY_META[cat] || { emoji: getCatEmoji(cat), label: getCatShortName(cat) };
-          warnings.push(`${m.emoji} <strong>${m.label}</strong> 카테고리 콘텐츠가 없어 ${count}명에게 발송 불가`);
+        const subsC = subsByCategory[cat] || [];
+        const m = CATEGORY_META[cat] || { emoji: getCatEmoji(cat), label: getCatShortName(cat) };
+        if (drOk) {
+          // [v231] 이미 오늘 발송 완료된 구독자(already_sent_today)는 제외하고,
+          //   '발송 가능하지도, 이미 발송하지도 않은' = 콘텐츠가 없어 실제로 막힌 인원만 카운트
+          const blocked = subsC.filter(s =>
+            !sendableBySub[s.id] && skipReasonBySub[s.id] !== 'already_sent_today');
+          if (blocked.length > 0 && !isCatDeliverable(cat)) {
+            warnings.push(`${m.emoji} <strong>${m.label}</strong> 오늘 보낼 콘텐츠가 준비되지 않아 ${blocked.length}명 발송 보류 <span style="color:var(--muted)">(이미 발송 완료된 구독자는 제외)</span>`);
+          }
+        } else {
+          // dry-run 실패 폴백 — 날짜 콘텐츠 유무로만 판단(기존 동작)
+          if (subsC.length > 0 && !todayItems[cat]) {
+            warnings.push(`${m.emoji} <strong>${m.label}</strong> 카테고리 콘텐츠가 없어 ${subsC.length}명에게 발송 불가`);
+          }
         }
       });
     }
@@ -5359,6 +5400,9 @@ async function loadSendPreview() {
     const sendableCount = drOk
       ? drSent
       : categories.reduce((sum, cat) => sum + (todayItems[cat] ? subsByCategory[cat].length : 0), 0);
+    // [v231] 실제 발송 가능 건수(순번 포함)를 저장 — 발송 시작 버튼 가드가 동일 기준 사용
+    _prevState.sendableCount = sendableCount;
+    _prevState.drSent = drSent;
 
     // [v218] 발송 가능 대상이 0일 때 '왜 없는지' 사유를 함께 표시
     //   (구독자는 있는데 만료/시작일 이전/순번 소진/오늘 이미 발송 등으로 제외된 경우 구분)
@@ -5583,41 +5627,104 @@ function escapeHtml(str) {
     .replace(/"/g, '&quot;').replace(/'/g, '&#039;');
 }
 
-// 본인에게만 테스트 발송
+// [v231] 테스트 발송 — 연락처 입력 + 부주제 선택 → 저장 콘텐츠 다중선택 발송
+let _tsContents = [];
 async function executeSendTest() {
-  const phone = prompt('테스트할 본인 전화번호를 입력해주세요 (- 없이):');
-  if (!phone) return;
-  const cleanPhone = phone.replace(/-/g, '').trim();
-  if (!/^01[0-9]{8,9}$/.test(cleanPhone)) {
-    showToast('전화번호 형식이 올바르지 않습니다', 'ng');
-    return;
-  }
-  if (!confirm(`${cleanPhone} 으로만 테스트 발송할까요?`)) return;
-
-  const btn = document.getElementById('sendTestBtn');
-  btn.disabled = true; btn.innerHTML = '<span class="spin"></span> 테스트 중...';
+  const ov = document.getElementById('testSendOverlay');
+  if (!ov) return;
+  // 연락처는 비워두고(직접 입력), 부주제 드롭다운 채움
+  const sel = document.getElementById('tsSubtopic');
+  document.getElementById('tsContentList').innerHTML =
+    '<div style="padding:18px;text-align:center;color:var(--muted);font-size:12px">부주제를 먼저 선택하세요</div>';
+  document.getElementById('tsSelCount').textContent = '';
+  // 부주제 목록 로드 (카테고리별 그룹)
   try {
-    const res = await apiPost('/admin/send-daily-content', {
-      test_phone: cleanPhone,
+    const r = await apiFetch('/admin/subtopics');
+    const list = (r && r.success && Array.isArray(r.data)) ? r.data : [];
+    const byCat = {};
+    list.forEach(st => { (byCat[st.category_id] = byCat[st.category_id] || []).push(st); });
+    let html = '<option value="">부주제를 선택하세요…</option>';
+    Object.keys(byCat).forEach(catId => {
+      const label = (typeof getCatLabel === 'function' ? getCatLabel(catId) : catId) || catId;
+      html += `<optgroup label="${escapeHtml(label)}">`;
+      byCat[catId].sort((a,b)=>(a.display_order||0)-(b.display_order||0)).forEach(st => {
+        html += `<option value="${st.id}">${escapeHtml(st.name || ('부주제 '+st.id))}</option>`;
+      });
+      html += '</optgroup>';
     });
-    if (res && res.sent > 0) {
-      const ch = res.results?.[0]?.channel || 'sms';
-      const chLabel = ch === 'alimtalk' ? '알림톡' : (ch === 'friendtalk' ? '친구톡' : 'SMS');
-      showToast(`테스트 발송 완료 (${chLabel}) ✅`, 'ok');
-      loadTodaySendStats();
-      loadSendLogs();
-    } else {
-      const errMsg = res?.results?.[0]?.error || res?.error || '';
-      const errLabel = errMsg === 'friendtalk_blocked_hours'
-        ? '친구톡 발송 불가 시간대 (오후 9시~오전 8시)'
-        : errMsg || '발송 실패';
-      showToast('테스트 실패: ' + errLabel, 'ng');
-    }
+    sel.innerHTML = html;
   } catch (e) {
-    showToast('테스트 오류: ' + e.message, 'ng');
+    sel.innerHTML = '<option value="">부주제 로드 실패</option>';
+  }
+  ov.classList.add('open');
+}
+
+function closeTestSend() {
+  const ov = document.getElementById('testSendOverlay');
+  if (ov) ov.classList.remove('open');
+}
+
+async function tsLoadContents() {
+  const sid = document.getElementById('tsSubtopic').value;
+  const box = document.getElementById('tsContentList');
+  const cntEl = document.getElementById('tsSelCount');
+  cntEl.textContent = '';
+  _tsContents = [];
+  if (!sid) { box.innerHTML = '<div style="padding:18px;text-align:center;color:var(--muted);font-size:12px">부주제를 먼저 선택하세요</div>'; return; }
+  box.innerHTML = '<div style="padding:18px;text-align:center;color:var(--muted);font-size:12px">콘텐츠 불러오는 중…</div>';
+  try {
+    const r = await apiFetch('/admin/contents/sequence?subtopic_id=' + encodeURIComponent(sid) + '&include_hidden=1');
+    _tsContents = (r && r.data) ? r.data : [];
+    if (!_tsContents.length) {
+      box.innerHTML = '<div style="padding:18px;text-align:center;color:var(--muted);font-size:12px">이 부주제에 저장된 콘텐츠가 없습니다</div>';
+      return;
+    }
+    box.innerHTML = _tsContents.map((c, i) => {
+      const seq = (c.seq != null) ? `#${c.seq} ` : '';
+      const topic = c.topic || c.headline || '(제목 없음)';
+      const preview = (c.body || '').slice(0, 60).replace(/\n/g, ' ');
+      return `<label style="display:flex;gap:10px;align-items:flex-start;padding:10px 12px;border-bottom:1px solid var(--b);cursor:pointer;font-size:12px">
+        <input type="checkbox" class="ts-chk" data-idx="${i}" onchange="tsUpdateCount()" style="margin-top:2px;width:15px;height:15px;flex-shrink:0;accent-color:var(--gold)">
+        <span style="flex:1;min-width:0">
+          <span style="color:var(--gold);font-family:var(--mono)">${seq}</span><span style="color:var(--text);font-weight:600">${escapeHtml(topic)}</span>
+          <span style="display:block;color:var(--muted);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(preview)}</span>
+        </span>
+      </label>`;
+    }).join('');
+  } catch (e) {
+    box.innerHTML = '<div style="padding:18px;text-align:center;color:var(--red);font-size:12px">콘텐츠 조회 실패</div>';
+  }
+}
+
+function tsUpdateCount() {
+  const n = document.querySelectorAll('#tsContentList .ts-chk:checked').length;
+  document.getElementById('tsSelCount').textContent = n > 0 ? `${n}건 선택됨` : '';
+}
+
+async function tsSend(btn) {
+  const phoneRaw = (document.getElementById('tsPhone').value || '').replace(/[^0-9]/g, '');
+  if (!/^01[0-9]{8,9}$/.test(phoneRaw)) { showToast('연락처 형식이 올바르지 않습니다', 'ng'); return; }
+  const checked = [...document.querySelectorAll('#tsContentList .ts-chk:checked')];
+  if (!checked.length) { showToast('발송할 콘텐츠를 선택하세요', 'ng'); return; }
+  const items = checked.map(ch => _tsContents[parseInt(ch.dataset.idx, 10)]).filter(Boolean);
+  if (!confirm(`${phoneRaw} 번호로 선택한 ${items.length}건을 테스트 발송할까요?`)) return;
+
+  btn.disabled = true; const orig = btn.innerHTML; btn.innerHTML = '<span class="spin"></span> 발송 중...';
+  let ok = 0, fail = 0;
+  try {
+    for (const c of items) {
+      const body = c.body || c.summary || '';
+      if (!body) { fail++; continue; }
+      try {
+        const res = await apiPost('/admin/send-selected', { phones: [phoneRaw], content: body });
+        if (res && (res.sent || 0) > 0) ok++; else fail++;
+      } catch (e) { fail++; }
+    }
+    showToast(`테스트 발송 — 성공 ${ok}건${fail ? ` · 실패 ${fail}건` : ''}`, fail ? 'ng' : 'ok');
+    if (ok > 0) { loadTodaySendStats?.(); loadSendLogs?.(); }
+    if (!fail) closeTestSend();
   } finally {
-    btn.disabled = false;
-    btn.innerHTML = '🧪 본인에게만 테스트';
+    btn.disabled = false; btn.innerHTML = orig;
   }
 }
 
@@ -14233,11 +14340,14 @@ function closeSendConfirm() { document.getElementById('sendConfirm').classList.r
 
 // 발송 페이지에서 "📤 발송 시작" 클릭 시 - 진짜 발송 확인
 function confirmExecuteSend() {
-  // 발송 가능 메시지 건수 확인 (활성 카테고리 모두 포함)
-  const sendableCount = getActiveCatIds().reduce((sum, cat) => {
-    const hasContent = !!_prevState.contents[cat];
-    return sum + (hasContent ? (_prevState.subsByCategory[cat] || []).length : 0);
-  }, 0);
+  // [v231] 발송 가능 건수 = 미리보기 dry-run 기준(순번 발송 포함). 날짜 아카이브만 보던 기존 로직은
+  //   순번(sequence) 콘텐츠를 0으로 잡아 "대상 없음"으로 잘못 막던 버그가 있었음.
+  let sendableCount = (typeof _prevState.sendableCount === 'number')
+    ? _prevState.sendableCount
+    : getActiveCatIds().reduce((sum, cat) => {
+        const hasContent = !!(_prevState.contents && _prevState.contents[cat]);
+        return sum + (hasContent ? ((_prevState.subsByCategory && _prevState.subsByCategory[cat]) || []).length : 0);
+      }, 0);
   // [v182] force_send 체크 상태 — ON이면 미리보기 0명이어도 발송 시도 (당일 가입자 포함)
   const _forceSend = !!document.getElementById('forceSendCheck')?.checked;
   if (sendableCount === 0 && !_forceSend) {
