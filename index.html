@@ -985,7 +985,7 @@ body:not(.light-mode) .np-time { color:#9b9eaa; }
 <!-- SIDEBAR -->
 <aside class="sidebar">
   <div class="sb-logo">1DAYECO<small>Admin Dashboard</small>
-    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v232</span>
+    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v233</span>
   </div>
   <nav class="sb-nav">
     <div class="sb-group">운영</div>
@@ -11681,13 +11681,15 @@ https://onedayeco.com`
     toggleKey: 'notify_review_request_enabled',
     tplKey:    'kakao_tpl_review_request',
     envKey:    'KAKAO_TPL_REVIEW_REQUEST',
-    when: '실제 발송 7건째 구독자에게 — 콘텐츠 발송 후(스케줄러에서 시각 조정, 기본 08:05 KST) 1회. 버튼: 구글폼 설문',
+    when: '실제 발송 7건째 구독자에게 — 콘텐츠 발송 후(스케줄러에서 시각 조정, 기본 08:05 KST) 1회. 링크: 구글폼 설문',
     vars: ['이름'],
-    preview: `[1DAYECO] 리뷰 작성 요청
-안녕하세요, #{이름}님 🙏 1DAYECO와 7일을 함께해 주셔서 감사합니다.
-그동안 받아보신 콘텐츠는 어떠셨나요? 2~3분이면 끝나는 짧은 설문으로 소중한 의견을 들려주세요. 더 나은 콘텐츠로 보답하겠습니다.
-참여해 주신 분께는 5,000원 할인 쿠폰을 드립니다 🎁
-[버튼] 설문 참여하기`
+    preview: `안녕하세요, #{이름}님
+
+  그동안 받아보신 콘텐츠는 어떠셨나요?
+  1분이면 끝나는 짧은 설문으로 소중한 의견을 들려주세요.
+ 더 나은 콘텐츠로 보답하겠습니다.
+
+ [링크] https://docs.google.com/forms/d/e/1FAIpQLSfJAraEMIP36NBVc2wr2_8ijxpqeJ_nikS3x0QSdsYDDVpgVA/viewform`
   },
   // ─ 콘텐츠 그룹 6개 ─
   {
