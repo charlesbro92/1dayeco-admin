@@ -995,6 +995,7 @@ body:not(.light-mode) .np-time { color:#9b9eaa; }
     <a class="sb-item" onclick="showPage('content')"><span class="ico">📝</span>주제 관리</a>
     <a class="sb-item" onclick="showPage('archive')"><span class="ico">📚</span>콘텐츠 아카이브</a>
     <a class="sb-item" onclick="showPage('stats')"><span class="ico">📈</span>통계</a>
+    <a class="sb-item" onclick="showPage('funnel')"><span class="ico">🔻</span>전환 퍼널</a>
     <div class="sb-group">수익</div>
     <a class="sb-item" onclick="showPage('revenue')"><span class="ico">💰</span>매출</a>
     <a class="sb-item" onclick="showPage('payments')"><span class="ico">💳</span>결제 이력</a>
@@ -1998,6 +1999,29 @@ body:not(.light-mode) .np-time { color:#9b9eaa; }
           </tbody>
         </table>
       </div>
+    </div>
+  </div>
+
+  <!-- ── PAGE: 전환 퍼널 ── -->
+  <div class="content" id="page-funnel">
+    <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:18px">
+      <div style="font-size:13px;color:var(--muted)">기간</div>
+      <select id="funnelDays" onchange="loadFunnel()" style="background:var(--dark2);border:1px solid var(--border);color:var(--text);padding:7px 12px;border-radius:7px;font-size:13px;font-family:var(--sans);cursor:pointer">
+        <option value="7">최근 7일</option>
+        <option value="14">최근 14일</option>
+        <option value="30">최근 30일</option>
+        <option value="90">최근 90일</option>
+      </select>
+      <button onclick="loadFunnel()" style="background:rgba(201,168,76,.12);border:1px solid rgba(201,168,76,.3);color:var(--gold);padding:7px 14px;border-radius:7px;font-size:12px;font-weight:700;font-family:var(--sans);cursor:pointer">새로고침</button>
+      <span id="funnelSince" style="font-size:12px;color:var(--muted)"></span>
+    </div>
+    <div id="funnelOverall" style="margin-bottom:18px"></div>
+    <div id="funnelBars"><div class="empty"><span class="empty-ico">🔻</span>데이터를 불러오는 중…</div></div>
+    <div id="funnelTrial" style="margin-top:22px"></div>
+    <div style="margin-top:18px;font-size:11px;color:var(--muted);line-height:1.6">
+      · 메인 퍼널: 방문 → 가격 섹션 도달 → 결제창 열기 → 결제 시도 → 결제 완료 (브라우저 세션 기준 distinct)<br>
+      · 각 단계의 % 는 직전 단계 대비 전환율, 괄호는 방문 대비 누적 전환율입니다.<br>
+      · 결제 완료는 랜딩에서 기록되므로, 정확한 매출 건수는 결제 이력/구독자와 교차 확인하세요.
     </div>
   </div>
 
@@ -3710,6 +3734,7 @@ const pageTitles = {
   send:'📨 발송 현황', content:'📝 주제 관리',
   archive:'📚 콘텐츠 아카이브',
   stats:'📈 통계 분석',
+  funnel:'🔻 전환 퍼널',
   revenue:'💰 매출 현황', payments:'💳 결제 이력',
   coupons:'🎟️ 이벤트 쿠폰',
   scheduler:'⏰ 스케줄러', settings:'🗂️ 카테고리 관리', notify:'🔔 알림 관리',
@@ -3817,6 +3842,7 @@ function loadPage(name) {
   }
   if (name === 'payments')     loadPayments();
   if (name === 'coupons')      loadCoupons();
+  if (name === 'funnel')       loadFunnel();
   if (name === 'settings')     loadSettings();
   if (name === 'scheduler')    { loadSchedulerStatus(); loadSchedulerSettings(); loadSchedulerStatusPanel(); loadSubtopicSchedules(); loadCategoriesForSched(); }
   if (name === 'notify')       loadNotifySettings();
@@ -4210,6 +4236,80 @@ function _cpnExpireShort(iso) {
   if (m) return `${parseInt(m[2],10)}/${parseInt(m[3],10)}까지`;
   return '무제한';
 }
+// ── [v234] 전환 퍼널 ──────────────────────────────────────
+async function loadFunnel() {
+  const barsEl  = document.getElementById('funnelBars');
+  const overEl  = document.getElementById('funnelOverall');
+  const trialEl = document.getElementById('funnelTrial');
+  const sinceEl = document.getElementById('funnelSince');
+  if (!barsEl) return;
+  const days = (document.getElementById('funnelDays') || {}).value || '7';
+  barsEl.innerHTML = '<div class="empty"><span class="empty-ico">🔻</span>데이터를 불러오는 중…</div>';
+  let d = null;
+  try {
+    const r = await fetch(API_BASE + '/admin/funnel?days=' + encodeURIComponent(days));
+    d = await r.json();
+  } catch (e) { console.warn('[funnel] fetch', e); }
+
+  if (!d || !d.success) {
+    barsEl.innerHTML = '<div class="empty"><span class="empty-ico">⚠️</span>퍼널 데이터를 불러오지 못했습니다. (funnel_events 테이블/배포 확인)</div>';
+    if (overEl) overEl.innerHTML = ''; if (trialEl) trialEl.innerHTML = '';
+    return;
+  }
+  if (sinceEl) sinceEl.textContent = (d.since ? d.since + ' ~ 오늘 (KST)' : '');
+
+  const steps = d.steps || [];
+  const maxCount = Math.max(1, ...steps.map(s => s.count || 0));
+  const fmt = (n) => (typeof n === 'number' ? n.toLocaleString('ko-KR') : '—');
+
+  // 전체 전환율 요약 카드
+  if (overEl) {
+    const oc = (d.overall_conv != null) ? d.overall_conv + '%' : '—';
+    overEl.innerHTML =
+      '<div style="display:inline-flex;align-items:baseline;gap:10px;background:rgba(201,168,76,.1);border:1px solid rgba(201,168,76,.3);padding:14px 20px;border-radius:10px">' +
+        '<span style="font-size:13px;color:var(--muted)">방문 → 결제 전체 전환율</span>' +
+        '<span style="font-size:24px;font-weight:800;color:var(--gold)">' + oc + '</span>' +
+      '</div>';
+  }
+
+  // 메인 퍼널 막대
+  barsEl.innerHTML = steps.map(function(s, i){
+    const w = Math.round((s.count / maxCount) * 100);
+    const stepConv = (s.step_conv != null) ? s.step_conv + '%' : '—';
+    const totalConv = (s.total_conv != null) ? s.total_conv + '%' : '';
+    const dropTxt = (s.drop != null && s.drop > 0)
+      ? '<span style="color:#f87171;font-size:11px;margin-left:8px">▼ ' + s.drop + '% 이탈</span>' : '';
+    return (
+      '<div style="margin-bottom:12px">' +
+        '<div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:5px">' +
+          '<span style="font-size:13px;color:var(--text);font-weight:600">' + (i+1) + '. ' + s.label + '</span>' +
+          '<span style="font-size:13px;color:var(--muted)"><b style="color:var(--text)">' + fmt(s.count) + '</b>' +
+            (i > 0 ? ' · 직전 ' + stepConv + (totalConv ? ' <span style="opacity:.6">(누적 ' + totalConv + ')</span>' : '') : '') +
+            '</span>' +
+        '</div>' +
+        '<div style="background:var(--dark2);border-radius:7px;overflow:hidden;height:30px;position:relative;border:1px solid var(--border)">' +
+          '<div style="width:' + w + '%;height:100%;background:linear-gradient(90deg,var(--gold),#b08d3f);transition:width .4s"></div>' +
+        '</div>' +
+        '<div style="text-align:right">' + dropTxt + '</div>' +
+      '</div>'
+    );
+  }).join('');
+
+  // 부가: 무료체험 분기
+  if (trialEl) {
+    const t = d.trial || [];
+    trialEl.innerHTML =
+      '<div style="font-size:13px;color:var(--muted);margin-bottom:8px">🎁 무료체험 분기 (참고)</div>' +
+      '<div style="display:flex;gap:12px;flex-wrap:wrap">' +
+      t.map(function(x){
+        return '<div style="flex:1;min-width:140px;background:var(--dark2);border:1px solid var(--border);border-radius:8px;padding:12px 14px">' +
+          '<div style="font-size:12px;color:var(--muted);margin-bottom:4px">' + x.label + '</div>' +
+          '<div style="font-size:20px;font-weight:800;color:var(--text)">' + fmt(x.count) + '</div></div>';
+      }).join('') +
+      '</div>';
+  }
+}
+
 async function loadEventSummary() {
   const box = document.getElementById('eventCouponSummary');
   if (!box) return;
