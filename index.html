@@ -985,7 +985,7 @@ body:not(.light-mode) .np-time { color:#9b9eaa; }
 <!-- SIDEBAR -->
 <aside class="sidebar">
   <div class="sb-logo">1DAYECO<small>Admin Dashboard</small>
-    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v233</span>
+    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v235</span>
   </div>
   <nav class="sb-nav">
     <div class="sb-group">운영</div>
@@ -2018,6 +2018,7 @@ body:not(.light-mode) .np-time { color:#9b9eaa; }
     <div id="funnelOverall" style="margin-bottom:18px"></div>
     <div id="funnelBars"><div class="empty"><span class="empty-ico">🔻</span>데이터를 불러오는 중…</div></div>
     <div id="funnelTrial" style="margin-top:22px"></div>
+    <div id="funnelDwell" style="margin-top:22px"></div>
     <div style="margin-top:18px;font-size:11px;color:var(--muted);line-height:1.6">
       · 메인 퍼널: 방문 → 가격 섹션 도달 → 결제창 열기 → 결제 시도 → 결제 완료 (브라우저 세션 기준 distinct)<br>
       · 각 단계의 % 는 직전 단계 대비 전환율, 괄호는 방문 대비 누적 전환율입니다.<br>
@@ -4307,6 +4308,26 @@ async function loadFunnel() {
           '<div style="font-size:20px;font-weight:800;color:var(--text)">' + fmt(x.count) + '</div></div>';
       }).join('') +
       '</div>';
+  }
+
+  // [v235] 체류시간 분포
+  const dwellEl = document.getElementById('funnelDwell');
+  if (dwellEl) {
+    const dw = d.dwell || [];
+    const colors = { lt3:'#f87171', '3_10':'#fbbf24', gt10:'#4ade80' };
+    dwellEl.innerHTML =
+      '<div style="font-size:13px;color:var(--muted);margin-bottom:8px">⏱️ 체류 시간 분포 (방문 기준)</div>' +
+      '<div style="display:flex;gap:12px;flex-wrap:wrap">' +
+      dw.map(function(x){
+        const c = colors[x.key] || 'var(--gold)';
+        const pct = (x.pct != null) ? x.pct + '%' : '—';
+        return '<div style="flex:1;min-width:120px;background:var(--dark2);border:1px solid var(--border);border-radius:8px;padding:12px 14px">' +
+          '<div style="font-size:12px;color:var(--muted);margin-bottom:4px">' + x.label + '</div>' +
+          '<div style="font-size:22px;font-weight:800;color:' + c + '">' + fmt(x.count) + '</div>' +
+          '<div style="font-size:12px;color:var(--muted);margin-top:2px">' + pct + '</div></div>';
+      }).join('') +
+      '</div>' +
+      '<div style="margin-top:6px;font-size:11px;color:var(--muted)">· 3초/10초 도달 마일스톤을 차감해 산출 (이탈 시점 추정). 빨강=3초 미만 즉시 이탈.</div>';
   }
 }
 
