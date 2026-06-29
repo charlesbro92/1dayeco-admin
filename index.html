@@ -669,7 +669,7 @@ body.light-mode .filter-pill.active { color:#fff; }
 .login-field label { display:block; font-size:11px; color:var(--muted); margin-bottom:5px; letter-spacing:.3px; }
 .login-field input {
   width:100%; background:rgba(255,255,255,.04); border:1.5px solid var(--b);
-  border-radius:8px; padding:12px 16px; font-size:15px; color:var(--text);
+  border-radius:8px; padding:12px 16px; font-size:16px; color:var(--text); box-sizing:border-box; -webkit-user-select:text; user-select:text;
   font-family:var(--sans); outline:none; transition:border-color .2s;
 }
 .login-field input:focus { border-color:var(--gold); }
@@ -944,12 +944,12 @@ body:not(.light-mode) .np-time { color:#9b9eaa; }
   <div class="login-box">
     <div class="login-field">
       <label>관리자 아이디</label>
-      <input type="text" id="loginId" placeholder="아이디 입력" onkeydown="if(event.key==='Enter')doLogin()">
+      <input type="text" id="loginId" placeholder="아이디 입력" autocapitalize="none" autocorrect="off" spellcheck="false" autocomplete="username" enterkeyhint="next" onkeydown="if(event.key==='Enter')doLogin()">
     </div>
     <!-- [v205] 비밀번호 필드 — 항상 표시 -->
     <div class="pw-field-wrap login-field" id="pwFieldWrap">
       <label>비밀번호</label>
-      <input type="password" id="loginPw" placeholder="비밀번호 입력" onkeydown="if(event.key==='Enter')doLogin()">
+      <input type="password" id="loginPw" placeholder="비밀번호 입력" autocomplete="current-password" enterkeyhint="go" onkeydown="if(event.key==='Enter')doLogin()">
     </div>
     <button class="login-btn" onclick="doLogin()">로그인</button>
     <div class="login-err" id="loginErr">아이디 또는 비밀번호가 올바르지 않습니다</div>
@@ -985,7 +985,7 @@ body:not(.light-mode) .np-time { color:#9b9eaa; }
 <!-- SIDEBAR -->
 <aside class="sidebar">
   <div class="sb-logo">1DAYECO<small>Admin Dashboard</small>
-    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v235</span>
+    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v236</span>
   </div>
   <nav class="sb-nav">
     <div class="sb-group">운영</div>
@@ -14910,11 +14910,11 @@ function handleLogoClick() {
 // [v206] doLogin — 백엔드 /admin/login 호출로 변경
 async function doLogin() {
   const id = document.getElementById('loginId')?.value.trim();
-  const pw = pwUnlocked ? document.getElementById('loginPw')?.value.trim() : '';
+  const pw = document.getElementById('loginPw')?.value.trim();
   const errEl = document.getElementById('loginErr');
 
   // 비밀번호 활성화 전: 아무 반응 없이 무시
-  if (!pwUnlocked) { return; }
+  // [v236] pwUnlocked 게이트 제거 — iOS 등에서 5탭 없이 바로 로그인
   
   // 입력값 검증
   if (!id || !pw) {
