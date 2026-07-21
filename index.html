@@ -317,6 +317,9 @@ tr:hover td { background:rgba(255,255,255,.02); }
 .badge.refund_protected_ended { background:rgba(139,92,246,.12); color:#a78bfa; }  /* 보라 — 보장환불 */
 .badge.refund_requested       { background:rgba(245,158,11,.12); color:var(--amber); }  /* 주황 — 환불요청 */
 .badge.refunded               { background:rgba(168,85,247,.12); color:#c084fc; }  /* 자주 — 환불완료 */
+/* [2026-07-21] 자동재시도 소진 → 수동처리 필요/완료 */
+.badge.refund_manual_required  { background:rgba(248,113,113,.14); color:#f87171; }  /* 빨강 — 수동처리필요 */
+.badge.refund_manual_completed { background:rgba(168,85,247,.12);  color:#c084fc; }  /* 자주 — 수동처리완료 (환불완료와 동일 톤) */
 .badge.monthly { background:rgba(96,165,250,.1); color:var(--blue); }
 .badge.yearly  { background:rgba(201,168,76,.1); color:var(--gold); }
 .badge.free    { background:rgba(255,255,255,.06); color:var(--muted); }
@@ -1153,6 +1156,8 @@ body:not(.light-mode) .np-time { color:#9b9eaa; }
         <option value="cancelled">체험취소</option>
         <option value="payment_failed">결제오류</option>
         <option value="refund_requested">환불요청</option>
+        <option value="refund_manual_required">수동처리필요</option>
+        <option value="refund_manual_completed">수동처리완료</option>
       </select>
       <!-- 시간 필터: 8시 고정으로 숨김 처리 (legacy 호환 위해 hidden으로 유지) -->
       <input type="hidden" id="hourFilter" value="">
@@ -3252,7 +3257,7 @@ body:not(.light-mode) .np-time { color:#9b9eaa; }
           placeholder="미입력 시 저장 안됨"></textarea>
       </div>
 
-      <!-- 환불 정보 섹션 (refund_requested 상태일 때만 표시) -->
+      <!-- 환불 정보 섹션 (refund_requested / refund_manual_required 상태일 때만 표시) -->
       <div id="sdRefundSection" style="display:none;background:rgba(248,113,113,.05);border:1px solid rgba(248,113,113,.2);border-radius:10px;padding:14px">
         <div style="font-size:11px;font-weight:700;color:#f87171;letter-spacing:.5px;margin-bottom:10px">↩️ 환불 정보</div>
         <div id="sdRefundCalc" style="font-size:12px;color:var(--muted);margin-bottom:12px">환불액 계산 중...</div>
@@ -4685,7 +4690,7 @@ function renderSubscribersTable() {
     if (window._scFilter === 'trial_all') {
       matchStatus = ['trial','pending_charge','pending_payment'].includes(s.status);
     } else if (window._scFilter === 'refund_error') {
-      matchStatus = ['payment_failed','refund_requested'].includes(s.status) || s.payment_status === 'refunded';
+      matchStatus = ['payment_failed','refund_requested','refund_manual_required'].includes(s.status) || s.payment_status === 'refunded';
     } else {
       matchStatus = !statusFilter || s.status === statusFilter;
     }
@@ -4724,7 +4729,7 @@ function renderSubscribersTable() {
     sc('sc-trial',     allSubs.filter(s=>['trial','pending_charge','pending_payment'].includes(s.status)).length);
     sc('sc-expired',   allSubs.filter(s=>s.status==='expired').length);
     sc('sc-cancelled', allSubs.filter(s=>s.status==='cancelled').length);
-    sc('sc-others',    allSubs.filter(s=>['payment_failed','refund_requested'].includes(s.status)||s.payment_status==='refunded').length);
+    sc('sc-others',    allSubs.filter(s=>['payment_failed','refund_requested','refund_manual_required'].includes(s.status)||s.payment_status==='refunded').length);
   }
 
   const tbody = document.getElementById('subTableBody');
@@ -4905,6 +4910,11 @@ function renderSubscribersRows(filtered) {
            <button onclick="event.stopPropagation();openSubDetail('${s.id}')"
              style="font-size:11px;color:#f87171;font-weight:700;padding:4px 8px;background:rgba(248,113,113,.08);border:1px solid rgba(248,113,113,.3);border-radius:4px;white-space:nowrap;cursor:pointer;font-family:var(--sans)">↩️ 환불요청중</button>
          </div>`
+      : s.status === 'refund_manual_required'
+      ? `<div style="display:flex;gap:4px;align-items:center">
+           <button onclick="event.stopPropagation();openSubDetail('${s.id}')"
+             style="font-size:11px;color:#f87171;font-weight:700;padding:4px 8px;background:rgba(248,113,113,.14);border:1px solid rgba(248,113,113,.4);border-radius:4px;white-space:nowrap;cursor:pointer;font-family:var(--sans)">⚠️ 수동처리필요</button>
+         </div>`
       : s.status === 'active'
       ? `<div style="display:flex;gap:4px;align-items:center;flex-wrap:nowrap">
            <button onclick="event.stopPropagation();cancelSub('${s.id}','${s.name}')"
@@ -4929,7 +4939,7 @@ function renderSubscribersRows(filtered) {
     // [v223] 금액(정가) / 할인액 / 최종결제액 — paid_amount(실결제액) 기반. 결제완료 시에만 계산(0원 무료쿠폰 포함)
     const PLAN_LIST_AMT = {monthly:9900, yearly:79000, free:0, pkg3m:19900, pkg6m:24900, pkg1y:41900};
     const _listAmt  = PLAN_LIST_AMT[s.plan];
-    const _charged  = ['paid','completed','refunded','refund_requested'].includes(s.payment_status);
+    const _charged  = ['paid','completed','refunded','refund_requested','refund_manual_required','refund_manual_completed'].includes(s.payment_status);
     const _finalAmt = (s.paid_amount !== null && s.paid_amount !== undefined && s.paid_amount !== '') ? Number(s.paid_amount) : null;
     const listAmtLabel = (_listAmt !== undefined) ? ('₩' + _listAmt.toLocaleString()) : '';
     let discountLabel = '—', finalAmtLabel = '—';
@@ -4958,6 +4968,9 @@ function renderSubscribersRows(filtered) {
   refund_protected_ended:  '보장환불',
   refund_requested:        '환불요청',
   refunded:                '환불완료',
+  // [2026-07-21] 자동재시도 소진 → 수동처리
+  refund_manual_required:  '수동처리필요',
+  refund_manual_completed: '수동처리완료',
   // 옛 값 (혹시 남은 데이터 호환)
   trial:                   '체험중(옛)',
   cancelled:               '취소(옛)',
@@ -14153,10 +14166,12 @@ async function openSubDetail(id) {
 
   document.getElementById('subDetailOverlay').classList.add('open');
 
-  // 환불 정보 섹션 (refund_requested 상태일 때만)
+  // 환불 정보 섹션 (refund_requested 또는 refund_manual_required 상태일 때만)
+  // [2026-07-21] 자동재시도가 소진돼서 'refund_manual_required'(수동처리필요)로
+  // 넘어온 건도 여기서 똑같이 환불완료 처리할 수 있어야 하므로 조건 확장.
   const refundSection = document.getElementById('sdRefundSection');
   if (refundSection) {
-    if (sub.status === 'refund_requested') {
+    if (sub.status === 'refund_requested' || sub.status === 'refund_manual_required') {
       refundSection.style.display = 'block';
 
       // memo에서 계좌 정보 파싱
