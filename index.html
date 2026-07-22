@@ -5081,6 +5081,11 @@ function buildMonthHistory(fromStr, toStr) {
 
 const MOCK_SEND_HISTORY = []; // loadSendHistory 진입 시 buildMonthHistory로 채워짐
 
+// [2026-07-22] /admin/send-logs에서 받아온 실제 발송 로그 원본(날짜 필터링 전
+// 전체 목록) — 일별 통계 행을 클릭했을 때 그 날짜의 실제 성공/실패 대상자
+// 리스트를 보여주기 위해 보관한다. loadSendHistory()에서 채워짐.
+let SEND_LOGS_RAW = [];
+
 // 선택 발송 이력 (오늘 날짜 기준으로 쌓임)
 // {time, recipients:[{name,phone,id}], content, success, failed}
 const BULK_SEND_LOG = [];
@@ -5938,6 +5943,7 @@ async function loadSendHistory() {
     if (r.ok) {
       const d = await r.json();
       const logs = d.data || [];
+      SEND_LOGS_RAW = logs; // [2026-07-22] 일별 상세(toggleSendDetail)에서 재사용
 
       // 날짜별 집계
       const dateMap = {};
@@ -6095,20 +6101,21 @@ function toggleSendDetail(dateStr) {
   if (arrowEl)  arrowEl.textContent = '▲';
   if (!innerDiv) return;
 
-  const logs = BULK_SEND_LOG.filter(function(l) {
-    var d = new Date(l.timeObj || l.time);
-    return new Date(d.getTime() + 9*3600000).toISOString().slice(0,10) === dateStr;
+  // [2026-07-22 수정] 이번 세션에서 수동 '선택발송'한 것만 쌓이는 BULK_SEND_LOG
+  // 대신, loadSendHistory()가 이미 받아온 실제 send_logs 원본(SEND_LOGS_RAW)에서
+  // 이 날짜에 해당하는 행을 그대로 찾는다 — 위 요약 행(전체/성공/실패)과
+  // 동일한 실제 데이터 소스라 숫자가 항상 일치하고, 자동발송 건도 보인다.
+  var dayLogs = SEND_LOGS_RAW.filter(function(l) {
+    var ds = l.send_date || (l.sent_at || '').slice(0, 10);
+    return ds === dateStr;
   });
   var archivedItems = (typeof CONTENT_ARCHIVE !== 'undefined') ? getArchiveByDate(dateStr) : {};
   var archivedFirstCat = Object.keys(archivedItems)[0];
   var archived = archivedFirstCat ? archivedItems[archivedFirstCat] : null;
-  var todayKST    = getKSTDateStr();
-  var isToday     = dateStr === todayKST;
-  var allRecip    = logs.reduce(function(a,l){ return a.concat(l.recipients||[]); }, []);
-  var successList = allRecip.filter(function(r){ return r.status === 'success'; });
-  var failList    = allRecip.filter(function(r){ return r.status === 'failed'; });
-  var totalSent   = isToday ? (STATE._todaySent   || 0) : successList.length;
-  var totalFailed = isToday ? (STATE._todayFailed  || 0) : failList.length;
+  var failList = dayLogs.filter(function(l){ return !l.success; });
+  var successList = dayLogs.filter(function(l){ return l.success; });
+  // 실패를 먼저 보여줘서 운영자가 바로 확인/재발송할 수 있게 정렬
+  var ordered = failList.concat(successList);
 
   var html = '<div>';
 
@@ -6120,52 +6127,59 @@ function toggleSendDetail(dateStr) {
       '</div>';
   }
 
-  var retryAllBtn = failList.length > 0
-    ? ('<button data-date="' + dateStr + '" onclick="retryAllFailed(this.dataset.date)" ' +
-       'style="margin-left:auto;background:rgba(248,113,113,.12);border:1px solid rgba(248,113,113,.3);color:var(--red);' +
-       'padding:3px 12px;border-radius:4px;font-size:11px;font-weight:700;cursor:pointer;font-family:var(--sans)">' +
-       '↺ 실패 ' + failList.length + '건 전체 재발송</button>')
-    : '';
+  // [2026-07-22] 성공/실패 건수는 위쪽 일별 통계 행에 이미 표시되므로 여기서
+  // 중복 표기하지 않는다 — 재발송 버튼만 필요할 때 보여준다.
+  if (failList.length > 0) {
+    html += '<div style="padding:8px 18px;display:flex;border-bottom:1px solid var(--b)">' +
+      '<button data-date="' + dateStr + '" onclick="retryAllFailed(this.dataset.date)" ' +
+      'style="margin-left:auto;background:rgba(248,113,113,.12);border:1px solid rgba(248,113,113,.3);color:var(--red);' +
+      'padding:3px 12px;border-radius:4px;font-size:11px;font-weight:700;cursor:pointer;font-family:var(--sans)">' +
+      '↺ 실패 ' + failList.length + '건 전체 재발송</button>' +
+      '</div>';
+  }
 
-  html += '<div style="padding:10px 18px;display:flex;gap:20px;border-bottom:1px solid var(--b);font-size:12px;align-items:center">' +
-    '<span>전체 <strong style="color:var(--text)">' + (totalSent+totalFailed) + '</strong>명</span>' +
-    '<span>성공 <strong style="color:var(--green)">' + totalSent + '</strong>명</span>' +
-    '<span>실패 <strong style="color:' + (totalFailed>0?'var(--red)':'var(--muted)') + '">' + totalFailed + '</strong>명</span>' +
-    retryAllBtn +
-    '</div>';
-
-  if (allRecip.length > 0) {
+  if (dayLogs.length > 0) {
     html += '<div style="padding:0 18px 14px"><table style="width:100%;border-collapse:collapse;font-size:11px;margin-top:8px">' +
       '<thead><tr style="border-bottom:1px solid var(--b)">' +
       '<th style="text-align:left;padding:5px 8px;color:var(--muted);font-weight:500;width:30px">상태</th>' +
       '<th style="text-align:left;padding:5px 8px;color:var(--muted);font-weight:500">이름</th>' +
       '<th style="text-align:left;padding:5px 8px;color:var(--muted);font-weight:500">전화번호</th>' +
-      '<th style="text-align:left;padding:5px 8px;color:var(--muted);font-weight:500">결과</th>' +
+      '<th style="text-align:left;padding:5px 8px;color:var(--muted);font-weight:500">토픽</th>' +
+      '<th style="text-align:left;padding:5px 8px;color:var(--muted);font-weight:500">발송시간</th>' +
       '<th style="text-align:right;padding:5px 8px;color:var(--muted);font-weight:500">재발송</th>' +
       '</tr></thead><tbody>';
 
-    allRecip.forEach(function(r) {
-      var ok = r.status === 'success';
+    ordered.forEach(function(l) {
+      var ok = !!l.success;
+      var sub = (typeof STATE !== 'undefined' && STATE.subscribers)
+        ? STATE.subscribers.find(function(s){ return s.id === l.subscriber_id; })
+        : null;
+      var name  = sub ? sub.name : '—';
+      var phone = (l.to_phone || '').replace(/-/g,'');
+      var sentTime = l.sent_at
+        ? new Date(l.sent_at).toLocaleString('ko-KR', { timeZone:'Asia/Seoul', month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit', hour12:false })
+        : '—';
       var retryBtn = !ok
-        ? ('<button data-phone="' + (r.phone||'').replace(/-/g,'') + '" data-name="' + (r.name||'').replace(/"/g,'&quot;') + '" ' +
+        ? ('<button data-phone="' + phone + '" data-name="' + (name||'').replace(/"/g,'&quot;') + '" ' +
            'onclick="retrySingleSend(this.dataset.phone, this.dataset.name)" ' +
            'style="background:rgba(248,113,113,.12);border:1px solid rgba(248,113,113,.3);color:var(--red);' +
            'padding:3px 10px;border-radius:4px;font-size:10px;cursor:pointer;font-family:var(--sans)">↺ 재발송</button>')
         : '';
+      var errCell = !ok && l.error
+        ? '<div style="font-size:9.5px;color:var(--red);margin-top:2px">' + l.error + '</div>' : '';
       html += '<tr style="border-bottom:1px solid rgba(255,255,255,.04)">' +
         '<td style="padding:7px 8px;text-align:center">' + (ok?'✅':'❌') + '</td>' +
-        '<td style="padding:7px 8px;font-weight:600;color:var(--text)">' + (r.name||'—') + '</td>' +
-        '<td style="padding:7px 8px;font-family:var(--mono);color:var(--muted)">' + (r.phone||'—') + '</td>' +
-        '<td style="padding:7px 8px;color:' + (ok?'var(--green)':'var(--red)') + '">' + (ok?'발송 성공':'발송 실패') + '</td>' +
+        '<td style="padding:7px 8px;font-weight:600;color:var(--text)">' + (name||'—') + '</td>' +
+        '<td style="padding:7px 8px;font-family:var(--mono);color:var(--muted)">' + fmtPhone(phone) + '</td>' +
+        '<td style="padding:7px 8px;color:var(--text)">' + (l.topic||'—') + errCell + '</td>' +
+        '<td style="padding:7px 8px;font-family:var(--mono);color:var(--muted);white-space:nowrap">' + sentTime + '</td>' +
         '<td style="padding:7px 8px;text-align:right">' + retryBtn + '</td>' +
         '</tr>';
     });
 
     html += '</tbody></table></div>';
   } else {
-    html += '<div style="padding:16px 18px;font-size:11px;color:var(--muted)">' +
-      (isToday && totalSent > 0 ? '✅ 발송 완료 ' + totalSent + '건' : '발송 이력 없음') +
-      '</div>';
+    html += '<div style="padding:16px 18px;font-size:11px;color:var(--muted)">발송 이력이 없습니다</div>';
   }
 
   html += '</div>';
@@ -15040,13 +15054,15 @@ async function retrySingleSend(phone, name) {
 
 // ── 실패 전체 재발송 ──────────────────────────────────────────
 async function retryAllFailed(dateStr) {
-  const logs = BULK_SEND_LOG.filter(l => {
-    const d = new Date(l.timeObj || l.time);
-    return new Date(d.getTime()+9*3600000).toISOString().slice(0,10) === dateStr;
+  // [2026-07-22 수정] BULK_SEND_LOG(이번 세션 수동발송만 기록) 대신 실제
+  // send_logs 원본(SEND_LOGS_RAW)에서 이 날짜의 실패 건을 찾는다.
+  const dayLogs = SEND_LOGS_RAW.filter(l => {
+    const ds = l.send_date || (l.sent_at || '').slice(0, 10);
+    return ds === dateStr;
   });
-  const failedPhones = logs.flatMap(l => l.recipients||[])
-    .filter(r => r.status === 'failed')
-    .map(r => (r.phone||'').replace(/-/g,''))
+  const failedPhones = dayLogs
+    .filter(l => !l.success)
+    .map(l => (l.to_phone||'').replace(/-/g,''))
     .filter(Boolean);
   if (!failedPhones.length) { showToast('재발송할 실패 건이 없습니다', 'ng'); return; }
   const _todayKey2 = getKSTDateStr();
