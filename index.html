@@ -745,20 +745,63 @@ body.light-mode .filter-pill.active { color:#fff; }
 .cal-quick-btn:hover { border-color:var(--gold); color:var(--gold); }
 
 @media(max-width:900px) {
-  .sidebar { transform:translateX(-100%); }
+  .sidebar {
+    transform:translateX(-100%);
+    transition:transform .25s ease;
+    box-shadow:0 0 40px rgba(0,0,0,.5);
+  }
+  /* [2026-07-29] 사이드바를 다시 불러올 방법이 전혀 없었음(햄버거 버튼 부재) —
+     모바일 메뉴 버튼으로 토글되는 오버레이 방식으로 열림 */
+  .sidebar.mobile-open { transform:translateX(0); }
+  #mobileSidebarBackdrop {
+    display:none; position:fixed; inset:0; z-index:49;
+    background:rgba(0,0,0,.5);
+  }
+  #mobileSidebarBackdrop.show { display:block; }
+  #mobileMenuBtn { display:inline-flex !important; }
   /* [v164] 사이드바 숨길 때 main도 viewport 전체 사용 — 우측 빈 공간 제거 */
   .main {
     margin-left:0;
     max-width:100vw;
     width:100vw;
   }
-  .kpi-grid, .kpi-grid-5 { grid-template-columns:repeat(2,1fr); }
-  .two-col { grid-template-columns:1fr; }
+  /* [2026-07-29] 사이드바 폭(220px)만큼 topbar가 여전히 오른쪽으로 밀려있어서
+     좁은 화면에서 타이틀·버튼이 전부 겹치고 잘려 보이던 문제 수정 */
+  .topbar {
+    left:0;
+    padding:0 12px;
+    gap:8px;
+  }
+  .page-title { font-size:13px; }
+  /* [2026-07-29] 통계/매출 등 일부 카드는 인라인 style="grid-template-columns:..."로
+     열 수를 직접 지정해놔서 이 클래스 규칙만으론 덮어써지지 않음 — !important와
+     인라인 스타일 속성 선택자로 강제 재정의 (기존 #page-scheduler 방식과 동일 패턴) */
+  .kpi-grid, .kpi-grid-5 { grid-template-columns:repeat(2,1fr) !important; }
+  .two-col { grid-template-columns:1fr !important; }
+  div[style*="grid-template-columns:repeat(3,1fr)"],
+  div[style*="grid-template-columns:repeat(4,1fr)"] {
+    grid-template-columns:repeat(2,1fr) !important;
+  }
   /* [v170] 스케줄러 페이지 — 좁은 화면에서는 1열로 (main 위, side1·side2 아래) */
   #page-scheduler > div[style*="grid-template-areas"] {
     grid-template-columns:1fr !important;
     grid-template-areas:'main' 'side1' 'side2' !important;
   }
+}
+
+/* [2026-07-29] 아이폰 폭(≤480px) 전용 추가 보정 — 900px 기준만으론
+   실제 폰 폭에서 topbar·KPI가 여전히 빡빡해서 별도 단계로 한 번 더 축약 */
+@media(max-width:480px) {
+  .topbar { padding:0 8px; height:auto; min-height:var(--topbar-h); flex-wrap:wrap; padding-top:6px; padding-bottom:6px; }
+  .page-title { font-size:12px; }
+  .topbar-right { gap:6px; flex-wrap:wrap; justify-content:flex-end; }
+  .topbar-right .tb-time { display:none !important; } /* 좁은 화면에선 KST/VNT 시계 숨김 — 공간 확보 우선 */
+  .btn-refresh, .btn-send { padding:6px 10px; font-size:11px; }
+  .btn-send span:first-child { display:none; } /* 이모지 아이콘 생략, 텍스트만 */
+  .content { padding:14px; }
+  .kpi-grid, .kpi-grid-5 { grid-template-columns:1fr !important; gap:10px; }
+  div[style*="grid-template-columns:repeat(3,1fr)"] { grid-template-columns:1fr !important; }
+  .login-box { width:min(340px,88vw); padding:26px 22px; }
 }
 
 /* ── 컬럼 리사이즈 ── */
@@ -959,8 +1002,13 @@ body:not(.light-mode) .np-time { color:#9b9eaa; }
   </div>
 </div>
 
+<!-- [2026-07-29] 모바일 전용 사이드바 배경 오버레이 — 탭하면 메뉴 닫힘 -->
+<div id="mobileSidebarBackdrop" onclick="toggleMobileSidebar(false)"></div>
+
 <!-- [v167] TOPBAR — 화면 최상단 전체 너비 (┳ 구조의 가로축) -->
 <header class="topbar">
+  <button id="mobileMenuBtn" class="btn-refresh" onclick="toggleMobileSidebar()"
+    style="display:none;padding:8px 11px;font-size:15px;flex-shrink:0" title="메뉴">☰</button>
   <div class="page-title" id="pageTitle">📊 개요</div>
   <div class="topbar-right">
     <span class="tb-time" style="display:flex;gap:14px;align-items:center">
@@ -988,7 +1036,7 @@ body:not(.light-mode) .np-time { color:#9b9eaa; }
 <!-- SIDEBAR -->
 <aside class="sidebar">
   <div class="sb-logo">1DAYECO<small>Admin Dashboard</small>
-    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v236</span>
+    <span class="deploy-badge" id="deployBadge" onclick="showDeployInfo()" title="클릭: 배포 정보">admin-v237</span>
   </div>
   <nav class="sb-nav">
     <div class="sb-group">운영</div>
@@ -3768,6 +3816,18 @@ function showPage(name) {
   document.getElementById('pageTitle').textContent = pageTitles[name] || name;
   currentPage = name;
   loadPage(name);
+  toggleMobileSidebar(false); // [2026-07-29] 모바일에서 메뉴 탭하면 자동으로 닫힘
+}
+
+// [2026-07-29] 모바일(≤900px) 사이드바 열기/닫기 — 900px 초과에서는 사이드바가
+// 원래 항상 보이는 상태라 이 토글은 아무 영향 없음(해당 CSS가 미디어쿼리 안에만 있음)
+function toggleMobileSidebar(force) {
+  const sidebar = document.querySelector('.sidebar');
+  const backdrop = document.getElementById('mobileSidebarBackdrop');
+  if (!sidebar || !backdrop) return;
+  const open = typeof force === 'boolean' ? force : !sidebar.classList.contains('mobile-open');
+  sidebar.classList.toggle('mobile-open', open);
+  backdrop.classList.toggle('show', open);
 }
 
 function loadPage(name) {
